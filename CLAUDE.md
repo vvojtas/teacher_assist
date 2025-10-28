@@ -25,7 +25,7 @@ Teacher Assist is a Django-based web application designed to help Polish kinderg
 ```
 teacher_assist/
 ├── docs/
-│   └── projectPremise.md      # Detailed project requirements and UI specs
+│   └── PRD.md                 # Product Requirements Document
 ├── webserver/                  # Django project root
 │   ├── manage.py              # Django management script
 │   ├── teachertools/          # Main Django project configuration
@@ -71,49 +71,22 @@ cd webserver
 python manage.py shell
 ```
 
-## Application Requirements (from projectPremise.md)
+## Application Requirements
 
-The main application UI consists of:
+**See [docs/PRD.md](docs/PRD.md) for detailed product requirements, user stories, and functional specifications.**
 
-1. **Text field** - For entering the weekly theme
-2. **Data table** with columns:
-   - Moduł (educational module: emotions, art forms, etc.)
-   - Podstawa Programowa (core curriculum paragraph numbers)
-   - Cele (educational objectives)
-   - Aktywność (planned activity - user input)
-3. **Autofill buttons** - AI-powered filling for single rows or all rows
-4. **Interactive feature** - Hovering over Podstawa Programowa numbers shows corresponding curriculum text
+Quick summary: Single-page table interface for lesson planning with AI-powered autofill of educational metadata (modules, curriculum references, objectives) based on teacher-entered activities. Interface in Polish, designed for easy copying to Google Docs.
 
 ## AI Integration Architecture
 
-### Two-Process Design
+**Two-Process Design:** Django web server (port 8000) + LangGraph AI service (port 8001) communicating via REST API.
 
-The application uses a **separate process architecture** with REST API communication:
-
-1. **Django Web Server** (Process 1)
-   - Serves the UI
-   - Handles user requests
-   - Manages database operations
-   - Makes HTTP requests to LangGraph service
-
-2. **LangGraph AI Service** (Process 2)
-   - Runs as a separate FastAPI/Flask server
-   - Processes AI requests
-   - Returns educational metadata in JSON format
-
-### Communication Flow
-
-```
-User Browser → Django (localhost:8000) → HTTP REST API → LangGraph Service (localhost:8001)
-                     ↓                                            ↓
-                SQLite Database                            LLM (OpenAI/etc)
-```
+**See [docs/PRD.md](docs/PRD.md) Section 7 for detailed API contract, database schema, and LangGraph workflow specs.**
 
 ### Starting Both Services
 
 **Terminal 1 - LangGraph Service:**
 ```bash
-# Start the AI service (to be created)
 python ai_service/main.py
 # Runs on http://localhost:8001
 ```
@@ -125,71 +98,21 @@ python manage.py runserver
 # Runs on http://localhost:8000
 ```
 
-### REST API Contract
+### Quick Reference
 
-**Endpoint:** `POST http://localhost:8001/api/generate-metadata`
-
-**Request:**
-```json
-{
-  "activity": "Zabawa w sklep z owocami",
-  "theme": "Jesień - zbiory"
-}
-```
-
-**Response:**
-```json
-{
-  "modul": "Zabawy matematyczne",
-  "podstawa_programowa": ["I.1.2", "II.3.1"],
-  "cele": [
-    "Rozwijanie umiejętności liczenia",
-    "Poznawanie nazw owoców sezonowych"
-  ]
-}
-```
-
-### Django Integration
-
-Django views will use `requests` library to call the LangGraph service:
-
-```python
-import requests
-
-LANGGRAPH_URL = "http://localhost:8001/api/generate-metadata"
-
-def autofill_activity(activity, theme):
-    response = requests.post(
-        LANGGRAPH_URL,
-        json={"activity": activity, "theme": theme},
-        timeout=30
-    )
-    return response.json()
-```
-
-### LangGraph Workflow
-
-The AI workflow should:
-- Accept Polish language activity descriptions
-- Map activities to standard educational modules
-- Reference appropriate core curriculum paragraphs
-- Generate relevant educational objectives in Polish
-- Return structured JSON response
+- **AI Endpoint:** `POST http://localhost:8001/api/generate-metadata`
+- **LLM Gateway:** OpenRouter (for model flexibility)
+- **Budget:** ~$1/month (use cost-effective models)
+- **Timeout:** 30 seconds
+- **Language:** Polish (UI and AI responses)
 
 ## Database
 
-**SQLite is intentionally used** for this project because:
-- Simple, file-based database requiring no server setup
-- Database file can be committed to git for portability across systems
-- Ideal for local-only MVP deployment
-- Development and deployment databases can be synchronized via git
+**SQLite is intentionally used** and the database file (`webserver/db.sqlite3`) **is committed to git** for portability. This allows pre-populated curriculum data to work across different systems without setup.
 
-**Important:** The SQLite database file (`webserver/db.sqlite3`) is tracked in git, unlike typical Django projects. This allows the application to work across different systems with pre-populated data (curriculum references, etc.).
+**See [docs/PRD.md](docs/PRD.md) Section 7.5 for database schema details.**
 
-The main data model will include:
-- Weekly themes
-- Activities with associated metadata (module, curriculum references, objectives)
-- Core curriculum reference data (for hover-over display)
+**Note:** MVP has no data persistence for lesson plans (session-only). Future phases will add save/load functionality.
 
 ## Git Workflow
 
