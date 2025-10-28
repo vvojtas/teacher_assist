@@ -11,6 +11,7 @@ Teacher Assist is a Django-based web application designed to help Polish kinderg
 - MVP focused on local deployment (no user authentication)
 - Single-page application with tabular data display
 - Designed for easy copying to Google Docs
+- **Training project:** This project serves as a learning opportunity for Claude Code, Django, and LangGraph
 
 ## Technology Stack
 
@@ -83,13 +84,97 @@ The main application UI consists of:
 3. **Autofill buttons** - AI-powered filling for single rows or all rows
 4. **Interactive feature** - Hovering over Podstawa Programowa numbers shows corresponding curriculum text
 
-## AI Integration
+## AI Integration Architecture
 
-The application will use LangGraph to process teacher inputs and generate appropriate educational metadata. The AI workflow should:
+### Two-Process Design
+
+The application uses a **separate process architecture** with REST API communication:
+
+1. **Django Web Server** (Process 1)
+   - Serves the UI
+   - Handles user requests
+   - Manages database operations
+   - Makes HTTP requests to LangGraph service
+
+2. **LangGraph AI Service** (Process 2)
+   - Runs as a separate FastAPI/Flask server
+   - Processes AI requests
+   - Returns educational metadata in JSON format
+
+### Communication Flow
+
+```
+User Browser → Django (localhost:8000) → HTTP REST API → LangGraph Service (localhost:8001)
+                     ↓                                            ↓
+                SQLite Database                            LLM (OpenAI/etc)
+```
+
+### Starting Both Services
+
+**Terminal 1 - LangGraph Service:**
+```bash
+# Start the AI service (to be created)
+python ai_service/main.py
+# Runs on http://localhost:8001
+```
+
+**Terminal 2 - Django Server:**
+```bash
+cd webserver
+python manage.py runserver
+# Runs on http://localhost:8000
+```
+
+### REST API Contract
+
+**Endpoint:** `POST http://localhost:8001/api/generate-metadata`
+
+**Request:**
+```json
+{
+  "activity": "Zabawa w sklep z owocami",
+  "theme": "Jesień - zbiory"
+}
+```
+
+**Response:**
+```json
+{
+  "modul": "Zabawy matematyczne",
+  "podstawa_programowa": ["I.1.2", "II.3.1"],
+  "cele": [
+    "Rozwijanie umiejętności liczenia",
+    "Poznawanie nazw owoców sezonowych"
+  ]
+}
+```
+
+### Django Integration
+
+Django views will use `requests` library to call the LangGraph service:
+
+```python
+import requests
+
+LANGGRAPH_URL = "http://localhost:8001/api/generate-metadata"
+
+def autofill_activity(activity, theme):
+    response = requests.post(
+        LANGGRAPH_URL,
+        json={"activity": activity, "theme": theme},
+        timeout=30
+    )
+    return response.json()
+```
+
+### LangGraph Workflow
+
+The AI workflow should:
 - Accept Polish language activity descriptions
 - Map activities to standard educational modules
 - Reference appropriate core curriculum paragraphs
 - Generate relevant educational objectives in Polish
+- Return structured JSON response
 
 ## Database
 
@@ -131,6 +216,26 @@ git add . && git commit -m "Complete lesson planning UI"
 git push origin feature/c_lesson_planning_ui
 git checkout -b feature/c_ai_integration
 ```
+
+## Development Guidelines
+
+### Package Management
+
+**ALWAYS ask before installing new packages via pip.**
+
+The developer wants to maintain control over project dependencies. When a new package is needed:
+1. Suggest the package and explain why it's needed
+2. Wait for explicit approval before installing
+3. After approval, install and document in requirements.txt
+
+### Project Purpose
+
+This is a **training project** for learning:
+- Claude Code capabilities and workflows
+- Django web framework
+- LangGraph AI integration
+
+Keep implementations educational and well-commented where appropriate.
 
 ## Settings Notes
 
