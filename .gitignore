@@ -58,8 +58,8 @@ cover/
 # Django stuff:
 *.log
 local_settings.py
-db.sqlite3
-db.sqlite3-journal
+# db.sqlite3 - UNCOMMITTED: SQLite database is tracked in git for portability
+# db.sqlite3-journal - UNCOMMITTED: SQLite journal is tracked in git for portability
 
 # Flask stuff:
 instance/
