@@ -142,6 +142,10 @@ git checkout -b feature/c_ai_integration
 
 ## Development Guidelines
 
+### Documentation Synchronization
+
+**When requirements change (before or during implementation), update [docs/PRD.md](docs/PRD.md) or other related documentation immediately.** Documentation must always reflect actual/planned implementation.
+
 ### Package Management
 
 **ALWAYS ask before installing new packages via pip.**

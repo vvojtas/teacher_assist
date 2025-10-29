@@ -420,7 +420,6 @@ CREATE TABLE curriculum_references (
     id INTEGER PRIMARY KEY,
     reference_code VARCHAR(20) UNIQUE NOT NULL,  -- e.g., "I.1.2"
     full_text TEXT NOT NULL,                      -- Polish curriculum text
-    category VARCHAR(100),                        -- e.g., "Rozwój społeczny"
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
@@ -430,8 +429,7 @@ CREATE TABLE curriculum_references (
 CREATE TABLE educational_modules (
     id INTEGER PRIMARY KEY,
     module_name VARCHAR(200) UNIQUE NOT NULL,    -- e.g., "Zabawy matematyczne"
-    description TEXT,
-    is_standard BOOLEAN DEFAULT TRUE,             -- False if AI-suggested
+    is_ai_suggested BOOLEAN DEFAULT TRUE,             -- True if AI-suggested
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
@@ -441,8 +439,8 @@ CREATE TABLE educational_modules (
 ### 7.6 Performance Requirements
 
 - **Page Load:** < 2 seconds
-- **Single Row AI Generation:** < 10 seconds target, 30 seconds timeout
-- **Bulk Autofill (5 rows):** < 60 seconds
+- **Single Row AI Generation:** < 30 seconds target, 120 seconds timeout
+- **Bulk Autofill (5 rows):** < 150 seconds
 - **Tooltip Display:** Instant (data preloaded)
 - **Add/Delete Row:** Instant (client-side)
 
@@ -452,7 +450,7 @@ CREATE TABLE educational_modules (
 - No authentication required
 - No HTTPS required (localhost only)
 - Development SECRET_KEY acceptable
-- DEBUG = True for ease of troubleshooting
+
 
 **API Security:**
 - OpenRouter API key stored in environment variable
@@ -477,26 +475,28 @@ CREATE TABLE educational_modules (
 
 ### 8.3 Layout
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Teacher Assist - Planowanie Lekcji                    │
-├─────────────────────────────────────────────────────────┤
-│                                                          │
-│  Temat tygodnia: [_________________________]            │
-│                                                          │
-│  [Wypełnij wszystko AI] [Dodaj wiersz] [Wyczyść]       │
-│                                                          │
-│  ┌──────────┬──────────┬──────────┬──────────┬───┐    │
-│  │ Moduł    │ Podstawa │ Cele     │ Aktywność│ AI│    │
-│  │          │ Program. │          │          │   │    │
-│  ├──────────┼──────────┼──────────┼──────────┼───┤    │
-│  │[______]  │[_______] │[_______] │[________]│[↻]│    │
-│  │          │          │          │          │   │    │
-│  ├──────────┼──────────┼──────────┼──────────┼───┤    │
-│  │[______]  │[_______] │[_______] │[________]│[↻]│    │
-│  │          │          │          │          │   │    │
-│  └──────────┴──────────┴──────────┴──────────┴───┘    │
-│                                                          │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  Teacher Assist - Planowanie Lekcji                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Temat tygodnia: [_________________________]                │
+│                                                              │
+│  [Wypełnij wszystko AI] [Dodaj wiersz] [Wyczyść]           │
+│                                                              │
+│  ┌──────────┬──────────┬──────────┬──────────────────┐    │
+│  │ Moduł    │ Podstawa │ Cele     │ Aktywność        │    │
+│  │          │ Program. │          │                  │    │
+│  ├──────────┼──────────┼──────────┼──────────────────┤    │
+│  │[______]  │[_______] │[_______] │[________] [↻][×]│    │
+│  │          │          │          │                  │    │
+│  ├──────────┼──────────┼──────────┼──────────────────┤    │
+│  │[______]  │[_______] │[_______] │[________] [↻][×]│    │
+│  │          │          │          │                  │    │
+│  └──────────┴──────────┴──────────┴──────────────────┘    │
+│                                                              │
+│  [↻] = Wypełnij AI / Generuj ponownie                      │
+│  [×] = Usuń wiersz                                          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### 8.4 Interaction Patterns
@@ -515,8 +515,8 @@ CREATE TABLE educational_modules (
 - **Bulk State:** Progress bar showing "X/Y completed"
 
 #### Confirmation Dialogs
-- **Clear All:** "Czy na pewno chcesz wyczyść wszystkie dane?"
-- **Regenerate (if edited):** "Dane zostały edytowane. Nadpisać?"
+- **Clear All:** "Czy na pewno chcesz wyczyść wszystkie wiersze?"
+- **Regenerate (if edited):** "Wiersz był zmodyfikowany. Nadpisać dane wprowadzone przez użytkownika?"
 
 ---
 
@@ -548,9 +548,13 @@ CREATE TABLE educational_modules (
 
 ### MVP Validation Criteria
 ✅ Teacher can fill 5 activities and generate metadata in < 5 minutes
+
 ✅ AI-generated curriculum references are accurate ≥80% of the time
+
 ✅ AI-generated objectives are relevant and usable ≥80% of the time
+
 ✅ No critical bugs prevent core workflow completion
+
 ✅ Test teacher reports tool is "easier than manual method"
 
 ### Quality Metrics
@@ -668,6 +672,7 @@ CREATE TABLE educational_modules (
 
 ### Appendix B: Reference Documents
 - CLAUDE.md - Development guidelines and git workflow
+- projectPremise.md - Original project concept and UI specifications
 - Podstawa Programowa - Official curriculum document (to be added)
 
 ---
@@ -680,10 +685,7 @@ CREATE TABLE educational_modules (
 
 ---
 
-**Approval Status:** ⏳ Pending Review
-
 **Next Steps:**
-1. Review and approve PRD
 2. Populate curriculum database
 3. Begin Phase 1 development
 4. Set up OpenRouter account
