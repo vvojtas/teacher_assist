@@ -363,7 +363,7 @@ LangGraph AI Service (localhost:8001)
 
 ### 7.3 API Contract
 
-#### Endpoint: `POST http://localhost:8001/api/generate-metadata`
+#### Endpoint: `POST http://localhost:8001/api/fill-work-plan`
 
 **Request Headers:**
 ```
@@ -390,7 +390,8 @@ Content-Type: application/json
 **Error Response (500/503):**
 ```json
 {
-  "error": "string (error message in Polish)"
+  "error_code": "string (describing general error category)"
+  "error": "string (error details)"
 }
 ```
 
