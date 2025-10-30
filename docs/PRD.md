@@ -386,11 +386,11 @@ Content-Type: application/json
 **Success Response Example:**
 ```json
 {
-  "module": "Zabawy matematyczne",
-  "curriculum_refs": ["I.1.2", "II.3.1"],
+  "module": "MATEMATYKA",
+  "curriculum_refs": ["4.15", "4.18"],
   "objectives": [
-    "Rozwijanie umiejętności liczenia",
-    "Poznawanie nazw owoców sezonowych"
+    "Dziecko potrafi przeliczać w zakresie 5",
+    "Rozpoznaje poznane wcześniej cyfry"
   ]
 }
 ```
@@ -546,17 +546,21 @@ CREATE TABLE educational_modules (
 - **Task:** Manual data entry or import script (separate task)
 
 ### 9.2 Educational Modules Initial List
-**Suggested Categories:**
-- Zabawy matematyczne (Mathematical games)
-- Rozwój społeczny (Social development)
-- Formy ekspresji artystycznej (Artistic expression)
-- Rozwój emocjonalny (Emotional development)
-- Aktywność fizyczna (Physical activity)
-- Poznawanie przyrody (Nature exploration)
-- Rozwój mowy i języka (Language development)
-- Zabawy konstrukcyjne (Construction play)
+**Standard Categories (based on Polish curriculum):**
+- JĘZYK (Language)
+- MATEMATYKA (Mathematics)
+- MOTORYKA MAŁA (Fine Motor Skills)
+- MOTORYKA DUŻA (Gross Motor Skills)
+- FORMY PLASTYCZNE (Artistic Forms)
+- MUZYKA (Music)
+- POZNAWCZE (Cognitive)
+- WSPÓŁPRACA (Cooperation)
+- EMOCJE (Emotions)
+- SPOŁECZNE (Social)
+- SENSORYKA (Sensory)
+- ZDROWIE (Health)
 
-**Note:** This list is not exhaustive; AI can suggest new modules.
+**Note:** This list is not exhaustive; AI can suggest new modules or combinations.
 
 ---
 
@@ -675,16 +679,20 @@ CREATE TABLE educational_modules (
 - "Malowanie liści farbami"
 - "Sortowanie kasztanów według wielkości"
 - "Czytanie bajki o jeżu"
+- "Tworzenie logo grupy Promyczki z użyciem kolorowego papieru"
+- "Zabawa ruchowa przy piosence Biegnę do przedszkola"
 
 **Module Examples:**
-- "Zabawy matematyczne"
-- "Rozwój społeczny"
-- "Formy ekspresji artystycznej"
+- "MATEMATYKA" (Mathematics)
+- "JĘZYK" (Language)
+- "FORMY PLASTYCZNE" (Artistic Forms)
+- "MOTORYKA DUŻA" (Gross Motor Skills)
 
 **Objective Examples:**
-- "Rozwijanie umiejętności liczenia"
-- "Poznawanie nazw owoców sezonowych"
-- "Kształtowanie umiejętności współpracy"
+- "Dziecko potrafi przeliczać w zakresie 5"
+- "Dziecko zapoznaje się z literaturą dziecięcą, słucha uważnie wiersza"
+- "Dziecko potrafi współpracować z innymi podczas tworzenia wspólnej pracy"
+- "Rozwijanie koordynacji wzrokowo-ruchowej"
 
 ### Appendix B: Reference Documents
 - CLAUDE.md - Development guidelines and git workflow
