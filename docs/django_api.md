@@ -64,11 +64,11 @@ Content-Type: application/json
 **Success Response (200 OK):**
 ```json
 {
-  "module": "Zabawy matematyczne",
-  "curriculum_refs": ["I.1.2", "II.3.1"],
+  "module": "MATEMATYKA",
+  "curriculum_refs": ["4.15", "4.18"],
   "objectives": [
-    "Rozwijanie umiejętności liczenia",
-    "Poznawanie nazw owoców sezonowych"
+    "Dziecko potrafi przeliczać w zakresie 5",
+    "Rozpoznaje poznane wcześniej cyfry"
   ]
 }
 ```
@@ -108,10 +108,10 @@ Returns complete dictionary of curriculum reference codes and their full Polish 
 ```json
 {
   "references": {
-    "I.1.1": "Dziecko rozumie pojęcie ilości i potrafi liczyć do 10",
-    "I.1.2": "Dziecko rozpoznaje cyfry i umie je zapisać",
-    "II.3.1": "Dziecko zna nazwy owoców i warzyw sezonowych",
-    "II.3.2": "Dziecko rozumie podstawowe pojęcia matematyczne"
+    "1.1": "zgłasza potrzeby fizjologiczne, samodzielnie wykonuje podstawowe czynności higieniczne;",
+    "2.5": "rozstaje się z rodzicami bez lęku, ma świadomość, że rozstanie takie bywa dłuższe lub krótsze;",
+    "3.8": "obdarza uwagą inne dzieci i osoby dorosłe;",
+    "4.15": "przelicza elementy zbiorów w czasie zabawy, prac porządkowych, ćwiczeń i wykonywania innych czynności, posługuje się liczebnikami głównymi i porządkowymi, rozpoznaje cyfry oznaczające liczby od 0 do 10, eksperymentuje z tworzeniem kolejnych liczb, wykonuje dodawanie i odejmowanie w sytuacji użytkowej, liczy obiekty, odróżnia liczenie błędne od poprawnego;"
   },
   "count": 4
 }
@@ -144,18 +144,18 @@ Retrieves full text for a specific curriculum reference code. Alternative to bul
 **Path Parameters:**
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
-| `code` | string | Curriculum reference code | `I.1.2` |
+| `code` | string | Curriculum reference code | `3.8` |
 
 **Example Request:**
 ```
-GET /api/curriculum-refs/I.1.2
+GET /api/curriculum-refs/3.8
 ```
 
 **Success Response (200 OK):**
 ```json
 {
-  "reference_code": "I.1.2",
-  "full_text": "Dziecko rozpoznaje cyfry i umie je zapisać",
+  "reference_code": "3.8",
+  "full_text": "obdarza uwagą inne dzieci i osoby dorosłe;",
   "created_at": "2025-10-28T10:30:00Z"
 }
 ```
@@ -204,24 +204,30 @@ GET /api/modules?ai_suggested=false
   "modules": [
     {
       "id": 1,
-      "name": "Zabawy matematyczne",
+      "name": "JĘZYK",
       "is_ai_suggested": false,
       "created_at": "2025-10-28T10:00:00Z"
     },
     {
       "id": 2,
-      "name": "Rozwój społeczny",
+      "name": "MATEMATYKA",
       "is_ai_suggested": false,
       "created_at": "2025-10-28T10:00:00Z"
     },
     {
       "id": 3,
-      "name": "Eksperymenty naukowe",
-      "is_ai_suggested": true,
-      "created_at": "2025-10-29T14:30:00Z"
+      "name": "MOTORYKA DUŻA",
+      "is_ai_suggested": false,
+      "created_at": "2025-10-28T10:00:00Z"
+    },
+    {
+      "id": 4,
+      "name": "FORMY PLASTYCZNE",
+      "is_ai_suggested": false,
+      "created_at": "2025-10-28T10:00:00Z"
     }
   ],
-  "count": 3
+  "count": 4
 }
 ```
 
