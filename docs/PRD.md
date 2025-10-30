@@ -279,32 +279,21 @@ And updates the metadata with new suggestions
 
 ### 6.2 AI Integration Requirements
 
-#### Input to AI Service
-```json
-{
-  "activity": "Zabawa w sklep z owocami",
-  "theme": "Jesień - zbiory"
-}
-```
+The AI service analyzes teacher-entered activities and automatically generates appropriate educational metadata to reduce manual documentation effort.
 
-#### Expected Output from AI Service
-```json
-{
-  "modul": "Zabawy matematyczne",
-  "podstawa_programowa": ["I.1.2", "II.3.1"],
-  "cele": [
-    "Rozwijanie umiejętności liczenia",
-    "Poznawanie nazw owoców sezonowych"
-  ]
-}
-```
+#### Functional Requirements
+- **Input:** Activity description (required) + weekly theme (optional context)
+- **Output:** Educational module name, curriculum paragraph references, and 2-3 learning objectives
+- **Language:** All AI responses must be in natural Polish (no translation artifacts)
+- **Curriculum Accuracy:** Generated paragraph references must be valid codes from Podstawa Programowa
+- **Contextual Understanding:** AI should consider both activity description and weekly theme when generating metadata
+- **Module Flexibility:** AI can suggest modules beyond predefined list based on activity type
+- **Objective Quality:** Generated objectives should be specific, actionable, and aligned with the activity
 
-#### AI Service Requirements
-- **Response Time:** Target < 10 seconds per row
-- **Timeout:** 120 seconds before showing error
-- **Language:** All AI responses in Polish
-- **Quality:** Must reference valid curriculum paragraphs
-- **Flexibility:** AI can suggest new modules beyond predefined list
+#### Performance Expectations
+- **Target Response Time:** < 10 seconds per row (user experience goal)
+- **Maximum Timeout:** 120 seconds before error message displays
+- **Bulk Processing:** Sequential processing with progress indicators for multiple rows
 
 ### 6.3 Business Rules
 
@@ -370,11 +359,19 @@ LangGraph AI Service (localhost:8001)
 Content-Type: application/json
 ```
 
-**Request Body:**
+**Request Body Schema:**
 ```json
 {
   "activity": "string (required, 1-500 chars)",
   "theme": "string (optional, 0-200 chars)"
+}
+```
+
+**Request Example:**
+```json
+{
+  "activity": "Zabawa w sklep z owocami",
+  "theme": "Jesień - zbiory"
 }
 ```
 
@@ -387,15 +384,34 @@ Content-Type: application/json
 }
 ```
 
+**Success Response Example:**
+```json
+{
+  "modul": "Zabawy matematyczne",
+  "podstawa_programowa": ["I.1.2", "II.3.1"],
+  "cele": [
+    "Rozwijanie umiejętności liczenia",
+    "Poznawanie nazw owoców sezonowych"
+  ]
+}
+```
+
 **Error Response (500/503):**
 ```json
 {
-  "error_code": "string (describing general error category)"
+  "error_code": "string (describing general error category)",
   "error": "string (error details)"
 }
 ```
 
 **Timeout:** 120 seconds
+
+**Validation Rules:**
+- `activity` field cannot be empty string
+- `activity` length must be between 1-500 characters
+- `theme` is optional; if provided, max 200 characters
+- Response `podstawa_programowa` must contain valid curriculum reference codes
+- Response `cele` array should contain 2-3 objectives (flexible)
 
 ### 7.4 LangGraph Workflow
 
