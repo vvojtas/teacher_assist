@@ -33,29 +33,6 @@ LangGraph AI Service (localhost:8001)
 
 ---
 
-## Use Cases
-
-### UC1: Single Row AI Autofill
-**User Story 3:** Teacher enters activity, clicks "Wypełnij AI" button
-**Flow:** Frontend → Django `/api/fill-work-plan` → LangGraph → Django → Frontend
-
-### UC2: Bulk AI Autofill
-**User Story 4:** Teacher clicks "Wypełnij wszystko AI" for multiple rows
-**Flow:** Frontend makes multiple sequential calls to `/api/fill-work-plan`
-
-### UC3: Regenerate Metadata
-**User Story 10:** Teacher unsatisfied with AI output, clicks "Generuj ponownie"
-**Flow:** Same as UC1, called again with same input
-
-### UC4: Curriculum Reference Tooltips
-**User Story 6:** Teacher hovers over curriculum reference code (e.g., "I.1.2")
-**Flow:** Frontend uses data from `/api/curriculum-references` (loaded on page load)
-
-### UC5: Page Load Initialization
-**User Story 1:** Teacher opens application
-**Flow:** Frontend loads curriculum references and optionally modules list
-
----
 
 ## API Endpoints
 
@@ -87,9 +64,9 @@ Content-Type: application/json
 **Success Response (200 OK):**
 ```json
 {
-  "modul": "Zabawy matematyczne",
-  "podstawa_programowa": ["I.1.2", "II.3.1"],
-  "cele": [
+  "module": "Zabawy matematyczne",
+  "curriculum_refs": ["I.1.2", "II.3.1"],
+  "objectives": [
     "Rozwijanie umiejętności liczenia",
     "Poznawanie nazw owoców sezonowych"
   ]
@@ -99,56 +76,21 @@ Content-Type: application/json
 **Response Schema:**
 | Field | Type | Description |
 |-------|------|-------------|
-| `modul` | string | Educational module name |
-| `podstawa_programowa` | array[string] | Curriculum reference codes |
-| `cele` | array[string] | Educational objectives (typically 2-3) |
+| `module` | string | Educational module name |
+| `curriculum_refs` | array[string] | Curriculum reference codes |
+| `objectives` | array[string] | Educational objectives (typically 2-3) |
 
 **Error Responses:**
+- `400 INVALID_INPUT` - Empty or invalid activity field
+- `503 AI_SERVICE_UNAVAILABLE` - LangGraph service unreachable
+- `504 AI_SERVICE_TIMEOUT` - Request exceeds 120s timeout
+- `500 INTERNAL_ERROR` - Unexpected server errors
 
-**400 Bad Request** - Invalid input
-```json
-{
-  "error": "Pole 'activity' nie może być puste",
-  "error_code": "INVALID_INPUT"
-}
-```
-
-**503 Service Unavailable** - LangGraph service down
-```json
-{
-  "error": "Nie można połączyć z usługą AI. Wypełnij dane ręcznie.",
-  "error_code": "AI_SERVICE_UNAVAILABLE"
-}
-```
-
-**504 Gateway Timeout** - LangGraph response timeout (>120s)
-```json
-{
-  "error": "Przekroczono limit czasu oczekiwania. Spróbuj ponownie.",
-  "error_code": "AI_SERVICE_TIMEOUT"
-}
-```
-
-**500 Internal Server Error** - Other errors
-```json
-{
-  "error": "Wystąpił nieoczekiwany błąd. Spróbuj ponownie.",
-  "error_code": "INTERNAL_ERROR"
-}
-```
+*See [Error Handling Guidelines](#error-handling-guidelines) for full error response format.*
 
 **Implementation Notes:**
-- Django proxies request to LangGraph service at `http://localhost:8001/api/fill-work-plan`
-- Timeout: 120 seconds (as per PRD section 6.2)
-- Validates input before forwarding to LangGraph
-- Transforms/validates response from LangGraph before returning to frontend
-- Logs all requests and responses for debugging
-
-**Validation Rules:**
-- `activity` must not be empty or whitespace-only
-- `activity` length: 1-500 characters
-- `theme` is optional; if provided, max 200 characters
-- Response `podstawa_programowa` codes should match format: `Roman.Arabic.Arabic`
+- Proxies to LangGraph service at `http://localhost:8001/api/fill-work-plan` with 120s timeout
+- Validates: `activity` (1-500 chars, non-empty), `theme` (optional, max 200 chars)
 
 ---
 
@@ -156,7 +98,7 @@ Content-Type: application/json
 
 Returns complete dictionary of curriculum reference codes and their full Polish text. Used for tooltip display.
 
-**Endpoint:** `GET /api/curriculum-references`
+**Endpoint:** `GET /api/curriculum-refs`
 
 **Request Headers:** None required
 
@@ -182,26 +124,14 @@ Returns complete dictionary of curriculum reference codes and their full Polish 
 | `count` | integer | Total number of curriculum references |
 
 **Error Responses:**
+- `500 DATABASE_ERROR` - Database query failure
 
-**500 Internal Server Error** - Database error
-```json
-{
-  "error": "Nie można pobrać danych z bazy",
-  "error_code": "DATABASE_ERROR"
-}
-```
+*See [Error Handling Guidelines](#error-handling-guidelines) for full error response format.*
 
 **Implementation Notes:**
-- Queries `curriculum_references` table
-- Returns all records as key-value pairs
-- Response should be cached on frontend (data rarely changes)
-- Consider adding `Last-Modified` header for caching
-- Data loaded on page initialization
-
-**Performance:**
-- Target response time: <500ms
-- Expected payload size: ~50-100 references (estimated 5-10KB)
-- Can be cached indefinitely on frontend
+- Queries all records from `curriculum_references` table
+- Frontend should cache response (data rarely changes)
+- Expected payload: ~50-100 references (5-10KB), <500ms response time
 
 ---
 
@@ -209,7 +139,7 @@ Returns complete dictionary of curriculum reference codes and their full Polish 
 
 Retrieves full text for a specific curriculum reference code. Alternative to bulk loading.
 
-**Endpoint:** `GET /api/curriculum-references/<code>`
+**Endpoint:** `GET /api/curriculum-refs/<code>`
 
 **Path Parameters:**
 | Parameter | Type | Description | Example |
@@ -218,7 +148,7 @@ Retrieves full text for a specific curriculum reference code. Alternative to bul
 
 **Example Request:**
 ```
-GET /api/curriculum-references/I.1.2
+GET /api/curriculum-refs/I.1.2
 ```
 
 **Success Response (200 OK):**
@@ -238,34 +168,14 @@ GET /api/curriculum-references/I.1.2
 | `created_at` | string (ISO 8601) | When this reference was added to database |
 
 **Error Responses:**
+- `404 REFERENCE_NOT_FOUND` - Curriculum reference code doesn't exist
+- `400 INVALID_CODE_FORMAT` - Invalid code format
 
-**404 Not Found** - Curriculum reference does not exist
-```json
-{
-  "error": "Nie znaleziono odniesienia do podstawy programowej",
-  "error_code": "REFERENCE_NOT_FOUND",
-  "requested_code": "I.1.2"
-}
-```
-
-**400 Bad Request** - Invalid code format
-```json
-{
-  "error": "Nieprawidłowy format kodu podstawy programowej",
-  "error_code": "INVALID_CODE_FORMAT"
-}
-```
+*See [Error Handling Guidelines](#error-handling-guidelines) for full error response format.*
 
 **Implementation Notes:**
-- Queries `curriculum_references` table by `reference_code`
-- Returns 404 if reference not found (not an error, just missing data)
-- Code format validation: Should match pattern `[IVX]+\.\d+\.\d+` (Roman.Number.Number)
-- Consider URL encoding for special characters (though unlikely in curriculum codes)
-
-**Use Cases:**
-- On-demand tooltip loading (if not using bulk load)
-- Validation of AI-generated curriculum codes
-- Debugging/verification during development
+- Single record lookup from `curriculum_references` table by code
+- Use case: On-demand tooltip loading or debugging
 
 ---
 
@@ -326,23 +236,14 @@ GET /api/modules?ai_suggested=false
 | `count` | integer | Total number of modules returned |
 
 **Error Responses:**
+- `500 DATABASE_ERROR` - Database query failure
 
-**500 Internal Server Error** - Database error
-```json
-{
-  "error": "Nie można pobrać listy modułów",
-  "error_code": "DATABASE_ERROR"
-}
-```
+*See [Error Handling Guidelines](#error-handling-guidelines) for full error response format.*
 
 **Implementation Notes:**
-- Queries `educational_modules` table
-- Supports filtering by `is_ai_suggested` flag
-- Ordered alphabetically by `name`
-- Can be used for frontend autocomplete/suggestions
-- New modules may be added by AI during operation
-
-**MVP Status:** Optional endpoint - not critical for core workflow. May be deferred to Phase 2.
+- Queries `educational_modules` table, ordered alphabetically
+- Optional filtering by `is_ai_suggested` flag
+- **MVP Status:** Optional endpoint (may be deferred to Phase 2)
 
 ---
 
@@ -387,161 +288,8 @@ All error messages must be in Polish, user-friendly, and actionable:
 - Use `requests.timeout` parameter when calling LangGraph
 - Return 504 Gateway Timeout with user-friendly Polish message
 
----
-
-## Database Models Reference
-
-### Curriculum References Table
-```python
-# Model: CurriculumReference
-# Table: curriculum_references
-
-Fields:
-- id: AutoField (primary key)
-- reference_code: CharField(max_length=20, unique=True)
-  Example: "I.1.2"
-- full_text: TextField
-  Example: "Dziecko rozpoznaje cyfry i umie je zapisać"
-- created_at: DateTimeField(auto_now_add=True)
-```
-
-### Educational Modules Table
-```python
-# Model: EducationalModule
-# Table: educational_modules
-
-Fields:
-- id: AutoField (primary key)
-- module_name: CharField(max_length=200, unique=True)
-  Example: "Zabawy matematyczne"
-- is_ai_suggested: BooleanField(default=True)
-- created_at: DateTimeField(auto_now_add=True)
-```
-
-**Note:** Session data (themes, activities, generated metadata) is NOT persisted in MVP.
-
----
 
 ## CORS and Security
 
-### MVP Security Profile
-- **Authentication:** None (local deployment only)
-- **HTTPS:** Not required (localhost only)
-- **CORS:** Not needed (same origin)
-- **API Key:** Not required for Django endpoints
+**MVP:** Local deployment only - no authentication, HTTPS, or CORS required. Django backend holds OpenRouter API key (environment variable); never exposed to frontend. LangGraph service only accepts localhost connections.
 
-### LangGraph Service Communication
-- Django backend holds OpenRouter API key (environment variable)
-- API key NEVER exposed to frontend
-- LangGraph service only accepts connections from localhost
-
-### Future Considerations (Post-MVP)
-- Add authentication when moving to multi-user deployment
-- Implement rate limiting for AI calls
-- Add CSRF protection for state-changing operations
-- Use HTTPS in production
-
----
-
-## Performance Requirements
-
-Based on PRD Section 7.6:
-
-| Endpoint | Target Response Time | Notes |
-|----------|---------------------|-------|
-| `POST /api/fill-work-plan` | < 30s | Includes LangGraph call; 120s timeout |
-| `GET /api/curriculum-references` | < 500ms | Database query, ~50-100 records |
-| `GET /api/curriculum-references/<code>` | < 200ms | Single record lookup |
-| `GET /api/modules` | < 500ms | Database query |
-
-**Frontend Experience:**
-- Show loading indicators immediately
-- Display progress for bulk operations
-- Allow user to continue working (non-blocking where possible)
-
----
-
-## Testing Endpoints
-
-### Manual Testing with cURL
-
-**Test Fill Work Plan:**
-```bash
-curl -X POST http://localhost:8000/api/fill-work-plan \
-  -H "Content-Type: application/json" \
-  -d '{
-    "activity": "Zabawa w sklep z owocami",
-    "theme": "Jesień - zbiory"
-  }'
-```
-
-**Test Get All Curriculum References:**
-```bash
-curl http://localhost:8000/api/curriculum-references
-```
-
-**Test Lookup Specific Reference:**
-```bash
-curl http://localhost:8000/api/curriculum-references/I.1.2
-```
-
-**Test Get Modules:**
-```bash
-curl http://localhost:8000/api/modules
-```
-
-### Test Data Requirements
-
-For testing, seed database with:
-- At least 10-20 curriculum references
-- At least 5-8 predefined educational modules
-- Mix of predefined and AI-suggested modules
-
----
-
-## Implementation Checklist
-
-### Phase 1: Core Endpoints
-- [ ] Implement `POST /api/fill-work-plan`
-  - [ ] Input validation
-  - [ ] LangGraph HTTP client integration
-  - [ ] Timeout handling (120s)
-  - [ ] Error transformation to Polish
-  - [ ] Response validation
-- [ ] Implement `GET /api/curriculum-references`
-  - [ ] Query all curriculum references
-  - [ ] Return as dictionary
-  - [ ] Handle empty database gracefully
-- [ ] Implement `GET /api/curriculum-references/<code>`
-  - [ ] Single record lookup
-  - [ ] Return 404 for missing codes
-  - [ ] Code format validation
-
-### Phase 2: Optional Endpoints
-- [ ] Implement `GET /api/modules`
-  - [ ] Query educational modules
-  - [ ] Support filtering
-  - [ ] Alphabetical ordering
-
-### Phase 3: Testing & Polish
-- [ ] Write unit tests for all endpoints
-- [ ] Test error scenarios
-- [ ] Verify all error messages in Polish
-- [ ] Load testing (especially bulk operations)
-- [ ] Integration testing with LangGraph service
-
----
-
-## Related Documentation
-
-- [PRD.md](./PRD.md) - Product Requirements Document
-- [CLAUDE.md](../CLAUDE.md) - Development guidelines and git workflow
-- LangGraph API specification (see PRD.md Section 7.3)
-
----
-
-## Changelog
-
-| Date | Version | Changes |
-|------|---------|---------|
-| 2025-10-30 | 1.0 | Initial Django API specification for MVP |

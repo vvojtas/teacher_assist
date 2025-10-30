@@ -299,7 +299,6 @@ The AI service analyzes teacher-entered activities and automatically generates a
 
 #### Validation Rules
 - Activity field cannot be empty when triggering autofill
-- Curriculum references must match format: Roman.Arabic.Arabic (e.g., "I.1.2")
 - At least one row must have content to enable bulk autofill
 
 #### Override Rules
@@ -378,18 +377,18 @@ Content-Type: application/json
 **Success Response (200):**
 ```json
 {
-  "modul": "string",
-  "podstawa_programowa": ["string", "string"],
-  "cele": ["string", "string", "string"]
+  "module": "string",
+  "curriculum_refs": ["string", "string"],
+  "objectives": ["string", "string", "string"]
 }
 ```
 
 **Success Response Example:**
 ```json
 {
-  "modul": "Zabawy matematyczne",
-  "podstawa_programowa": ["I.1.2", "II.3.1"],
-  "cele": [
+  "module": "Zabawy matematyczne",
+  "curriculum_refs": ["I.1.2", "II.3.1"],
+  "objectives": [
     "Rozwijanie umiejętności liczenia",
     "Poznawanie nazw owoców sezonowych"
   ]
@@ -410,8 +409,8 @@ Content-Type: application/json
 - `activity` field cannot be empty string
 - `activity` length must be between 1-500 characters
 - `theme` is optional; if provided, max 200 characters
-- Response `podstawa_programowa` must contain valid curriculum reference codes
-- Response `cele` array should contain 2-3 objectives (flexible)
+- Response `curriculum_refs` must contain valid curriculum reference codes
+- Response `objectives` array should contain 2-3 objectives (flexible)
 
 ### 7.4 LangGraph Workflow
 
