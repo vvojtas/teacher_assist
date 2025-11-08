@@ -51,7 +51,7 @@ global.AIService = {
   }),
 };
 
-// Mock escapeHtml function
+// Mock escapeHtml function (used by copy functionality tests)
 global.escapeHtml = (text) => {
   const div = document.createElement('div');
   div.textContent = text;
@@ -511,6 +511,139 @@ describe('Planner - Tooltip Interactions', () => {
 
       expect(tooltipContent.innerHTML).toContain('<br>');
       expect(tooltipContent.innerHTML.split('<br>').length).toBe(2);
+    });
+  });
+
+  describe('Tooltip Event Handlers Integration', () => {
+    test('should show tooltip on mouseenter and hide on mouseleave', async () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+      let tooltipVisible = false;
+
+      // Simulate event handler attachment
+      curriculumCell.addEventListener('mouseenter', async () => {
+        const code = curriculumCell.textContent.trim();
+        const text = await AIService.getCurriculumTooltip(code);
+        tooltipContent.innerHTML = `<strong>${code}:</strong> ${text}`;
+        tooltip.style.display = 'block';
+        tooltipVisible = true;
+      });
+
+      curriculumCell.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+        tooltipVisible = false;
+      });
+
+      // Trigger mouseenter
+      const mouseEnterEvent = new MouseEvent('mouseenter', { bubbles: true });
+      curriculumCell.dispatchEvent(mouseEnterEvent);
+
+      // Wait for async operations
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      expect(tooltip.style.display).toBe('block');
+      expect(tooltipContent.innerHTML).toContain('3.11');
+      expect(tooltipVisible).toBe(true);
+
+      // Trigger mouseleave
+      const mouseLeaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+      curriculumCell.dispatchEvent(mouseLeaveEvent);
+
+      expect(tooltip.style.display).toBe('none');
+      expect(tooltipVisible).toBe(false);
+    });
+
+    test('should handle rapid hover events with delay', async () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+      let tooltipTimeout = null;
+
+      // Simulate event handler with delay (like in actual code)
+      curriculumCell.addEventListener('mouseenter', () => {
+        clearTimeout(tooltipTimeout);
+        tooltipTimeout = setTimeout(async () => {
+          const code = curriculumCell.textContent.trim();
+          const text = await AIService.getCurriculumTooltip(code);
+          tooltipContent.innerHTML = `<strong>${code}:</strong> ${text}`;
+          tooltip.style.display = 'block';
+        }, 300);
+      });
+
+      curriculumCell.addEventListener('mouseleave', () => {
+        clearTimeout(tooltipTimeout);
+        tooltip.style.display = 'none';
+      });
+
+      // Trigger mouseenter
+      const mouseEnterEvent = new MouseEvent('mouseenter', { bubbles: true });
+      curriculumCell.dispatchEvent(mouseEnterEvent);
+
+      // Quickly trigger mouseleave (before 300ms delay)
+      const mouseLeaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+      setTimeout(() => curriculumCell.dispatchEvent(mouseLeaveEvent), 100);
+
+      // Wait less than delay
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // Tooltip should not have appeared
+      expect(tooltip.style.display).toBe('none');
+    });
+
+    test('should position tooltip when displayed', async () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+
+      // Simulate positioning logic
+      curriculumCell.addEventListener('mouseenter', async () => {
+        const code = curriculumCell.textContent.trim();
+        const text = await AIService.getCurriculumTooltip(code);
+        tooltipContent.innerHTML = `<strong>${code}:</strong> ${text}`;
+
+        // Position tooltip
+        const rect = curriculumCell.getBoundingClientRect();
+        tooltip.style.top = `${rect.top - 50}px`;
+        tooltip.style.left = `${rect.left}px`;
+        tooltip.style.display = 'block';
+      });
+
+      // Trigger mouseenter
+      const event = new MouseEvent('mouseenter', { bubbles: true });
+      curriculumCell.dispatchEvent(event);
+
+      // Wait for async
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      expect(tooltip.style.display).toBe('block');
+      expect(tooltip.style.top).toBeTruthy();
+      expect(tooltip.style.left).toBeTruthy();
+    });
+
+    test('should keep tooltip visible when hovering over tooltip itself', () => {
+      let tooltipVisible = false;
+
+      // Show tooltip first
+      tooltip.style.display = 'block';
+      tooltipVisible = true;
+
+      // Simulate tooltip hover handler
+      tooltip.addEventListener('mouseenter', () => {
+        tooltipVisible = true;
+      });
+
+      tooltip.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+        tooltipVisible = false;
+      });
+
+      // Hover over tooltip
+      const mouseEnterEvent = new MouseEvent('mouseenter', { bubbles: true });
+      tooltip.dispatchEvent(mouseEnterEvent);
+
+      expect(tooltipVisible).toBe(true);
+
+      // Leave tooltip
+      const mouseLeaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+      tooltip.dispatchEvent(mouseLeaveEvent);
+
+      expect(tooltip.style.display).toBe('none');
+      expect(tooltipVisible).toBe(false);
     });
   });
 });

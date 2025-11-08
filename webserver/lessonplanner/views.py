@@ -7,7 +7,6 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
-from django.utils.html import escape
 
 from .services.ai_client import generate_metadata, get_curriculum_text
 
@@ -47,8 +46,8 @@ def generate_metadata_view(request):
     try:
         # Parse request body
         data = json.loads(request.body)
-        activity = escape(data.get('activity', '').strip())
-        theme = escape(data.get('theme', '').strip())
+        activity = data.get('activity', '').strip()
+        theme = data.get('theme', '').strip()
 
         # Validate activity
         if not activity:
@@ -128,7 +127,7 @@ def generate_bulk_view(request):
     try:
         # Parse request body
         data = json.loads(request.body)
-        theme = escape(data.get('theme', '').strip())
+        theme = data.get('theme', '').strip()
         activities = data.get('activities', [])
 
         if not activities:
@@ -148,7 +147,7 @@ def generate_bulk_view(request):
         results = []
         for item in activities:
             row_id = item.get('id')
-            activity = escape(item.get('activity', '').strip())
+            activity = item.get('activity', '').strip()
 
             if not activity:
                 # Skip empty activities

@@ -17,6 +17,21 @@ const AIService = {
     REQUEST_TIMEOUT: 120000,
 
     /**
+     * Get user-friendly error message based on error type
+     * @param {Error} error - The error object
+     * @returns {string} User-friendly error message in Polish
+     */
+    getUserFriendlyErrorMessage(error) {
+        if (error.name === 'AbortError') {
+            return 'Żądanie przekroczyło limit czasu (120s). Spróbuj ponownie.';
+        } else if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
+            return 'Nie można połączyć z usługą AI. Sprawdź połączenie internetowe.';
+        } else {
+            return error.message || 'Wystąpił nieoczekiwany błąd.';
+        }
+    },
+
+    /**
      * Generate metadata for a single row
      * @param {string} rowId - The ID of the row to update
      * @param {string} activity - The activity text
@@ -67,18 +82,7 @@ const AIService = {
         } catch (error) {
             clearTimeout(timeoutId);
             console.error('Error generating metadata:', error);
-
-            // User-friendly error messages
-            let userMessage;
-            if (error.name === 'AbortError') {
-                userMessage = 'Żądanie przekroczyło limit czasu (120s). Spróbuj ponownie.';
-            } else if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
-                userMessage = 'Nie można połączyć z usługą AI. Sprawdź połączenie internetowe.';
-            } else {
-                userMessage = error.message || 'Wystąpił nieoczekiwany błąd.';
-            }
-
-            this.showError(userMessage);
+            this.showError(this.getUserFriendlyErrorMessage(error));
             throw error;
 
         } finally {
@@ -184,18 +188,7 @@ const AIService = {
         } catch (error) {
             clearTimeout(timeoutId);
             console.error('Error in bulk generation:', error);
-
-            // User-friendly error messages
-            let userMessage;
-            if (error.name === 'AbortError') {
-                userMessage = 'Żądanie przekroczyło limit czasu (120s). Spróbuj ponownie.';
-            } else if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
-                userMessage = 'Nie można połączyć z usługą AI. Sprawdź połączenie internetowe.';
-            } else {
-                userMessage = error.message || 'Wystąpił nieoczekiwany błąd.';
-            }
-
-            this.showError(userMessage);
+            this.showError(this.getUserFriendlyErrorMessage(error));
             throw error;
 
         } finally {
