@@ -3,6 +3,8 @@ Views for the lesson planner application
 """
 
 import json
+import logging
+
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -11,6 +13,9 @@ from django.views.decorators.http import require_http_methods
 from .services.ai_client import generate_metadata, get_curriculum_text
 from .forms import FillWorkPlanForm
 from .fixtures.mock_data import MOCK_CURRICULUM_REFS, MOCK_EDUCATIONAL_MODULES
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
 
 
 @ensure_csrf_cookie
@@ -102,11 +107,14 @@ def fill_work_plan_view(request):
         }, status=504)
 
     except Exception as e:
-        # Log unexpected errors for debugging (in production, use proper logging)
-        import sys
-        print(f"Unexpected error in fill_work_plan_view: {e}", file=sys.stderr)
+        # Log unexpected errors for debugging
+        logger.error(
+            "Unexpected error in fill_work_plan_view: %s",
+            e,
+            exc_info=True  # Include full stack trace
+        )
         return JsonResponse({
-            'error': 'Nie można połączyć z usługą AI. Wypełnij dane ręcznie.',
+            'error': 'Wystąpił nieoczekiwany błąd serwera. Spróbuj ponownie lub wypełnij dane ręcznie.',
             'error_code': 'INTERNAL_ERROR'
         }, status=500)
 
@@ -138,6 +146,11 @@ def get_all_curriculum_refs_view(request):
         }, status=200)
 
     except Exception as e:
+        logger.error(
+            "Unexpected error in get_all_curriculum_refs_view: %s",
+            e,
+            exc_info=True
+        )
         return JsonResponse({
             'error': 'Błąd bazy danych przy pobieraniu odniesień',
             'error_code': 'DATABASE_ERROR'
@@ -186,6 +199,11 @@ def get_curriculum_ref_by_code_view(request, code):
         }, status=200)
 
     except Exception as e:
+        logger.error(
+            "Unexpected error in get_curriculum_ref_by_code_view: %s",
+            e,
+            exc_info=True
+        )
         return JsonResponse({
             'error': 'Błąd bazy danych',
             'error_code': 'DATABASE_ERROR'
@@ -237,6 +255,11 @@ def get_modules_view(request):
         }, status=200)
 
     except Exception as e:
+        logger.error(
+            "Unexpected error in get_modules_view: %s",
+            e,
+            exc_info=True
+        )
         return JsonResponse({
             'error': 'Błąd bazy danych przy pobieraniu modułów',
             'error_code': 'DATABASE_ERROR'
