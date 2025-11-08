@@ -21,12 +21,23 @@ webserver/
 │   ├── settings.py
 │   ├── urls.py
 │   └── wsgi.py/asgi.py
+├── lessonplanner/              # Lesson planning app (main app)
+│   ├── models.py               # Database models
+│   ├── views.py                # View functions & API endpoints
+│   ├── urls.py                 # App URL configuration
+│   ├── migrations/             # Database migrations
+│   ├── package.json            # JavaScript dependencies (Jest)
+│   ├── static/lessonplanner/   # Static assets
+│   │   ├── css/                # Stylesheets
+│   │   └── js/                 # JavaScript modules & tests
+│   └── templates/              # Django templates
 └── hello/                      # Example Django app (placeholder)
-    ├── models.py               # Database models
-    ├── views.py                # View functions
-    ├── urls.py                 # App URL configuration
-    └── migrations/             # Database migrations
 ```
+
+## Django Apps
+
+**lessonplanner:** Monthly lesson planning interface for Polish kindergarten teachers. Single-page table UI with AI-powered metadata generation. Uses vanilla JavaScript with modular architecture (TableManager, AIService). Includes Jest-based tests for both Python and JavaScript.
+
 
 ## Essential Commands
 
