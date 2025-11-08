@@ -10,7 +10,6 @@ from django.views.decorators.http import require_http_methods
 
 from .services.ai_client import generate_metadata, get_curriculum_text
 from .forms import FillWorkPlanForm
-from .models import CurriculumReference, EducationalModule
 
 
 @ensure_csrf_cookie
@@ -106,6 +105,8 @@ def get_all_curriculum_refs_view(request):
     """
     Get all curriculum references (for tooltips and caching).
 
+    MOCK IMPLEMENTATION: Returns sample curriculum reference data.
+
     Returns:
     {
         "references": {
@@ -120,13 +121,13 @@ def get_all_curriculum_refs_view(request):
     - 500 DATABASE_ERROR - Database query failure
     """
     try:
-        # Query all curriculum references from database
-        refs = CurriculumReference.objects.all()
-
-        # Build dictionary mapping code to text
+        # Mock curriculum references data
         references = {
-            ref.reference_code: ref.full_text
-            for ref in refs
+            "1.1": "zgłasza potrzeby fizjologiczne, samodzielnie wykonuje podstawowe czynności higieniczne;",
+            "2.5": "rozstaje się z rodzicami bez lęku, ma świadomość, że rozstanie takie bywa dłuższe lub krótsze;",
+            "3.8": "obdarza uwagą inne dzieci i osoby dorosłe;",
+            "4.15": "przelicza elementy zbiorów w czasie zabawy, prac porządkowych, ćwiczeń i wykonywania innych czynności, posługuje się liczebnikami głównymi i porządkowymi, rozpoznaje cyfry oznaczające liczby od 0 do 10, eksperymentuje z tworzeniem kolejnych liczb, wykonuje dodawanie i odejmowanie w sytuacji użytkowej, liczy obiekty, odróżnia liczenie błędne od poprawnego;",
+            "4.18": "eksperymentuje w zakresie orientacji przestrzennej: wysoko – nisko, blisko – daleko, z przodu – z tyłu, nad – pod, prawo – lewo, góra – dół;"
         }
 
         return JsonResponse({
@@ -145,6 +146,8 @@ def get_all_curriculum_refs_view(request):
 def get_curriculum_ref_by_code_view(request, code):
     """
     Lookup curriculum reference by code.
+
+    MOCK IMPLEMENTATION: Returns sample curriculum reference data.
 
     URL parameter: code (e.g., "3.8", "4.15")
 
@@ -167,20 +170,27 @@ def get_curriculum_ref_by_code_view(request, code):
                 'error_code': 'INVALID_CODE_FORMAT'
             }, status=400)
 
+        # Mock curriculum references data
+        mock_references = {
+            "1.1": "zgłasza potrzeby fizjologiczne, samodzielnie wykonuje podstawowe czynności higieniczne;",
+            "2.5": "rozstaje się z rodzicami bez lęku, ma świadomość, że rozstanie takie bywa dłuższe lub krótsze;",
+            "3.8": "obdarza uwagą inne dzieci i osoby dorosłe;",
+            "4.15": "przelicza elementy zbiorów w czasie zabawy, prac porządkowych, ćwiczeń i wykonywania innych czynności, posługuje się liczebnikami głównymi i porządkowymi, rozpoznaje cyfry oznaczające liczby od 0 do 10, eksperymentuje z tworzeniem kolejnych liczb, wykonuje dodawanie i odejmowanie w sytuacji użytkowej, liczy obiekty, odróżnia liczenie błędne od poprawnego;",
+            "4.18": "eksperymentuje w zakresie orientacji przestrzennej: wysoko – nisko, blisko – daleko, z przodu – z tyłu, nad – pod, prawo – lewo, góra – dół;"
+        }
+
         # Lookup curriculum reference
-        ref = CurriculumReference.objects.get(reference_code=code)
+        if code not in mock_references:
+            return JsonResponse({
+                'error': f'Nie znaleziono odniesienia dla kodu: {code}',
+                'error_code': 'REFERENCE_NOT_FOUND'
+            }, status=404)
 
         return JsonResponse({
-            'reference_code': ref.reference_code,
-            'full_text': ref.full_text,
-            'created_at': ref.created_at.isoformat()
+            'reference_code': code,
+            'full_text': mock_references[code],
+            'created_at': '2025-10-28T10:30:00Z'
         }, status=200)
-
-    except CurriculumReference.DoesNotExist:
-        return JsonResponse({
-            'error': f'Nie znaleziono odniesienia dla kodu: {code}',
-            'error_code': 'REFERENCE_NOT_FOUND'
-        }, status=404)
 
     except Exception as e:
         return JsonResponse({
@@ -193,6 +203,8 @@ def get_curriculum_ref_by_code_view(request, code):
 def get_modules_view(request):
     """
     Get all educational modules with optional filtering.
+
+    MOCK IMPLEMENTATION: Returns sample educational module data.
 
     Query Parameters:
     - ai_suggested (optional): Filter by AI-suggested flag (true/false)
@@ -218,24 +230,47 @@ def get_modules_view(request):
         # Get optional filter parameter
         ai_suggested_param = request.GET.get('ai_suggested', None)
 
-        # Query modules with optional filtering
-        modules = EducationalModule.objects.all()
+        # Mock educational modules data
+        all_modules = [
+            {
+                'id': 1,
+                'name': 'JĘZYK',
+                'is_ai_suggested': False,
+                'created_at': '2025-10-28T10:00:00Z'
+            },
+            {
+                'id': 2,
+                'name': 'MATEMATYKA',
+                'is_ai_suggested': False,
+                'created_at': '2025-10-28T10:00:00Z'
+            },
+            {
+                'id': 3,
+                'name': 'MOTORYKA DUŻA',
+                'is_ai_suggested': False,
+                'created_at': '2025-10-28T10:00:00Z'
+            },
+            {
+                'id': 4,
+                'name': 'FORMY PLASTYCZNE',
+                'is_ai_suggested': False,
+                'created_at': '2025-10-28T10:00:00Z'
+            },
+            {
+                'id': 5,
+                'name': 'EDUKACJA MUZYCZNA',
+                'is_ai_suggested': True,
+                'created_at': '2025-10-28T10:00:00Z'
+            }
+        ]
 
+        # Apply filtering if requested
         if ai_suggested_param is not None:
             # Convert string to boolean
             ai_suggested = ai_suggested_param.lower() in ('true', '1', 'yes')
-            modules = modules.filter(is_ai_suggested=ai_suggested)
-
-        # Build response
-        modules_data = [
-            {
-                'id': module.id,
-                'name': module.module_name,
-                'is_ai_suggested': module.is_ai_suggested,
-                'created_at': module.created_at.isoformat()
-            }
-            for module in modules
-        ]
+            modules_data = [m for m in all_modules if m['is_ai_suggested'] == ai_suggested]
+        else:
+            modules_data = all_modules
 
         return JsonResponse({
             'modules': modules_data,

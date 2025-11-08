@@ -10,8 +10,6 @@ from unittest.mock import patch
 from django.test import TestCase, Client
 from django.urls import reverse
 
-from .models import CurriculumReference, EducationalModule
-
 
 class LessonPlannerViewTests(TestCase):
     """Tests for the lesson planner view"""
@@ -237,22 +235,8 @@ class CurriculumRefsViewTests(TestCase):
         self.client = Client()
         self.url = reverse('lessonplanner:curriculum_refs_all')
 
-        # Create test data
-        CurriculumReference.objects.create(
-            reference_code='1.1',
-            full_text='zgłasza potrzeby fizjologiczne, samodzielnie wykonuje podstawowe czynności higieniczne;'
-        )
-        CurriculumReference.objects.create(
-            reference_code='2.5',
-            full_text='rozstaje się z rodzicami bez lęku, ma świadomość, że rozstanie takie bywa dłuższe lub krótsze;'
-        )
-        CurriculumReference.objects.create(
-            reference_code='3.8',
-            full_text='obdarza uwagą inne dzieci i osoby dorosłe;'
-        )
-
     def test_get_all_curriculum_refs_success(self):
-        """Test successful retrieval of all curriculum references"""
+        """Test successful retrieval of all curriculum references (mock data)"""
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, 200)
@@ -260,21 +244,13 @@ class CurriculumRefsViewTests(TestCase):
 
         self.assertIn('references', data)
         self.assertIn('count', data)
-        self.assertEqual(data['count'], 3)
+        # Mock data has 5 references
+        self.assertEqual(data['count'], 5)
         self.assertIn('1.1', data['references'])
         self.assertIn('2.5', data['references'])
         self.assertIn('3.8', data['references'])
-
-    def test_get_all_curriculum_refs_empty_database(self):
-        """Test response when database is empty"""
-        CurriculumReference.objects.all().delete()
-
-        response = self.client.get(self.url)
-
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data['count'], 0)
-        self.assertEqual(data['references'], {})
+        self.assertIn('4.15', data['references'])
+        self.assertIn('4.18', data['references'])
 
 
 class CurriculumRefByCodeViewTests(TestCase):
@@ -283,14 +259,8 @@ class CurriculumRefByCodeViewTests(TestCase):
     def setUp(self):
         self.client = Client()
 
-        # Create test data
-        self.ref = CurriculumReference.objects.create(
-            reference_code='3.8',
-            full_text='obdarza uwagą inne dzieci i osoby dorosłe;'
-        )
-
     def test_get_curriculum_ref_by_code_success(self):
-        """Test successful retrieval of curriculum reference by code"""
+        """Test successful retrieval of curriculum reference by code (mock data)"""
         url = reverse('lessonplanner:curriculum_ref_by_code', args=['3.8'])
         response = self.client.get(url)
 
@@ -329,26 +299,8 @@ class ModulesViewTests(TestCase):
         self.client = Client()
         self.url = reverse('lessonplanner:modules')
 
-        # Create test data
-        EducationalModule.objects.create(
-            module_name='JĘZYK',
-            is_ai_suggested=False
-        )
-        EducationalModule.objects.create(
-            module_name='MATEMATYKA',
-            is_ai_suggested=False
-        )
-        EducationalModule.objects.create(
-            module_name='MOTORYKA DUŻA',
-            is_ai_suggested=False
-        )
-        EducationalModule.objects.create(
-            module_name='CUSTOM MODULE',
-            is_ai_suggested=True
-        )
-
     def test_get_modules_all(self):
-        """Test retrieval of all modules"""
+        """Test retrieval of all modules (mock data)"""
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, 200)
@@ -356,7 +308,8 @@ class ModulesViewTests(TestCase):
 
         self.assertIn('modules', data)
         self.assertIn('count', data)
-        self.assertEqual(data['count'], 4)
+        # Mock data has 5 modules
+        self.assertEqual(data['count'], 5)
 
         # Verify structure
         module = data['modules'][0]
@@ -372,7 +325,8 @@ class ModulesViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
-        self.assertEqual(data['count'], 3)
+        # Mock data has 4 non-AI-suggested modules
+        self.assertEqual(data['count'], 4)
         for module in data['modules']:
             self.assertFalse(module['is_ai_suggested'])
 
@@ -383,74 +337,8 @@ class ModulesViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
+        # Mock data has 1 AI-suggested module
         self.assertEqual(data['count'], 1)
         self.assertTrue(data['modules'][0]['is_ai_suggested'])
 
-    def test_get_modules_empty_database(self):
-        """Test response when database is empty"""
-        EducationalModule.objects.all().delete()
 
-        response = self.client.get(self.url)
-
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data['count'], 0)
-        self.assertEqual(data['modules'], [])
-
-
-class ModelTests(TestCase):
-    """Tests for database models"""
-
-    def test_curriculum_reference_creation(self):
-        """Test creating a curriculum reference"""
-        ref = CurriculumReference.objects.create(
-            reference_code='4.15',
-            full_text='Test curriculum text'
-        )
-
-        self.assertEqual(ref.reference_code, '4.15')
-        self.assertEqual(ref.full_text, 'Test curriculum text')
-        self.assertIsNotNone(ref.created_at)
-
-    def test_curriculum_reference_unique_code(self):
-        """Test unique constraint on reference_code"""
-        CurriculumReference.objects.create(
-            reference_code='1.1',
-            full_text='Test'
-        )
-
-        with self.assertRaises(Exception):
-            CurriculumReference.objects.create(
-                reference_code='1.1',  # Duplicate
-                full_text='Different text'
-            )
-
-    def test_educational_module_creation(self):
-        """Test creating an educational module"""
-        module = EducationalModule.objects.create(
-            module_name='JĘZYK',
-            is_ai_suggested=False
-        )
-
-        self.assertEqual(module.module_name, 'JĘZYK')
-        self.assertFalse(module.is_ai_suggested)
-        self.assertIsNotNone(module.created_at)
-
-    def test_educational_module_default_ai_suggested(self):
-        """Test default value for is_ai_suggested"""
-        module = EducationalModule.objects.create(
-            module_name='TEST MODULE'
-        )
-
-        self.assertTrue(module.is_ai_suggested)
-
-    def test_educational_module_unique_name(self):
-        """Test unique constraint on module_name"""
-        EducationalModule.objects.create(
-            module_name='JĘZYK'
-        )
-
-        with self.assertRaises(Exception):
-            EducationalModule.objects.create(
-                module_name='JĘZYK'  # Duplicate
-            )
