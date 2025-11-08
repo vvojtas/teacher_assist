@@ -52,9 +52,22 @@ python manage.py dbshell                # Open SQLite shell
 
 ```bash
 python manage.py shell                  # Django Python shell
-python manage.py test                   # Run tests
+python manage.py test                   # Run Python tests
 python manage.py createsuperuser        # Create admin user
 ```
+
+### JavaScript Tests
+
+The `lessonplanner` app includes JavaScript functionality with Jest-based tests.
+
+```bash
+cd lessonplanner                        # Navigate to lessonplanner app
+npm install                             # Install JS dependencies (first time only)
+npm test                                # Run JavaScript tests
+npm run test:coverage                   # Run with coverage report
+```
+
+**Details:** See [lessonplanner/static/lessonplanner/js/__tests__/README.md](lessonplanner/static/lessonplanner/js/__tests__/README.md)
 
 ## Configuration
 
