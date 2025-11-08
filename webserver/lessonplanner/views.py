@@ -10,6 +10,7 @@ from django.views.decorators.http import require_http_methods
 
 from .services.ai_client import generate_metadata, get_curriculum_text
 from .forms import FillWorkPlanForm
+from .models import CurriculumReference, EducationalModule
 
 
 @ensure_csrf_cookie
@@ -101,28 +102,148 @@ def fill_work_plan_view(request):
 
 
 @require_http_methods(["GET"])
-def get_curriculum_tooltip_view(request, code):
+def get_all_curriculum_refs_view(request):
     """
-    Get full curriculum text for a reference code (for tooltips).
-
-    URL parameter: code (e.g., "I.1.2", "4.15")
+    Get all curriculum references (for tooltips and caching).
 
     Returns:
     {
-        "code": "I.1.2",
-        "text": "Full curriculum text in Polish"
+        "references": {
+            "1.1": "Full Polish text...",
+            "2.5": "Full Polish text...",
+            ...
+        },
+        "count": 123
     }
+
+    Error responses follow django_api.md specification:
+    - 500 DATABASE_ERROR - Database query failure
     """
     try:
-        text = get_curriculum_text(code)
+        # Query all curriculum references from database
+        refs = CurriculumReference.objects.all()
+
+        # Build dictionary mapping code to text
+        references = {
+            ref.reference_code: ref.full_text
+            for ref in refs
+        }
 
         return JsonResponse({
-            'code': code,
-            'text': text
+            'references': references,
+            'count': len(references)
         }, status=200)
 
     except Exception as e:
         return JsonResponse({
-            'error_code': 'NOT_FOUND',
-            'error': f'Nie znaleziono opisu dla kodu: {code}'
+            'error': 'Błąd bazy danych przy pobieraniu odniesień',
+            'error_code': 'DATABASE_ERROR'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_curriculum_ref_by_code_view(request, code):
+    """
+    Lookup curriculum reference by code.
+
+    URL parameter: code (e.g., "3.8", "4.15")
+
+    Returns:
+    {
+        "reference_code": "3.8",
+        "full_text": "Full curriculum text in Polish",
+        "created_at": "2025-10-28T10:30:00Z"
+    }
+
+    Error responses follow django_api.md specification:
+    - 404 REFERENCE_NOT_FOUND - Curriculum reference code doesn't exist
+    - 400 INVALID_CODE_FORMAT - Invalid code format
+    """
+    try:
+        # Validate code format (basic check)
+        if not code or len(code) > 20:
+            return JsonResponse({
+                'error': 'Nieprawidłowy format kodu odniesienia',
+                'error_code': 'INVALID_CODE_FORMAT'
+            }, status=400)
+
+        # Lookup curriculum reference
+        ref = CurriculumReference.objects.get(reference_code=code)
+
+        return JsonResponse({
+            'reference_code': ref.reference_code,
+            'full_text': ref.full_text,
+            'created_at': ref.created_at.isoformat()
+        }, status=200)
+
+    except CurriculumReference.DoesNotExist:
+        return JsonResponse({
+            'error': f'Nie znaleziono odniesienia dla kodu: {code}',
+            'error_code': 'REFERENCE_NOT_FOUND'
         }, status=404)
+
+    except Exception as e:
+        return JsonResponse({
+            'error': 'Błąd bazy danych',
+            'error_code': 'DATABASE_ERROR'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_modules_view(request):
+    """
+    Get all educational modules with optional filtering.
+
+    Query Parameters:
+    - ai_suggested (optional): Filter by AI-suggested flag (true/false)
+
+    Returns:
+    {
+        "modules": [
+            {
+                "id": 1,
+                "name": "JĘZYK",
+                "is_ai_suggested": false,
+                "created_at": "2025-10-28T10:00:00Z"
+            },
+            ...
+        ],
+        "count": 4
+    }
+
+    Error responses follow django_api.md specification:
+    - 500 DATABASE_ERROR - Database query failure
+    """
+    try:
+        # Get optional filter parameter
+        ai_suggested_param = request.GET.get('ai_suggested', None)
+
+        # Query modules with optional filtering
+        modules = EducationalModule.objects.all()
+
+        if ai_suggested_param is not None:
+            # Convert string to boolean
+            ai_suggested = ai_suggested_param.lower() in ('true', '1', 'yes')
+            modules = modules.filter(is_ai_suggested=ai_suggested)
+
+        # Build response
+        modules_data = [
+            {
+                'id': module.id,
+                'name': module.module_name,
+                'is_ai_suggested': module.is_ai_suggested,
+                'created_at': module.created_at.isoformat()
+            }
+            for module in modules
+        ]
+
+        return JsonResponse({
+            'modules': modules_data,
+            'count': len(modules_data)
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({
+            'error': 'Błąd bazy danych przy pobieraniu modułów',
+            'error_code': 'DATABASE_ERROR'
+        }, status=500)
