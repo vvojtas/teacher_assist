@@ -5,8 +5,7 @@
 const AIService = {
     // API endpoints
     endpoints: {
-        generateMetadata: '/api/generate-metadata/',
-        generateBulk: '/api/generate-bulk/',
+        fillWorkPlan: '/api/fill-work-plan',
         curriculumTooltip: '/api/curriculum/'
     },
 
@@ -47,7 +46,7 @@ const AIService = {
             TableManager.setRowLoading(rowId, true);
 
             // Make API request
-            const response = await fetch(this.endpoints.generateMetadata, {
+            const response = await fetch(this.endpoints.fillWorkPlan, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -92,15 +91,13 @@ const AIService = {
     },
 
     /**
-     * Generate metadata for multiple rows (bulk operation)
+     * Generate metadata for multiple rows (sequential operation)
+     * Makes individual calls to generateSingle for each row
      * @param {Array} rows - Array of row objects with id and activity
      * @param {string} theme - The optional theme text
      * @returns {Promise<void>}
      */
     async generateBulk(rows, theme = '') {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
-
         try {
             // Show progress container
             const progressContainer = document.getElementById('progressContainer');
@@ -117,53 +114,43 @@ const AIService = {
             bulkBtn.disabled = true;
             bulkBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Przetwarzanie...';
 
-            // Set all rows to loading state
-            rows.forEach(row => {
-                TableManager.setRowLoading(row.id, true);
-            });
-
-            // Prepare activities for bulk request
-            const activities = rows.map(row => ({
-                id: row.id,
-                activity: row.activity
-            }));
-
-            // Make bulk API request
-            const response = await fetch(this.endpoints.generateBulk, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCsrfToken()
-                },
-                body: JSON.stringify({
-                    theme: theme,
-                    activities: activities
-                }),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Błąd serwera');
-            }
-
-            // Process results
+            // Process each row sequentially
             let completed = 0;
-            for (const result of data.results) {
-                if (result.success) {
-                    // Update row with generated data
-                    TableManager.setRowData(result.id, {
-                        module: result.data.module,
-                        curriculum: result.data.curriculum_refs,
-                        objectives: result.data.objectives,
-                        aiGenerated: true,
-                        userEdited: false
+            let succeeded = 0;
+
+            for (const row of rows) {
+                try {
+                    // Make individual API call for each row
+                    const response = await fetch(this.endpoints.fillWorkPlan, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCsrfToken()
+                        },
+                        body: JSON.stringify({
+                            activity: row.activity,
+                            theme: theme
+                        })
                     });
-                } else {
-                    console.error(`Error for row ${result.id}:`, result.error);
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        // Update row with generated data
+                        TableManager.setRowData(row.id, {
+                            module: data.module,
+                            curriculum: data.curriculum_refs,
+                            objectives: data.objectives,
+                            aiGenerated: true,
+                            userEdited: false
+                        });
+                        succeeded++;
+                    } else {
+                        console.error(`Error for row ${row.id}:`, data.error);
+                    }
+
+                } catch (error) {
+                    console.error(`Error generating metadata for row ${row.id}:`, error);
                 }
 
                 // Update progress
@@ -172,13 +159,10 @@ const AIService = {
                 progressBar.style.width = progress + '%';
                 progressBar.setAttribute('aria-valuenow', progress);
                 progressText.textContent = `Przetwarzanie... (${completed}/${rows.length})`;
-
-                // Small delay for visual feedback
-                await new Promise(resolve => setTimeout(resolve, 100));
             }
 
             // Show completion message
-            progressText.textContent = `Ukończono: ${completed}/${rows.length}`;
+            progressText.textContent = `Ukończono: ${succeeded}/${rows.length}`;
 
             // Hide progress after delay
             setTimeout(() => {
@@ -186,17 +170,11 @@ const AIService = {
             }, 2000);
 
         } catch (error) {
-            clearTimeout(timeoutId);
             console.error('Error in bulk generation:', error);
             this.showError(this.getUserFriendlyErrorMessage(error));
             throw error;
 
         } finally {
-            // Clear loading state for all rows
-            rows.forEach(row => {
-                TableManager.setRowLoading(row.id, false);
-            });
-
             // Re-enable bulk generate button
             const bulkBtn = document.getElementById('bulkGenerateBtn');
             bulkBtn.disabled = false;

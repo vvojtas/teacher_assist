@@ -9,11 +9,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .services.ai_client import generate_metadata, get_curriculum_text
-
-
-# Constants for validation
-MAX_ACTIVITY_LENGTH = 500
-MAX_THEME_LENGTH = 200
+from .forms import FillWorkPlanForm
 
 
 @ensure_csrf_cookie
@@ -26,14 +22,14 @@ def index(request):
 
 
 @require_http_methods(["POST"])
-def generate_metadata_view(request):
+def fill_work_plan_view(request):
     """
-    Generate metadata for a single activity.
+    Generate metadata for a single activity (Fill Work Plan endpoint).
 
     Expected POST body:
     {
-        "activity": "string (required)",
-        "theme": "string (optional)"
+        "activity": "string (required, 1-500 chars)",
+        "theme": "string (optional, max 200 chars)"
     }
 
     Returns:
@@ -42,33 +38,37 @@ def generate_metadata_view(request):
         "curriculum_refs": ["string", ...],
         "objectives": ["string", ...]
     }
+
+    Error responses follow django_api.md specification:
+    - 400 INVALID_INPUT - Empty or invalid activity field
+    - 503 AI_SERVICE_UNAVAILABLE - LangGraph service unreachable
+    - 504 AI_SERVICE_TIMEOUT - Request exceeds timeout
+    - 500 INTERNAL_ERROR - Unexpected server errors
     """
     try:
         # Parse request body
         data = json.loads(request.body)
-        activity = data.get('activity', '').strip()
-        theme = data.get('theme', '').strip()
 
-        # Validate activity
-        if not activity:
+        # Validate using Django form
+        form = FillWorkPlanForm(data)
+
+        if not form.is_valid():
+            # Get first error message
+            errors = form.errors.as_data()
+            first_error = None
+            for field, error_list in errors.items():
+                if error_list:
+                    first_error = error_list[0].message
+                    break
+
             return JsonResponse({
-                'error_code': 'VALIDATION_ERROR',
-                'error': 'Pole "Aktywność" nie może być puste.'
+                'error': first_error or 'Nieprawidłowe dane wejściowe',
+                'error_code': 'INVALID_INPUT'
             }, status=400)
 
-        # Validate activity length (1-500 chars as per PRD)
-        if len(activity) > MAX_ACTIVITY_LENGTH:
-            return JsonResponse({
-                'error_code': 'VALIDATION_ERROR',
-                'error': f'Opis aktywności jest zbyt długi (max {MAX_ACTIVITY_LENGTH} znaków).'
-            }, status=400)
-
-        # Validate theme length (0-200 chars as per PRD)
-        if len(theme) > MAX_THEME_LENGTH:
-            return JsonResponse({
-                'error_code': 'VALIDATION_ERROR',
-                'error': f'Temat tygodnia jest zbyt długi (max {MAX_THEME_LENGTH} znaków).'
-            }, status=400)
+        # Get cleaned data
+        activity = form.cleaned_data['activity']
+        theme = form.cleaned_data.get('theme', '')
 
         # Call AI client service
         result = generate_metadata(activity, theme)
@@ -77,124 +77,26 @@ def generate_metadata_view(request):
 
     except json.JSONDecodeError:
         return JsonResponse({
-            'error_code': 'INVALID_JSON',
-            'error': 'Nieprawidłowy format danych.'
+            'error': 'Nieprawidłowy format danych JSON',
+            'error_code': 'INVALID_INPUT'
         }, status=400)
 
-    except ValueError as e:
+    except ConnectionError:
         return JsonResponse({
-            'error_code': 'VALIDATION_ERROR',
-            'error': str(e)
-        }, status=400)
+            'error': 'Nie można połączyć z usługą AI. Wypełnij dane ręcznie.',
+            'error_code': 'AI_SERVICE_UNAVAILABLE'
+        }, status=503)
+
+    except TimeoutError:
+        return JsonResponse({
+            'error': 'Żądanie przekroczyło limit czasu. Spróbuj ponownie.',
+            'error_code': 'AI_SERVICE_TIMEOUT'
+        }, status=504)
 
     except Exception as e:
         return JsonResponse({
-            'error_code': 'SERVER_ERROR',
-            'error': 'Nie można połączyć z usługą AI. Wypełnij dane ręcznie.'
-        }, status=500)
-
-
-@require_http_methods(["POST"])
-def generate_bulk_view(request):
-    """
-    Generate metadata for multiple activities in bulk.
-
-    Expected POST body:
-    {
-        "theme": "string (optional)",
-        "activities": [
-            {"id": "row_id", "activity": "string"},
-            ...
-        ]
-    }
-
-    Returns:
-    {
-        "results": [
-            {
-                "id": "row_id",
-                "success": true,
-                "data": {
-                    "module": "string",
-                    "curriculum_refs": ["string", ...],
-                    "objectives": ["string", ...]
-                }
-            },
-            ...
-        ]
-    }
-    """
-    try:
-        # Parse request body
-        data = json.loads(request.body)
-        theme = data.get('theme', '').strip()
-        activities = data.get('activities', [])
-
-        if not activities:
-            return JsonResponse({
-                'error_code': 'VALIDATION_ERROR',
-                'error': 'Brak aktywności do przetworzenia.'
-            }, status=400)
-
-        # Validate theme length
-        if len(theme) > MAX_THEME_LENGTH:
-            return JsonResponse({
-                'error_code': 'VALIDATION_ERROR',
-                'error': f'Temat tygodnia jest zbyt długi (max {MAX_THEME_LENGTH} znaków).'
-            }, status=400)
-
-        # Process each activity
-        results = []
-        for item in activities:
-            row_id = item.get('id')
-            activity = item.get('activity', '').strip()
-
-            if not activity:
-                # Skip empty activities
-                results.append({
-                    'id': row_id,
-                    'success': False,
-                    'error': 'Aktywność jest pusta'
-                })
-                continue
-
-            # Validate activity length
-            if len(activity) > MAX_ACTIVITY_LENGTH:
-                results.append({
-                    'id': row_id,
-                    'success': False,
-                    'error': f'Aktywność zbyt długa (max {MAX_ACTIVITY_LENGTH} znaków)'
-                })
-                continue
-
-            try:
-                # Generate metadata
-                metadata = generate_metadata(activity, theme)
-                results.append({
-                    'id': row_id,
-                    'success': True,
-                    'data': metadata
-                })
-            except Exception as e:
-                # Individual row error
-                results.append({
-                    'id': row_id,
-                    'success': False,
-                    'error': 'Błąd generowania danych'
-                })
-
-        return JsonResponse({'results': results}, status=200)
-
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'error_code': 'INVALID_JSON',
-            'error': 'Nieprawidłowy format danych.'
-        }, status=400)
-
-    except Exception as e:
-        return JsonResponse({
-            'error_code': 'SERVER_ERROR',
-            'error': 'Nie można połączyć z usługą AI. Wypełnij dane ręcznie.'
+            'error': 'Nie można połączyć z usługą AI. Wypełnij dane ręcznie.',
+            'error_code': 'INTERNAL_ERROR'
         }, status=500)
 
 
