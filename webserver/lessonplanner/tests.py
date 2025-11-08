@@ -227,6 +227,53 @@ class FillWorkPlanViewTests(TestCase):
         data = response.json()
         self.assertEqual(data['error_code'], 'INTERNAL_ERROR')
 
+    def test_fill_work_plan_csrf_required(self):
+        """Test that CSRF token validation is enforced"""
+        # Create client with CSRF checks enabled
+        from django.test import Client as CSRFClient
+        csrf_client = CSRFClient(enforce_csrf_checks=True)
+
+        # Request without CSRF token should fail
+        response = csrf_client.post(
+            self.url,
+            data=json.dumps({
+                'activity': 'Test activity',
+                'theme': 'Test theme'
+            }),
+            content_type='application/json'
+        )
+
+        # Should return 403 Forbidden due to missing CSRF token
+        self.assertEqual(response.status_code, 403)
+
+    def test_fill_work_plan_csrf_with_valid_token(self):
+        """Test that request with valid CSRF token succeeds"""
+        from django.test import Client as CSRFClient
+        from django.middleware.csrf import get_token
+
+        # Create client with CSRF checks enabled
+        csrf_client = CSRFClient(enforce_csrf_checks=True)
+
+        # Get CSRF token by visiting index page
+        index_response = csrf_client.get(reverse('lessonplanner:index'))
+        csrf_token = get_token(index_response.wsgi_request)
+
+        # Make request with valid CSRF token in header
+        with self.settings(CSRF_USE_SESSIONS=False, CSRF_COOKIE_HTTPONLY=False):
+            response = csrf_client.post(
+                self.url,
+                data=json.dumps({
+                    'activity': 'Test activity',
+                    'theme': 'Test theme'
+                }),
+                content_type='application/json',
+                HTTP_X_CSRFTOKEN=csrf_token
+            )
+
+        # Note: This will still fail with 500 because we're not mocking generate_metadata,
+        # but it proves CSRF validation passed (403 would indicate CSRF failure)
+        self.assertNotEqual(response.status_code, 403)
+
 
 class CurriculumRefsViewTests(TestCase):
     """Tests for GET /api/curriculum-refs endpoint"""

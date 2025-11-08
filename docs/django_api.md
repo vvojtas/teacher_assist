@@ -45,7 +45,14 @@ Generates educational metadata (module, curriculum references, objectives) for a
 **Request Headers:**
 ```
 Content-Type: application/json
+X-CSRFToken: <csrf_token>
 ```
+
+**CSRF Protection:**
+- This endpoint requires a valid CSRF token (Django default protection)
+- Frontend must include the CSRF token in the `X-CSRFToken` header
+- CSRF cookie is set by visiting the index page (`GET /`)
+- Token can be retrieved from the `csrftoken` cookie
 
 **Request Body:**
 ```json
@@ -82,6 +89,7 @@ Content-Type: application/json
 
 **Error Responses:**
 - `400 INVALID_INPUT` - Empty or invalid activity field
+- `403 CSRF_FAILED` - Missing or invalid CSRF token
 - `503 AI_SERVICE_UNAVAILABLE` - LangGraph service unreachable
 - `504 AI_SERVICE_TIMEOUT` - Request exceeds 120s timeout
 - `500 INTERNAL_ERROR` - Unexpected server errors
@@ -271,6 +279,7 @@ All error responses follow this structure:
 | Code Prefix | Category | HTTP Status | Description |
 |-------------|----------|-------------|-------------|
 | `INVALID_*` | Validation | 400 | Client sent invalid data |
+| `CSRF_*` | Security | 403 | CSRF token missing or invalid |
 | `NOT_FOUND_*` | Resource | 404 | Requested resource doesn't exist |
 | `AI_SERVICE_*` | External | 503/504 | LangGraph service issues |
 | `DATABASE_*` | Internal | 500 | Database connection/query errors |
@@ -296,5 +305,34 @@ All error messages must be in Polish, user-friendly, and actionable:
 
 
 ## CORS and Security
+
+### CSRF Protection
+
+All POST endpoints require CSRF token validation (Django default middleware):
+
+1. **Token Acquisition:**
+   - Frontend loads index page (`GET /`) which sets `csrftoken` cookie via `@ensure_csrf_cookie` decorator
+   - JavaScript retrieves token from cookie: `document.cookie.split('; ').find(row => row.startsWith('csrftoken=')).split('=')[1]`
+
+2. **Token Submission:**
+   - Include token in POST requests via `X-CSRFToken` header
+   - Example (fetch API):
+     ```javascript
+     fetch('/api/fill-work-plan/', {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+         'X-CSRFToken': getCsrfToken()
+       },
+       body: JSON.stringify({...})
+     })
+     ```
+
+3. **Error Handling:**
+   - Missing/invalid CSRF token returns `403 Forbidden`
+   - Django middleware automatically validates token
+   - No custom CSRF handling needed in views
+
+### General Security
 
 **MVP:** Local deployment only - no authentication, HTTPS, or CORS required. Django backend holds OpenRouter API key (environment variable); never exposed to frontend. LangGraph service only accepts localhost connections.
