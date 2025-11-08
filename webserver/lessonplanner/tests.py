@@ -2,6 +2,7 @@
 Tests for the lesson planner application
 """
 
+from unittest.mock import patch
 from django.test import TestCase, Client
 from django.urls import reverse
 
@@ -149,6 +150,80 @@ class GenerateMetadataViewTests(TestCase):
         data = response.json()
         self.assertEqual(data['error_code'], 'INVALID_JSON')
 
+    @patch('lessonplanner.views.generate_metadata')
+    def test_generate_metadata_success(self, mock_generate):
+        """Test successful metadata generation"""
+        # Mock the AI client response
+        mock_generate.return_value = {
+            'module': 'MATEMATYKA',
+            'curriculum_refs': ['4.15', '4.18'],
+            'objectives': ['Dziecko potrafi przeliczać w zakresie 5']
+        }
+
+        response = self.client.post(
+            self.url,
+            data='{"activity": "Liczenie klocków", "theme": "Matematyka"}',
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['module'], 'MATEMATYKA')
+        self.assertIn('curriculum_refs', data)
+        self.assertIn('objectives', data)
+        mock_generate.assert_called_once_with('Liczenie klocków', 'Matematyka')
+
+    @patch('lessonplanner.views.generate_metadata')
+    def test_generate_metadata_without_theme(self, mock_generate):
+        """Test successful metadata generation without theme"""
+        mock_generate.return_value = {
+            'module': 'EDUKACJA PLASTYCZNA',
+            'curriculum_refs': ['4.1'],
+            'objectives': ['Rozwija kreatywność']
+        }
+
+        response = self.client.post(
+            self.url,
+            data='{"activity": "Malowanie"}',
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['module'], 'EDUKACJA PLASTYCZNA')
+        mock_generate.assert_called_once_with('Malowanie', '')
+
+    @patch('lessonplanner.views.generate_metadata')
+    def test_generate_metadata_handles_ai_service_error(self, mock_generate):
+        """Test error handling when AI service fails"""
+        mock_generate.side_effect = Exception('AI service unavailable')
+
+        response = self.client.post(
+            self.url,
+            data='{"activity": "Test activity", "theme": "Test"}',
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 500)
+        data = response.json()
+        self.assertEqual(data['error_code'], 'SERVER_ERROR')
+        self.assertIn('AI', data['error'])
+
+    @patch('lessonplanner.views.generate_metadata')
+    def test_generate_metadata_handles_value_error(self, mock_generate):
+        """Test error handling for ValueError from AI client"""
+        mock_generate.side_effect = ValueError('Invalid input')
+
+        response = self.client.post(
+            self.url,
+            data='{"activity": "Test activity", "theme": "Test"}',
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertEqual(data['error_code'], 'VALIDATION_ERROR')
+
 
 class GenerateBulkViewTests(TestCase):
     """Tests for the bulk generate metadata API endpoint"""
@@ -184,6 +259,140 @@ class GenerateBulkViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertEqual(data['error_code'], 'INVALID_JSON')
+
+    @patch('lessonplanner.views.generate_metadata')
+    def test_generate_bulk_success(self, mock_generate):
+        """Test successful bulk metadata generation"""
+        # Mock the AI client to return different responses
+        mock_generate.side_effect = [
+            {
+                'module': 'MATEMATYKA',
+                'curriculum_refs': ['4.15'],
+                'objectives': ['Cel matematyczny']
+            },
+            {
+                'module': 'EDUKACJA PLASTYCZNA',
+                'curriculum_refs': ['4.1'],
+                'objectives': ['Cel plastyczny']
+            }
+        ]
+
+        response = self.client.post(
+            self.url,
+            data='''{
+                "theme": "Jesień",
+                "activities": [
+                    {"id": "row_1", "activity": "Liczenie liści"},
+                    {"id": "row_2", "activity": "Malowanie jesieni"}
+                ]
+            }''',
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('results', data)
+        self.assertEqual(len(data['results']), 2)
+        self.assertTrue(data['results'][0]['success'])
+        self.assertTrue(data['results'][1]['success'])
+        self.assertEqual(data['results'][0]['id'], 'row_1')
+        self.assertEqual(data['results'][1]['id'], 'row_2')
+
+    @patch('lessonplanner.views.generate_metadata')
+    def test_generate_bulk_handles_partial_failures(self, mock_generate):
+        """Test bulk generation with some rows failing"""
+        # First call succeeds, second fails
+        mock_generate.side_effect = [
+            {
+                'module': 'MATEMATYKA',
+                'curriculum_refs': ['4.15'],
+                'objectives': ['Cel matematyczny']
+            },
+            Exception('AI service error')
+        ]
+
+        response = self.client.post(
+            self.url,
+            data='''{
+                "theme": "Test",
+                "activities": [
+                    {"id": "row_1", "activity": "Activity 1"},
+                    {"id": "row_2", "activity": "Activity 2"}
+                ]
+            }''',
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data['results']), 2)
+        self.assertTrue(data['results'][0]['success'])
+        self.assertFalse(data['results'][1]['success'])
+
+    @patch('lessonplanner.views.generate_metadata')
+    def test_generate_bulk_skips_empty_activities(self, mock_generate):
+        """Test that bulk generation skips empty activities"""
+        mock_generate.return_value = {
+            'module': 'MATEMATYKA',
+            'curriculum_refs': ['4.15'],
+            'objectives': ['Cel']
+        }
+
+        response = self.client.post(
+            self.url,
+            data='''{
+                "theme": "Test",
+                "activities": [
+                    {"id": "row_1", "activity": "Valid activity"},
+                    {"id": "row_2", "activity": ""},
+                    {"id": "row_3", "activity": "   "}
+                ]
+            }''',
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data['results']), 3)
+        self.assertTrue(data['results'][0]['success'])
+        self.assertFalse(data['results'][1]['success'])
+        self.assertFalse(data['results'][2]['success'])
+        # Only one call to generate_metadata for the valid activity
+        mock_generate.assert_called_once()
+
+    def test_generate_bulk_rejects_long_theme(self):
+        """Test that bulk generation rejects themes longer than 200 chars"""
+        long_theme = 'a' * 201
+        response = self.client.post(
+            self.url,
+            data=f'''{{
+                "theme": "{long_theme}",
+                "activities": [{{"id": "row_1", "activity": "Test"}}]
+            }}''',
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertEqual(data['error_code'], 'VALIDATION_ERROR')
+
+    def test_generate_bulk_validates_activity_length(self):
+        """Test that bulk generation validates individual activity lengths"""
+        long_activity = 'a' * 501
+        response = self.client.post(
+            self.url,
+            data=f'''{{
+                "theme": "Test",
+                "activities": [{{"id": "row_1", "activity": "{long_activity}"}}]
+            }}''',
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data['results']), 1)
+        self.assertFalse(data['results'][0]['success'])
+        self.assertIn('długa', data['results'][0]['error'].lower())
 
 
 class CurriculumTooltipViewTests(TestCase):

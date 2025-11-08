@@ -7,8 +7,14 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
+from django.utils.html import escape
 
 from .services.ai_client import generate_metadata, get_curriculum_text
+
+
+# Constants for validation
+MAX_ACTIVITY_LENGTH = 500
+MAX_THEME_LENGTH = 200
 
 
 @ensure_csrf_cookie
@@ -41,8 +47,8 @@ def generate_metadata_view(request):
     try:
         # Parse request body
         data = json.loads(request.body)
-        activity = data.get('activity', '').strip()
-        theme = data.get('theme', '').strip()
+        activity = escape(data.get('activity', '').strip())
+        theme = escape(data.get('theme', '').strip())
 
         # Validate activity
         if not activity:
@@ -52,17 +58,17 @@ def generate_metadata_view(request):
             }, status=400)
 
         # Validate activity length (1-500 chars as per PRD)
-        if len(activity) > 500:
+        if len(activity) > MAX_ACTIVITY_LENGTH:
             return JsonResponse({
                 'error_code': 'VALIDATION_ERROR',
-                'error': 'Opis aktywności jest zbyt długi (max 500 znaków).'
+                'error': f'Opis aktywności jest zbyt długi (max {MAX_ACTIVITY_LENGTH} znaków).'
             }, status=400)
 
         # Validate theme length (0-200 chars as per PRD)
-        if len(theme) > 200:
+        if len(theme) > MAX_THEME_LENGTH:
             return JsonResponse({
                 'error_code': 'VALIDATION_ERROR',
-                'error': 'Temat tygodnia jest zbyt długi (max 200 znaków).'
+                'error': f'Temat tygodnia jest zbyt długi (max {MAX_THEME_LENGTH} znaków).'
             }, status=400)
 
         # Call AI client service
@@ -122,7 +128,7 @@ def generate_bulk_view(request):
     try:
         # Parse request body
         data = json.loads(request.body)
-        theme = data.get('theme', '').strip()
+        theme = escape(data.get('theme', '').strip())
         activities = data.get('activities', [])
 
         if not activities:
@@ -131,11 +137,18 @@ def generate_bulk_view(request):
                 'error': 'Brak aktywności do przetworzenia.'
             }, status=400)
 
+        # Validate theme length
+        if len(theme) > MAX_THEME_LENGTH:
+            return JsonResponse({
+                'error_code': 'VALIDATION_ERROR',
+                'error': f'Temat tygodnia jest zbyt długi (max {MAX_THEME_LENGTH} znaków).'
+            }, status=400)
+
         # Process each activity
         results = []
         for item in activities:
             row_id = item.get('id')
-            activity = item.get('activity', '').strip()
+            activity = escape(item.get('activity', '').strip())
 
             if not activity:
                 # Skip empty activities
@@ -143,6 +156,15 @@ def generate_bulk_view(request):
                     'id': row_id,
                     'success': False,
                     'error': 'Aktywność jest pusta'
+                })
+                continue
+
+            # Validate activity length
+            if len(activity) > MAX_ACTIVITY_LENGTH:
+                results.append({
+                    'id': row_id,
+                    'success': False,
+                    'error': f'Aktywność zbyt długa (max {MAX_ACTIVITY_LENGTH} znaków)'
                 })
                 continue
 
