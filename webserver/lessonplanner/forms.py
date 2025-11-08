@@ -43,8 +43,6 @@ class FillWorkPlanForm(forms.Form):
         return activity
 
     def clean_theme(self):
-        """Strip whitespace from theme if provided."""
-        theme = self.cleaned_data.get('theme', '')
-        if theme:
-            return theme.strip()
+        """Strip whitespace from theme. Return empty string if only whitespace."""
+        theme = self.cleaned_data.get('theme', '').strip()
         return theme

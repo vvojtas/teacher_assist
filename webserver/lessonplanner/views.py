@@ -12,6 +12,49 @@ from .services.ai_client import generate_metadata, get_curriculum_text
 from .forms import FillWorkPlanForm
 
 
+# Mock data constants (used until database is implemented)
+MOCK_CURRICULUM_REFS = {
+    "1.1": "zgłasza potrzeby fizjologiczne, samodzielnie wykonuje podstawowe czynności higieniczne;",
+    "2.5": "rozstaje się z rodzicami bez lęku, ma świadomość, że rozstanie takie bywa dłuższe lub krótsze;",
+    "3.8": "obdarza uwagą inne dzieci i osoby dorosłe;",
+    "4.15": "przelicza elementy zbiorów w czasie zabawy, prac porządkowych, ćwiczeń i wykonywania innych czynności, posługuje się liczebnikami głównymi i porządkowymi, rozpoznaje cyfry oznaczające liczby od 0 do 10, eksperymentuje z tworzeniem kolejnych liczb, wykonuje dodawanie i odejmowanie w sytuacji użytkowej, liczy obiekty, odróżnia liczenie błędne od poprawnego;",
+    "4.18": "eksperymentuje w zakresie orientacji przestrzennej: wysoko – nisko, blisko – daleko, z przodu – z tyłu, nad – pod, prawo – lewo, góra – dół;"
+}
+
+MOCK_EDUCATIONAL_MODULES = [
+    {
+        'id': 1,
+        'name': 'JĘZYK',
+        'is_ai_suggested': False,
+        'created_at': '2025-10-28T10:00:00Z'
+    },
+    {
+        'id': 2,
+        'name': 'MATEMATYKA',
+        'is_ai_suggested': False,
+        'created_at': '2025-10-28T10:00:00Z'
+    },
+    {
+        'id': 3,
+        'name': 'MOTORYKA DUŻA',
+        'is_ai_suggested': False,
+        'created_at': '2025-10-28T10:00:00Z'
+    },
+    {
+        'id': 4,
+        'name': 'FORMY PLASTYCZNE',
+        'is_ai_suggested': False,
+        'created_at': '2025-10-28T10:00:00Z'
+    },
+    {
+        'id': 5,
+        'name': 'EDUKACJA MUZYCZNA',
+        'is_ai_suggested': True,
+        'created_at': '2025-10-28T10:00:00Z'
+    }
+]
+
+
 @ensure_csrf_cookie
 def index(request):
     """
@@ -81,6 +124,13 @@ def fill_work_plan_view(request):
             'error_code': 'INVALID_INPUT'
         }, status=400)
 
+    except ValueError as e:
+        # ValueError can be raised by AI client for invalid input
+        return JsonResponse({
+            'error': str(e) if str(e) else 'Nieprawidłowe dane wejściowe',
+            'error_code': 'INVALID_INPUT'
+        }, status=400)
+
     except ConnectionError:
         return JsonResponse({
             'error': 'Nie można połączyć z usługą AI. Wypełnij dane ręcznie.',
@@ -94,6 +144,9 @@ def fill_work_plan_view(request):
         }, status=504)
 
     except Exception as e:
+        # Log unexpected errors for debugging (in production, use proper logging)
+        import sys
+        print(f"Unexpected error in fill_work_plan_view: {e}", file=sys.stderr)
         return JsonResponse({
             'error': 'Nie można połączyć z usługą AI. Wypełnij dane ręcznie.',
             'error_code': 'INTERNAL_ERROR'
@@ -121,18 +174,9 @@ def get_all_curriculum_refs_view(request):
     - 500 DATABASE_ERROR - Database query failure
     """
     try:
-        # Mock curriculum references data
-        references = {
-            "1.1": "zgłasza potrzeby fizjologiczne, samodzielnie wykonuje podstawowe czynności higieniczne;",
-            "2.5": "rozstaje się z rodzicami bez lęku, ma świadomość, że rozstanie takie bywa dłuższe lub krótsze;",
-            "3.8": "obdarza uwagą inne dzieci i osoby dorosłe;",
-            "4.15": "przelicza elementy zbiorów w czasie zabawy, prac porządkowych, ćwiczeń i wykonywania innych czynności, posługuje się liczebnikami głównymi i porządkowymi, rozpoznaje cyfry oznaczające liczby od 0 do 10, eksperymentuje z tworzeniem kolejnych liczb, wykonuje dodawanie i odejmowanie w sytuacji użytkowej, liczy obiekty, odróżnia liczenie błędne od poprawnego;",
-            "4.18": "eksperymentuje w zakresie orientacji przestrzennej: wysoko – nisko, blisko – daleko, z przodu – z tyłu, nad – pod, prawo – lewo, góra – dół;"
-        }
-
         return JsonResponse({
-            'references': references,
-            'count': len(references)
+            'references': MOCK_CURRICULUM_REFS,
+            'count': len(MOCK_CURRICULUM_REFS)
         }, status=200)
 
     except Exception as e:
@@ -170,17 +214,8 @@ def get_curriculum_ref_by_code_view(request, code):
                 'error_code': 'INVALID_CODE_FORMAT'
             }, status=400)
 
-        # Mock curriculum references data
-        mock_references = {
-            "1.1": "zgłasza potrzeby fizjologiczne, samodzielnie wykonuje podstawowe czynności higieniczne;",
-            "2.5": "rozstaje się z rodzicami bez lęku, ma świadomość, że rozstanie takie bywa dłuższe lub krótsze;",
-            "3.8": "obdarza uwagą inne dzieci i osoby dorosłe;",
-            "4.15": "przelicza elementy zbiorów w czasie zabawy, prac porządkowych, ćwiczeń i wykonywania innych czynności, posługuje się liczebnikami głównymi i porządkowymi, rozpoznaje cyfry oznaczające liczby od 0 do 10, eksperymentuje z tworzeniem kolejnych liczb, wykonuje dodawanie i odejmowanie w sytuacji użytkowej, liczy obiekty, odróżnia liczenie błędne od poprawnego;",
-            "4.18": "eksperymentuje w zakresie orientacji przestrzennej: wysoko – nisko, blisko – daleko, z przodu – z tyłu, nad – pod, prawo – lewo, góra – dół;"
-        }
-
         # Lookup curriculum reference
-        if code not in mock_references:
+        if code not in MOCK_CURRICULUM_REFS:
             return JsonResponse({
                 'error': f'Nie znaleziono odniesienia dla kodu: {code}',
                 'error_code': 'REFERENCE_NOT_FOUND'
@@ -188,7 +223,7 @@ def get_curriculum_ref_by_code_view(request, code):
 
         return JsonResponse({
             'reference_code': code,
-            'full_text': mock_references[code],
+            'full_text': MOCK_CURRICULUM_REFS[code],
             'created_at': '2025-10-28T10:30:00Z'
         }, status=200)
 
@@ -230,47 +265,13 @@ def get_modules_view(request):
         # Get optional filter parameter
         ai_suggested_param = request.GET.get('ai_suggested', None)
 
-        # Mock educational modules data
-        all_modules = [
-            {
-                'id': 1,
-                'name': 'JĘZYK',
-                'is_ai_suggested': False,
-                'created_at': '2025-10-28T10:00:00Z'
-            },
-            {
-                'id': 2,
-                'name': 'MATEMATYKA',
-                'is_ai_suggested': False,
-                'created_at': '2025-10-28T10:00:00Z'
-            },
-            {
-                'id': 3,
-                'name': 'MOTORYKA DUŻA',
-                'is_ai_suggested': False,
-                'created_at': '2025-10-28T10:00:00Z'
-            },
-            {
-                'id': 4,
-                'name': 'FORMY PLASTYCZNE',
-                'is_ai_suggested': False,
-                'created_at': '2025-10-28T10:00:00Z'
-            },
-            {
-                'id': 5,
-                'name': 'EDUKACJA MUZYCZNA',
-                'is_ai_suggested': True,
-                'created_at': '2025-10-28T10:00:00Z'
-            }
-        ]
-
         # Apply filtering if requested
         if ai_suggested_param is not None:
             # Convert string to boolean
             ai_suggested = ai_suggested_param.lower() in ('true', '1', 'yes')
-            modules_data = [m for m in all_modules if m['is_ai_suggested'] == ai_suggested]
+            modules_data = [m for m in MOCK_EDUCATIONAL_MODULES if m['is_ai_suggested'] == ai_suggested]
         else:
-            modules_data = all_modules
+            modules_data = MOCK_EDUCATIONAL_MODULES
 
         return JsonResponse({
             'modules': modules_data,

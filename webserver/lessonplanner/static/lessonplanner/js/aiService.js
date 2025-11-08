@@ -5,8 +5,8 @@
 const AIService = {
     // API endpoints
     endpoints: {
-        fillWorkPlan: '/api/fill-work-plan',
-        curriculumTooltip: '/api/curriculum/'
+        fillWorkPlan: '/api/fill-work-plan/',
+        curriculumTooltip: '/api/curriculum-refs/'
     },
 
     // Cache for curriculum tooltips
@@ -92,7 +92,7 @@ const AIService = {
 
     /**
      * Generate metadata for multiple rows (sequential operation)
-     * Makes individual calls to generateSingle for each row
+     * Makes individual calls to fillWorkPlan for each row
      * @param {Array} rows - Array of row objects with id and activity
      * @param {string} theme - The optional theme text
      * @returns {Promise<void>}
@@ -119,7 +119,13 @@ const AIService = {
             let succeeded = 0;
 
             for (const row of rows) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
+
                 try {
+                    // Set loading state for this row
+                    TableManager.setRowLoading(row.id, true);
+
                     // Make individual API call for each row
                     const response = await fetch(this.endpoints.fillWorkPlan, {
                         method: 'POST',
@@ -130,8 +136,11 @@ const AIService = {
                         body: JSON.stringify({
                             activity: row.activity,
                             theme: theme
-                        })
+                        }),
+                        signal: controller.signal
                     });
+
+                    clearTimeout(timeoutId);
 
                     const data = await response.json();
 
@@ -150,7 +159,11 @@ const AIService = {
                     }
 
                 } catch (error) {
+                    clearTimeout(timeoutId);
                     console.error(`Error generating metadata for row ${row.id}:`, error);
+                } finally {
+                    // Clear loading state for this row
+                    TableManager.setRowLoading(row.id, false);
                 }
 
                 // Update progress
@@ -208,9 +221,9 @@ const AIService = {
             }
 
             // Cache the result
-            this.tooltipCache.set(code, data.text);
+            this.tooltipCache.set(code, data.full_text);
 
-            return data.text;
+            return data.full_text;
 
         } catch (error) {
             console.error('Error fetching tooltip:', error);
