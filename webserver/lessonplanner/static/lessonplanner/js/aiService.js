@@ -13,10 +13,35 @@ const AIService = {
     // Cache for curriculum tooltips
     tooltipCache: new Map(),
 
+    // Request timeout in milliseconds (per PRD section 7.6)
+    REQUEST_TIMEOUT: 120000,
+
+    /**
+     * Get user-friendly error message based on error type
+     * @param {Error} error - The error object
+     * @returns {string} User-friendly error message in Polish
+     */
+    getUserFriendlyErrorMessage(error) {
+        if (error.name === 'AbortError') {
+            return 'Żądanie przekroczyło limit czasu (120s). Spróbuj ponownie.';
+        } else if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
+            return 'Nie można połączyć z usługą AI. Sprawdź połączenie internetowe.';
+        } else {
+            return error.message || 'Wystąpił nieoczekiwany błąd.';
+        }
+    },
+
     /**
      * Generate metadata for a single row
+     * @param {string} rowId - The ID of the row to update
+     * @param {string} activity - The activity text
+     * @param {string} theme - The optional theme text
+     * @returns {Promise<Object>} The generated metadata
      */
     async generateSingle(rowId, activity, theme = '') {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
+
         try {
             // Show loading state
             TableManager.setRowLoading(rowId, true);
@@ -31,8 +56,11 @@ const AIService = {
                 body: JSON.stringify({
                     activity: activity,
                     theme: theme
-                })
+                }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             const data = await response.json();
 
@@ -52,8 +80,9 @@ const AIService = {
             return data;
 
         } catch (error) {
+            clearTimeout(timeoutId);
             console.error('Error generating metadata:', error);
-            this.showError(error.message || 'Nie można połączyć z usługą AI. Wypełnij dane ręcznie.');
+            this.showError(this.getUserFriendlyErrorMessage(error));
             throw error;
 
         } finally {
@@ -64,8 +93,14 @@ const AIService = {
 
     /**
      * Generate metadata for multiple rows (bulk operation)
+     * @param {Array} rows - Array of row objects with id and activity
+     * @param {string} theme - The optional theme text
+     * @returns {Promise<void>}
      */
     async generateBulk(rows, theme = '') {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
+
         try {
             // Show progress container
             const progressContainer = document.getElementById('progressContainer');
@@ -103,8 +138,11 @@ const AIService = {
                 body: JSON.stringify({
                     theme: theme,
                     activities: activities
-                })
+                }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             const data = await response.json();
 
@@ -148,8 +186,9 @@ const AIService = {
             }, 2000);
 
         } catch (error) {
+            clearTimeout(timeoutId);
             console.error('Error in bulk generation:', error);
-            this.showError(error.message || 'Nie można połączyć z usługą AI. Wypełnij dane ręcznie.');
+            this.showError(this.getUserFriendlyErrorMessage(error));
             throw error;
 
         } finally {
@@ -167,6 +206,8 @@ const AIService = {
 
     /**
      * Get curriculum reference text for tooltip
+     * @param {string} code - The curriculum reference code (e.g., "I.1.2")
+     * @returns {Promise<string>} The curriculum text
      */
     async getCurriculumTooltip(code) {
         // Check cache first
@@ -200,7 +241,8 @@ const AIService = {
     },
 
     /**
-     * Show error modal
+     * Show error modal with a message
+     * @param {string} message - The error message to display
      */
     showError(message) {
         const modal = new bootstrap.Modal(document.getElementById('errorModal'));
@@ -211,7 +253,8 @@ const AIService = {
     },
 
     /**
-     * Get CSRF token from cookies
+     * Get CSRF token from cookies for Django requests
+     * @returns {string|null} The CSRF token or null if not found
      */
     getCsrfToken() {
         const name = 'csrftoken';

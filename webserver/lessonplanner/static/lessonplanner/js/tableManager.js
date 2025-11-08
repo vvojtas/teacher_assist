@@ -8,7 +8,7 @@ const TableManager = {
     rows: new Map(), // rowId -> {module, curriculum, objectives, activity, aiGenerated, userEdited}
 
     /**
-     * Initialize the table with 5 empty rows
+     * Initialize the table with 5 empty rows and attach event listeners
      */
     init() {
         this.addRows(5);
@@ -17,6 +17,7 @@ const TableManager = {
 
     /**
      * Add a specified number of empty rows to the table
+     * @param {number} count - Number of rows to add (default: 1)
      */
     addRows(count = 1) {
         const tbody = document.getElementById('planTableBody');
@@ -47,7 +48,8 @@ const TableManager = {
     },
 
     /**
-     * Delete a specific row
+     * Delete a specific row from the table
+     * @param {string} rowId - The ID of the row to delete
      */
     deleteRow(rowId) {
         const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
@@ -58,7 +60,8 @@ const TableManager = {
     },
 
     /**
-     * Clear all rows and reset to 5 empty rows
+     * Clear all rows and reset to 5 empty rows (with confirmation)
+     * @returns {Promise<void>}
      */
     async clearAll() {
         // Confirmation dialog
@@ -84,6 +87,8 @@ const TableManager = {
 
     /**
      * Get data from a specific row
+     * @param {string} rowId - The ID of the row
+     * @returns {Object|null} Row data object or null if not found
      */
     getRowData(rowId) {
         const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
@@ -104,6 +109,8 @@ const TableManager = {
 
     /**
      * Set data for a specific row
+     * @param {string} rowId - The ID of the row
+     * @param {Object} data - Data object with module, curriculum, objectives, activity, aiGenerated, userEdited
      */
     setRowData(rowId, data) {
         const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
@@ -149,6 +156,7 @@ const TableManager = {
     /**
      * Update button visibility based on row state
      * Show "Wypełnij AI" or "Generuj ponownie" based on aiGenerated flag
+     * @param {string} rowId - The ID of the row
      */
     updateRowButtons(rowId) {
         const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
@@ -170,7 +178,8 @@ const TableManager = {
     },
 
     /**
-     * Get all rows with activities
+     * Get all rows that have activities
+     * @returns {Array} Array of row data objects
      */
     getRowsWithActivities() {
         const result = [];
@@ -186,6 +195,7 @@ const TableManager = {
     /**
      * Get rows that need AI generation (have activity but no AI-generated metadata)
      * Used by bulk generate to only fill new rows, not override existing data
+     * @returns {Array} Array of row data objects that need generation
      */
     getRowsNeedingGeneration() {
         const result = [];
@@ -204,7 +214,9 @@ const TableManager = {
     },
 
     /**
-     * Mark row as loading
+     * Mark row as loading or not loading
+     * @param {string} rowId - The ID of the row
+     * @param {boolean} loading - True to show loading state, false to hide
      */
     setRowLoading(rowId, loading) {
         const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
@@ -270,7 +282,9 @@ const TableManager = {
     },
 
     /**
-     * Handle generate button click
+     * Handle generate button click for a row
+     * @param {string} rowId - The ID of the row
+     * @returns {Promise<void>}
      */
     async handleGenerate(rowId) {
         const data = this.getRowData(rowId);
@@ -296,7 +310,9 @@ const TableManager = {
     },
 
     /**
-     * Handle regenerate button click
+     * Handle regenerate button click for a row
+     * @param {string} rowId - The ID of the row
+     * @returns {Promise<void>}
      */
     async handleRegenerate(rowId) {
         const state = this.rows.get(rowId);

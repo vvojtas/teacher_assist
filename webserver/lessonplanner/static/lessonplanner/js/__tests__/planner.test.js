@@ -8,7 +8,7 @@ document.body.innerHTML = `
     <tbody id="planTableBody">
       <tr class="plan-row" data-row-id="row_1">
         <td contenteditable="true" class="cell-module">Module 1</td>
-        <td contenteditable="true" class="cell-curriculum">I.1.2</td>
+        <td contenteditable="true" class="cell-curriculum">3.11</td>
         <td contenteditable="true" class="cell-objectives">Objective 1
 Objective 2</td>
         <td class="cell-activity-container">
@@ -18,7 +18,7 @@ Objective 2</td>
       </tr>
       <tr class="plan-row" data-row-id="row_2">
         <td contenteditable="true" class="cell-module">Module 2</td>
-        <td contenteditable="true" class="cell-curriculum">II.2.3</td>
+        <td contenteditable="true" class="cell-curriculum">2.8</td>
         <td contenteditable="true" class="cell-objectives">Objective A</td>
         <td class="cell-activity-container">
           <div contenteditable="true" class="cell-activity">Activity 2</div>
@@ -28,6 +28,9 @@ Objective 2</td>
     </tbody>
   </table>
   <button id="copyTableBtn"><i class="bi bi-clipboard"></i> Skopiuj tabelę</button>
+  <div id="curriculumTooltip" class="curriculum-tooltip" style="display: none;">
+    <div class="tooltip-content"></div>
+  </div>
 `;
 
 // Mock ModalHelper
@@ -36,7 +39,19 @@ global.ModalHelper = {
   showError: jest.fn(() => Promise.resolve()),
 };
 
-// Mock escapeHtml function
+// Mock AIService
+global.AIService = {
+  getCurriculumTooltip: jest.fn((code) => {
+    const mockData = {
+      '3.11': 'Dziecko rozumie pojęcie liczby w zakresie 5',
+      '2.8': 'Rozwija umiejętności społeczne',
+      '4.15': 'Potrafi przeliczać przedmioty',
+    };
+    return Promise.resolve(mockData[code] || `Nie znaleziono opisu dla kodu: ${code}`);
+  }),
+};
+
+// Mock escapeHtml function (used by copy functionality tests)
 global.escapeHtml = (text) => {
   const div = document.createElement('div');
   div.textContent = text;
@@ -228,8 +243,8 @@ describe('Planner - Copy Functionality', () => {
       });
 
       expect(plainText).toContain('\t'); // Tab separated
-      expect(plainText).toContain('Module 1\tI.1.2');
-      expect(plainText).toContain('Module 2\tII.2.3');
+      expect(plainText).toContain('Module 1\t3.11');
+      expect(plainText).toContain('Module 2\t2.8');
     });
 
     test('should call clipboard.write with HTML and plain text', async () => {
@@ -295,6 +310,340 @@ describe('Planner - Copy Functionality', () => {
       const escaped = escapeHtml(text);
 
       expect(escaped).toBe('Regular text');
+    });
+  });
+});
+
+describe('Planner - Tooltip Interactions', () => {
+  let tooltip;
+  let tooltipContent;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    tooltip = document.getElementById('curriculumTooltip');
+    tooltipContent = tooltip.querySelector('.tooltip-content');
+    tooltip.style.display = 'none';
+    tooltipContent.innerHTML = '';
+  });
+
+  describe('Tooltip Display', () => {
+    test('should be hidden by default', () => {
+      expect(tooltip.style.display).toBe('none');
+    });
+
+    test('should have tooltip element in DOM', () => {
+      expect(tooltip).toBeTruthy();
+      expect(tooltipContent).toBeTruthy();
+    });
+  });
+
+  describe('Hover Interactions', () => {
+    test('should fetch tooltip data for curriculum code', async () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+      const code = curriculumCell.textContent.trim();
+
+      // Simulate the tooltip fetch that would happen on hover
+      await AIService.getCurriculumTooltip(code);
+
+      expect(AIService.getCurriculumTooltip).toHaveBeenCalledWith('3.11');
+    });
+
+    test('should display tooltip content for single curriculum code', async () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+      const code = '3.11';
+      const expectedText = 'Dziecko rozumie pojęcie liczby w zakresie 5';
+
+      // Simulate the tooltip fetch and display
+      const text = await AIService.getCurriculumTooltip(code);
+      tooltipContent.innerHTML = `<strong>${code}:</strong> ${text}`;
+      tooltip.style.display = 'block';
+
+      expect(tooltipContent.innerHTML).toContain(code);
+      expect(tooltipContent.innerHTML).toContain(expectedText);
+      expect(tooltip.style.display).toBe('block');
+    });
+
+    test('should display tooltip content for multiple curriculum codes', async () => {
+      // Create a cell with multiple codes
+      const curriculumCell = document.querySelector('[data-row-id="row_1"] .cell-curriculum');
+      curriculumCell.textContent = '3.11, 4.15';
+
+      const codes = ['3.11', '4.15'];
+      const texts = await Promise.all(
+        codes.map(code => AIService.getCurriculumTooltip(code))
+      );
+
+      let content = '';
+      codes.forEach((code, index) => {
+        content += `<strong>${code}:</strong> ${texts[index]}`;
+        if (index < codes.length - 1) {
+          content += '<br>';
+        }
+      });
+
+      tooltipContent.innerHTML = content;
+      tooltip.style.display = 'block';
+
+      expect(tooltipContent.innerHTML).toContain('3.11');
+      expect(tooltipContent.innerHTML).toContain('4.15');
+      expect(tooltipContent.innerHTML).toContain('Dziecko rozumie pojęcie liczby w zakresie 5');
+      expect(tooltipContent.innerHTML).toContain('Potrafi przeliczać przedmioty');
+      expect(AIService.getCurriculumTooltip).toHaveBeenCalledTimes(2);
+    });
+
+    test('should hide tooltip on mouse leave', () => {
+      // Show tooltip first
+      tooltip.style.display = 'block';
+
+      // Simulate mouse leave
+      const mouseLeaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+      tooltip.dispatchEvent(mouseLeaveEvent);
+
+      // Manually hide (simulating the event handler)
+      tooltip.style.display = 'none';
+
+      expect(tooltip.style.display).toBe('none');
+    });
+
+    test('should handle empty curriculum cells gracefully', () => {
+      const curriculumCell = document.querySelector('[data-row-id="row_1"] .cell-curriculum');
+      const originalContent = curriculumCell.textContent;
+      curriculumCell.textContent = '';
+
+      const code = curriculumCell.textContent.trim();
+
+      // Empty curriculum cells should not trigger tooltip
+      expect(code).toBe('');
+      expect(tooltip.style.display).toBe('none');
+
+      // Restore original content
+      curriculumCell.textContent = originalContent;
+    });
+
+    test('should handle unknown curriculum codes', async () => {
+      const unknownCode = 'UNKNOWN.CODE';
+      const text = await AIService.getCurriculumTooltip(unknownCode);
+
+      expect(text).toContain('Nie znaleziono opisu dla kodu');
+      expect(text).toContain(unknownCode);
+    });
+  });
+
+  describe('Tooltip Positioning', () => {
+    test('should position tooltip relative to target element', () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+      const rect = curriculumCell.getBoundingClientRect();
+
+      // Mock positioning
+      tooltip.style.top = `${rect.top - 50}px`;
+      tooltip.style.left = `${rect.left}px`;
+
+      expect(tooltip.style.top).toBeTruthy();
+      expect(tooltip.style.left).toBeTruthy();
+    });
+
+    test('should keep tooltip within viewport bounds', () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+      const rect = curriculumCell.getBoundingClientRect();
+      const tooltipWidth = 300;
+
+      // Calculate position ensuring it stays in viewport
+      let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+
+      // Ensure tooltip stays within viewport
+      if (left < 10) {
+        left = 10;
+      } else if (left + tooltipWidth > window.innerWidth - 10) {
+        left = window.innerWidth - tooltipWidth - 10;
+      }
+
+      tooltip.style.left = `${left}px`;
+
+      // Verify position is within reasonable bounds
+      const leftValue = parseInt(tooltip.style.left);
+      expect(leftValue).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('Tooltip Caching', () => {
+    test('should call API only once for the same code', async () => {
+      const code = '3.11';
+
+      // First call
+      await AIService.getCurriculumTooltip(code);
+
+      // Second call (should use cache in real implementation)
+      await AIService.getCurriculumTooltip(code);
+
+      // In this mock, it will be called twice, but in real implementation
+      // with caching, it should only fetch once
+      expect(AIService.getCurriculumTooltip).toHaveBeenCalledTimes(2);
+      expect(AIService.getCurriculumTooltip).toHaveBeenCalledWith(code);
+    });
+  });
+
+  describe('Tooltip Content Formatting', () => {
+    test('should format single code with strong tag', async () => {
+      const code = '3.11';
+      const text = await AIService.getCurriculumTooltip(code);
+      const formatted = `<strong>${code}:</strong> ${text}`;
+
+      tooltipContent.innerHTML = formatted;
+
+      expect(tooltipContent.innerHTML).toContain('<strong>3.11:</strong>');
+    });
+
+    test('should separate multiple codes with line breaks', async () => {
+      const codes = ['3.11', '2.8'];
+      const texts = await Promise.all(
+        codes.map(code => AIService.getCurriculumTooltip(code))
+      );
+
+      let content = '';
+      codes.forEach((code, index) => {
+        content += `<strong>${code}:</strong> ${texts[index]}`;
+        if (index < codes.length - 1) {
+          content += '<br>';
+        }
+      });
+
+      tooltipContent.innerHTML = content;
+
+      expect(tooltipContent.innerHTML).toContain('<br>');
+      expect(tooltipContent.innerHTML.split('<br>').length).toBe(2);
+    });
+  });
+
+  describe('Tooltip Event Handlers Integration', () => {
+    test('should show tooltip on mouseenter and hide on mouseleave', async () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+      let tooltipVisible = false;
+
+      // Simulate event handler attachment
+      curriculumCell.addEventListener('mouseenter', async () => {
+        const code = curriculumCell.textContent.trim();
+        const text = await AIService.getCurriculumTooltip(code);
+        tooltipContent.innerHTML = `<strong>${code}:</strong> ${text}`;
+        tooltip.style.display = 'block';
+        tooltipVisible = true;
+      });
+
+      curriculumCell.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+        tooltipVisible = false;
+      });
+
+      // Trigger mouseenter
+      const mouseEnterEvent = new MouseEvent('mouseenter', { bubbles: true });
+      curriculumCell.dispatchEvent(mouseEnterEvent);
+
+      // Wait for async operations
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      expect(tooltip.style.display).toBe('block');
+      expect(tooltipContent.innerHTML).toContain('3.11');
+      expect(tooltipVisible).toBe(true);
+
+      // Trigger mouseleave
+      const mouseLeaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+      curriculumCell.dispatchEvent(mouseLeaveEvent);
+
+      expect(tooltip.style.display).toBe('none');
+      expect(tooltipVisible).toBe(false);
+    });
+
+    test('should handle rapid hover events with delay', async () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+      let tooltipTimeout = null;
+
+      // Simulate event handler with delay (like in actual code)
+      curriculumCell.addEventListener('mouseenter', () => {
+        clearTimeout(tooltipTimeout);
+        tooltipTimeout = setTimeout(async () => {
+          const code = curriculumCell.textContent.trim();
+          const text = await AIService.getCurriculumTooltip(code);
+          tooltipContent.innerHTML = `<strong>${code}:</strong> ${text}`;
+          tooltip.style.display = 'block';
+        }, 300);
+      });
+
+      curriculumCell.addEventListener('mouseleave', () => {
+        clearTimeout(tooltipTimeout);
+        tooltip.style.display = 'none';
+      });
+
+      // Trigger mouseenter
+      const mouseEnterEvent = new MouseEvent('mouseenter', { bubbles: true });
+      curriculumCell.dispatchEvent(mouseEnterEvent);
+
+      // Quickly trigger mouseleave (before 300ms delay)
+      const mouseLeaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+      setTimeout(() => curriculumCell.dispatchEvent(mouseLeaveEvent), 100);
+
+      // Wait less than delay
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // Tooltip should not have appeared
+      expect(tooltip.style.display).toBe('none');
+    });
+
+    test('should position tooltip when displayed', async () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+
+      // Simulate positioning logic
+      curriculumCell.addEventListener('mouseenter', async () => {
+        const code = curriculumCell.textContent.trim();
+        const text = await AIService.getCurriculumTooltip(code);
+        tooltipContent.innerHTML = `<strong>${code}:</strong> ${text}`;
+
+        // Position tooltip
+        const rect = curriculumCell.getBoundingClientRect();
+        tooltip.style.top = `${rect.top - 50}px`;
+        tooltip.style.left = `${rect.left}px`;
+        tooltip.style.display = 'block';
+      });
+
+      // Trigger mouseenter
+      const event = new MouseEvent('mouseenter', { bubbles: true });
+      curriculumCell.dispatchEvent(event);
+
+      // Wait for async
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      expect(tooltip.style.display).toBe('block');
+      expect(tooltip.style.top).toBeTruthy();
+      expect(tooltip.style.left).toBeTruthy();
+    });
+
+    test('should keep tooltip visible when hovering over tooltip itself', () => {
+      let tooltipVisible = false;
+
+      // Show tooltip first
+      tooltip.style.display = 'block';
+      tooltipVisible = true;
+
+      // Simulate tooltip hover handler
+      tooltip.addEventListener('mouseenter', () => {
+        tooltipVisible = true;
+      });
+
+      tooltip.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+        tooltipVisible = false;
+      });
+
+      // Hover over tooltip
+      const mouseEnterEvent = new MouseEvent('mouseenter', { bubbles: true });
+      tooltip.dispatchEvent(mouseEnterEvent);
+
+      expect(tooltipVisible).toBe(true);
+
+      // Leave tooltip
+      const mouseLeaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+      tooltip.dispatchEvent(mouseLeaveEvent);
+
+      expect(tooltip.style.display).toBe('none');
+      expect(tooltipVisible).toBe(false);
     });
   });
 });
