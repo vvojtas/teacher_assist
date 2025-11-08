@@ -78,9 +78,13 @@ const AIService = {
 
             // Disable bulk generate button
             const bulkBtn = document.getElementById('bulkGenerateBtn');
-            const originalBtnText = bulkBtn.innerHTML;
             bulkBtn.disabled = true;
             bulkBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Przetwarzanie...';
+
+            // Set all rows to loading state
+            rows.forEach(row => {
+                TableManager.setRowLoading(row.id, true);
+            });
 
             // Prepare activities for bulk request
             const activities = rows.map(row => ({
@@ -147,6 +151,11 @@ const AIService = {
             throw error;
 
         } finally {
+            // Clear loading state for all rows
+            rows.forEach(row => {
+                TableManager.setRowLoading(row.id, false);
+            });
+
             // Re-enable bulk generate button
             const bulkBtn = document.getElementById('bulkGenerateBtn');
             bulkBtn.disabled = false;

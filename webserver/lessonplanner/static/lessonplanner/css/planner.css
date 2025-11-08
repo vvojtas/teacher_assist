@@ -58,10 +58,18 @@
     display: flex;
     gap: 4px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .activity-buttons .btn {
     flex-shrink: 0;
+}
+
+.activity-buttons .row-checkbox {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    margin: 0;
 }
 
 /* Curriculum reference links (for tooltips) */

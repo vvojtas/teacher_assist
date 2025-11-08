@@ -13,6 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Attach tooltip functionality
     attachTooltipListeners();
 
+    // Attach checkbox change listeners
+    attachCheckboxListeners();
+
     // Listen for generate metadata events from TableManager
     document.addEventListener('generateMetadata', handleGenerateMetadata);
 });
@@ -47,6 +50,162 @@ function attachMainButtonListeners() {
             console.error('Bulk generation failed:', error);
         }
     });
+
+    // Copy Table button
+    document.getElementById('copyTableBtn').addEventListener('click', async () => {
+        await copyTableToClipboard();
+    });
+}
+
+/**
+ * Attach checkbox change listeners to update copy button label
+ */
+function attachCheckboxListeners() {
+    const tbody = document.getElementById('planTableBody');
+
+    // Event delegation for checkbox changes
+    tbody.addEventListener('change', (e) => {
+        if (e.target.classList.contains('row-checkbox')) {
+            updateCopyButtonLabel();
+        }
+    });
+
+    // Also update when rows are added/removed
+    const observer = new MutationObserver(() => {
+        updateCopyButtonLabel();
+    });
+
+    observer.observe(tbody, { childList: true, subtree: true });
+}
+
+/**
+ * Update copy button label based on checkbox selection
+ */
+function updateCopyButtonLabel() {
+    const tbody = document.getElementById('planTableBody');
+    const copyBtn = document.getElementById('copyTableBtn');
+    const allRows = tbody.querySelectorAll('tr.plan-row');
+
+    const selectedCount = Array.from(allRows).filter(row => {
+        const checkbox = row.querySelector('.row-checkbox');
+        return checkbox && checkbox.checked;
+    }).length;
+
+    if (selectedCount > 0) {
+        copyBtn.innerHTML = `<i class="bi bi-clipboard"></i> Skopiuj zaznaczone (${selectedCount})`;
+    } else {
+        copyBtn.innerHTML = `<i class="bi bi-clipboard"></i> Skopiuj tabelę`;
+    }
+}
+
+/**
+ * Copy table data to clipboard
+ * Copies all rows if none are selected, or only selected rows
+ * Format: HTML table for Google Docs compatibility
+ */
+async function copyTableToClipboard() {
+    const tbody = document.getElementById('planTableBody');
+    const allRows = tbody.querySelectorAll('tr.plan-row');
+
+    // Find selected rows (rows with checked checkboxes)
+    const selectedRows = Array.from(allRows).filter(row => {
+        const checkbox = row.querySelector('.row-checkbox');
+        return checkbox && checkbox.checked;
+    });
+
+    // Determine which rows to copy
+    const rowsToCopy = selectedRows.length > 0 ? selectedRows : Array.from(allRows);
+    const includeHeaders = selectedRows.length === 0; // Include headers only for full table
+
+    if (rowsToCopy.length === 0) {
+        await ModalHelper.showAlert('Brak wierszy do skopiowania.');
+        return;
+    }
+
+    // Build HTML table
+    let htmlTable = '<table border="1" style="border-collapse: collapse;">';
+
+    // Add headers if copying whole table
+    if (includeHeaders) {
+        htmlTable += '<thead><tr>';
+        htmlTable += '<th style="padding: 8px; border: 1px solid #000;">Moduł</th>';
+        htmlTable += '<th style="padding: 8px; border: 1px solid #000;">Podstawa Programowa</th>';
+        htmlTable += '<th style="padding: 8px; border: 1px solid #000;">Cele</th>';
+        htmlTable += '<th style="padding: 8px; border: 1px solid #000;">Aktywność</th>';
+        htmlTable += '</tr></thead>';
+    }
+
+    // Add data rows
+    htmlTable += '<tbody>';
+    rowsToCopy.forEach(row => {
+        const module = row.querySelector('.cell-module').textContent.trim();
+        const curriculum = row.querySelector('.cell-curriculum').textContent.trim();
+        const objectives = row.querySelector('.cell-objectives').textContent.trim();
+        const activity = row.querySelector('.cell-activity').textContent.trim();
+
+        htmlTable += '<tr>';
+        htmlTable += `<td style="padding: 8px; border: 1px solid #000; vertical-align: top;">${escapeHtml(module)}</td>`;
+        htmlTable += `<td style="padding: 8px; border: 1px solid #000; vertical-align: top;">${escapeHtml(curriculum)}</td>`;
+        htmlTable += `<td style="padding: 8px; border: 1px solid #000; vertical-align: top; white-space: pre-wrap;">${escapeHtml(objectives)}</td>`;
+        htmlTable += `<td style="padding: 8px; border: 1px solid #000; vertical-align: top;">${escapeHtml(activity)}</td>`;
+        htmlTable += '</tr>';
+    });
+    htmlTable += '</tbody></table>';
+
+    // Build plain text version (TSV format)
+    let plainText = '';
+    if (includeHeaders) {
+        plainText = 'Moduł\tPodstawa Programowa\tCele\tAktywność\n';
+    }
+    rowsToCopy.forEach(row => {
+        const module = row.querySelector('.cell-module').textContent.trim();
+        const curriculum = row.querySelector('.cell-curriculum').textContent.trim();
+        const objectives = row.querySelector('.cell-objectives').textContent.trim();
+        const activity = row.querySelector('.cell-activity').textContent.trim();
+        plainText += `${module}\t${curriculum}\t${objectives}\t${activity}\n`;
+    });
+
+    // Copy to clipboard using Clipboard API with both HTML and plain text
+    try {
+        const htmlBlob = new Blob([htmlTable], { type: 'text/html' });
+        const textBlob = new Blob([plainText], { type: 'text/plain' });
+
+        const clipboardItem = new ClipboardItem({
+            'text/html': htmlBlob,
+            'text/plain': textBlob
+        });
+
+        await navigator.clipboard.write([clipboardItem]);
+
+        // Show success message
+        const rowCount = rowsToCopy.length;
+        const message = selectedRows.length > 0
+            ? `Skopiowano ${rowCount} zaznaczonych wierszy do schowka.`
+            : `Skopiowano całą tabelę (${rowCount} wierszy) do schowka.`;
+
+        await ModalHelper.showAlert(message);
+
+        // Uncheck all checkboxes after successful copy
+        if (selectedRows.length > 0) {
+            selectedRows.forEach(row => {
+                const checkbox = row.querySelector('.row-checkbox');
+                if (checkbox) checkbox.checked = false;
+            });
+            updateCopyButtonLabel();
+        }
+    } catch (error) {
+        console.error('Failed to copy to clipboard:', error);
+        await ModalHelper.showError('Nie udało się skopiować do schowka. Spróbuj ponownie.');
+    }
+}
+
+/**
+ * Escape HTML special characters
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 /**
