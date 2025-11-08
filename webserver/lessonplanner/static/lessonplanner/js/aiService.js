@@ -13,8 +13,8 @@ const AIService = {
     // Cache for curriculum tooltips
     tooltipCache: new Map(),
 
-    // Request timeout in milliseconds
-    REQUEST_TIMEOUT: 30000,
+    // Request timeout in milliseconds (per PRD section 7.6)
+    REQUEST_TIMEOUT: 120000,
 
     /**
      * Generate metadata for a single row
@@ -71,7 +71,7 @@ const AIService = {
             // User-friendly error messages
             let userMessage;
             if (error.name === 'AbortError') {
-                userMessage = 'Żądanie przekroczyło limit czasu (30s). Spróbuj ponownie.';
+                userMessage = 'Żądanie przekroczyło limit czasu (120s). Spróbuj ponownie.';
             } else if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
                 userMessage = 'Nie można połączyć z usługą AI. Sprawdź połączenie internetowe.';
             } else {
@@ -188,7 +188,7 @@ const AIService = {
             // User-friendly error messages
             let userMessage;
             if (error.name === 'AbortError') {
-                userMessage = 'Żądanie przekroczyło limit czasu (30s). Spróbuj ponownie.';
+                userMessage = 'Żądanie przekroczyło limit czasu (120s). Spróbuj ponownie.';
             } else if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
                 userMessage = 'Nie można połączyć z usługą AI. Sprawdź połączenie internetowe.';
             } else {
