@@ -27,12 +27,15 @@ This directory contains Jest-based tests for the lesson planner JavaScript modul
 
 ## Setup
 
-Install dependencies:
+From the `webserver/lessonplanner/` directory, install dependencies:
 ```bash
+cd webserver/lessonplanner
 npm install
 ```
 
 ## Running Tests
+
+From the `webserver/lessonplanner/` directory:
 
 Run all tests:
 ```bash

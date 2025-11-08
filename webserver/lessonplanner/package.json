@@ -10,15 +10,15 @@
   "jest": {
     "testEnvironment": "jsdom",
     "testMatch": [
-      "**/webserver/lessonplanner/static/lessonplanner/js/**/*.test.js"
+      "**/static/lessonplanner/js/**/*.test.js"
     ],
     "setupFilesAfterEnv": [
-      "<rootDir>/webserver/lessonplanner/static/lessonplanner/js/__tests__/setup.js"
+      "<rootDir>/static/lessonplanner/js/__tests__/setup.js"
     ],
     "collectCoverageFrom": [
-      "webserver/lessonplanner/static/lessonplanner/js/**/*.js",
-      "!webserver/lessonplanner/static/lessonplanner/js/**/*.test.js",
-      "!webserver/lessonplanner/static/lessonplanner/js/__tests__/**"
+      "static/lessonplanner/js/**/*.js",
+      "!static/lessonplanner/js/**/*.test.js",
+      "!static/lessonplanner/js/__tests__/**"
     ]
   },
   "devDependencies": {
