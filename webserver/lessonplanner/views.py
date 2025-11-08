@@ -5,20 +5,21 @@ Views for the lesson planner application
 import json
 from django.shortcuts import render
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .services.ai_client import generate_metadata, get_curriculum_text
 
 
+@ensure_csrf_cookie
 def index(request):
     """
     Main lesson planning page with table interface.
+    Ensures CSRF cookie is set for JavaScript requests.
     """
     return render(request, 'lessonplanner/index.html')
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def generate_metadata_view(request):
     """
@@ -88,7 +89,6 @@ def generate_metadata_view(request):
         }, status=500)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def generate_bulk_view(request):
     """

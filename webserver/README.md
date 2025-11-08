@@ -67,6 +67,64 @@ python manage.py test                   # Run Python tests
 python manage.py createsuperuser        # Create admin user
 ```
 
+### Testing API Endpoints
+
+The lesson planner API endpoints are protected by Django's CSRF middleware for security. When testing endpoints manually, you need to include a CSRF token.
+
+#### Method 1: Using Python requests (Recommended)
+
+```python
+import requests
+
+# Start a session to handle cookies automatically
+session = requests.Session()
+
+# 1. Get CSRF token by visiting the main page
+response = session.get('http://localhost:8000/')
+csrf_token = session.cookies['csrftoken']
+
+# 2. Make API request with CSRF token
+response = session.post(
+    'http://localhost:8000/api/generate-metadata/',
+    json={
+        'activity': 'Test activity',
+        'theme': 'Test theme'
+    },
+    headers={'X-CSRFToken': csrf_token}
+)
+
+print(response.status_code)
+print(response.json())
+```
+
+#### Method 2: Using curl
+
+```bash
+# 1. Get CSRF token and save cookies
+curl -c cookies.txt http://localhost:8000/
+
+# 2. Extract CSRF token from cookies
+CSRF_TOKEN=$(grep csrftoken cookies.txt | cut -f7)
+
+# 3. Make API request
+curl -X POST http://localhost:8000/api/generate-metadata/ \
+  -H "Content-Type: application/json" \
+  -H "X-CSRFToken: $CSRF_TOKEN" \
+  -b cookies.txt \
+  -d '{"activity": "Test activity", "theme": "Test theme"}'
+
+# Clean up
+rm cookies.txt
+```
+
+#### Available Endpoints
+
+- `POST /api/generate-metadata/` - Generate metadata for single activity
+- `POST /api/generate-bulk/` - Generate metadata for multiple activities
+- `GET /api/curriculum/<code>/` - Get curriculum text for tooltip (no CSRF needed)
+
+**Note:** The curriculum tooltip endpoint (GET) does not require CSRF tokens, only POST endpoints do.
+
 ### JavaScript Tests
 
 The `lessonplanner` app includes JavaScript functionality with Jest-based tests.

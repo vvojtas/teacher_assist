@@ -26,6 +26,7 @@ const AIService = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
                 },
                 body: JSON.stringify({
                     activity: activity,
@@ -97,6 +98,7 @@ const AIService = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
                 },
                 body: JSON.stringify({
                     theme: theme,
