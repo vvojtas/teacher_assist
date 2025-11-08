@@ -1,0 +1,38 @@
+{
+  "name": "teacher-assist",
+  "version": "1.0.0",
+  "description": "Django-based lesson planner with AI assistance",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testMatch": [
+      "**/webserver/lessonplanner/static/lessonplanner/js/**/*.test.js"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/webserver/lessonplanner/static/lessonplanner/js/__tests__/setup.js"
+    ],
+    "collectCoverageFrom": [
+      "webserver/lessonplanner/static/lessonplanner/js/**/*.js",
+      "!webserver/lessonplanner/static/lessonplanner/js/**/*.test.js",
+      "!webserver/lessonplanner/static/lessonplanner/js/__tests__/**"
+    ]
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^9.3.3",
+    "@testing-library/jest-dom": "^6.1.4",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "keywords": [
+    "education",
+    "lesson-planning",
+    "django",
+    "ai"
+  ],
+  "author": "",
+  "license": "ISC"
+}
