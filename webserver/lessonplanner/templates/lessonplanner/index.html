@@ -1,0 +1,202 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Assist - Planowanie Lekcji</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'lessonplanner/css/planner.css' %}">
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="display-5">Teacher Assist - Planowanie Lekcji</h1>
+            </div>
+        </div>
+
+        <!-- Theme Input -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="themeInput" class="form-label">Temat tygodnia:</label>
+                <input type="text"
+                       class="form-control"
+                       id="themeInput"
+                       placeholder="np. Jesień - zbiory"
+                       maxlength="200">
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="row">
+            <div class="col">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover" id="planTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 20%">Moduł</th>
+                                <th style="width: 20%">Podstawa Programowa</th>
+                                <th style="width: 30%">Cele</th>
+                                <th style="width: 30%">Aktywność</th>
+                            </tr>
+                        </thead>
+                        <tbody id="planTableBody">
+                            <!-- Rows will be added by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar (hidden by default) -->
+        <div class="row mb-3" id="progressContainer" style="display: none;">
+            <div class="col">
+                <div class="progress">
+                    <div id="progressBar"
+                         class="progress-bar progress-bar-striped progress-bar-animated"
+                         role="progressbar"
+                         style="width: 0%"
+                         aria-valuenow="0"
+                         aria-valuemin="0"
+                         aria-valuemax="100">
+                    </div>
+                </div>
+                <div id="progressText" class="text-center mt-2 text-muted"></div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="row mb-3">
+            <div class="col">
+                <button id="bulkGenerateBtn" class="btn btn-primary me-2">
+                    <i class="bi bi-magic"></i> Wypełnij wszystko AI
+                </button>
+                <button id="addRowBtn" class="btn btn-success me-2">
+                    <i class="bi bi-plus-circle"></i> Dodaj wiersz
+                </button>
+                <button id="clearAllBtn" class="btn btn-danger me-2">
+                    <i class="bi bi-trash"></i> Wyczyść wszystko
+                </button>
+                <button id="copyTableBtn" class="btn btn-info">
+                    <i class="bi bi-clipboard"></i> Skopiuj tabelę
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="errorModalLabel">
+                        <i class="bi bi-exclamation-triangle"></i> Błąd
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="errorModalBody">
+                    <!-- Error message will be inserted here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="confirmModalLabel">
+                        <i class="bi bi-question-circle"></i> <span id="confirmModalTitle">Potwierdzenie</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="confirmModalBody">
+                    <!-- Confirmation message will be inserted here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="confirmCancelBtn">Anuluj</button>
+                    <button type="button" class="btn btn-primary" id="confirmOkBtn">Potwierdź</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="alertModalLabel">
+                        <i class="bi bi-info-circle"></i> <span id="alertModalTitle">Informacja</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="alertModalBody">
+                    <!-- Alert message will be inserted here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="alertOkBtn">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row Template (hidden, used by JavaScript) -->
+    <template id="rowTemplate">
+        <tr class="plan-row" data-row-id="">
+            <td contenteditable="true" class="cell-module" data-field="module"></td>
+            <td contenteditable="true" class="cell-curriculum" data-field="curriculum"></td>
+            <td contenteditable="true" class="cell-objectives" data-field="objectives"></td>
+            <td class="cell-activity-container">
+                <div contenteditable="true" class="cell-activity" data-field="activity"></div>
+                <div class="activity-buttons mt-2">
+                    <button class="btn btn-sm btn-primary generate-btn" title="Wypełnij AI">
+                        <i class="bi bi-magic"></i>
+                    </button>
+                    <button class="btn btn-sm btn-secondary regenerate-btn" style="display: none;" title="Generuj ponownie">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                    <input type="checkbox" class="form-check-input row-checkbox me-2" title="Zaznacz wiersz">
+                    <button class="btn btn-sm btn-danger delete-btn" title="Usuń wiersz">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    </template>
+
+    <!-- Loading Spinner Template (hidden, used by JavaScript) -->
+    <div id="loadingSpinner" class="row-loading-overlay" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Ładowanie...</span>
+        </div>
+    </div>
+
+    <!-- Tooltip container (will be positioned dynamically) -->
+    <div id="curriculumTooltip" class="curriculum-tooltip" style="display: none;">
+        <div class="tooltip-content"></div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="{% static 'lessonplanner/js/modalHelper.js' %}"></script>
+    <script src="{% static 'lessonplanner/js/tableManager.js' %}"></script>
+    <script src="{% static 'lessonplanner/js/aiService.js' %}"></script>
+    <script src="{% static 'lessonplanner/js/planner.js' %}"></script>
+</body>
+</html>
