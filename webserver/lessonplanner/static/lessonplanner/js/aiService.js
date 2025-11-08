@@ -117,6 +117,7 @@ const AIService = {
             // Process each row sequentially
             let completed = 0;
             let succeeded = 0;
+            const failed = [];
 
             for (const row of rows) {
                 const controller = new AbortController();
@@ -155,12 +156,26 @@ const AIService = {
                         });
                         succeeded++;
                     } else {
-                        console.error(`Error for row ${row.id}:`, data.error);
+                        const errorMsg = data.error || 'Błąd serwera';
+                        console.error(`Error for row ${row.id}:`, errorMsg);
+                        failed.push({
+                            id: row.id,
+                            activity: row.activity,
+                            error: errorMsg
+                        });
                     }
 
                 } catch (error) {
                     clearTimeout(timeoutId);
-                    console.error(`Error generating metadata for row ${row.id}:`, error);
+                    const errorMsg = error.name === 'AbortError'
+                        ? 'Przekroczono limit czasu'
+                        : (error.message || 'Nieznany błąd');
+                    console.error(`Error generating metadata for row ${row.id}:`, errorMsg);
+                    failed.push({
+                        id: row.id,
+                        activity: row.activity,
+                        error: errorMsg
+                    });
                 } finally {
                     // Clear loading state for this row
                     TableManager.setRowLoading(row.id, false);
@@ -174,8 +189,19 @@ const AIService = {
                 progressText.textContent = `Przetwarzanie... (${completed}/${rows.length})`;
             }
 
-            // Show completion message
-            progressText.textContent = `Ukończono: ${succeeded}/${rows.length}`;
+            // Show completion message with failure details
+            if (failed.length > 0) {
+                progressText.textContent = `Ukończono: ${succeeded}/${rows.length}. Nieudane: ${failed.length}`;
+
+                // Show detailed error message
+                const failedActivities = failed.map(f => `• ${f.activity.substring(0, 30)}...`).join('\n');
+                this.showError(
+                    `Przetworzono pomyślnie: ${succeeded}/${rows.length}\n\n` +
+                    `Nieudane wiersze (${failed.length}):\n${failedActivities}`
+                );
+            } else {
+                progressText.textContent = `Ukończono: ${succeeded}/${rows.length}`;
+            }
 
             // Hide progress after delay
             setTimeout(() => {

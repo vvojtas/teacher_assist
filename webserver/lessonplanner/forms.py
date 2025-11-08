@@ -22,8 +22,7 @@ class FillWorkPlanForm(forms.Form):
             'required': "Pole 'activity' jest wymagane",
             'min_length': "Pole 'activity' nie może być puste",
             'max_length': "Pole 'activity' jest za długie (max 500 znaków)",
-        },
-        widget=forms.TextInput(attrs={'placeholder': 'Opis aktywności'})
+        }
     )
 
     theme = forms.CharField(
@@ -31,8 +30,7 @@ class FillWorkPlanForm(forms.Form):
         required=False,
         error_messages={
             'max_length': "Pole 'theme' jest za długie (max 200 znaków)",
-        },
-        widget=forms.TextInput(attrs={'placeholder': 'Temat tygodnia (opcjonalnie)'})
+        }
     )
 
     def clean_activity(self):

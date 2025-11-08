@@ -107,7 +107,7 @@ class FillWorkPlanViewTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 405)  # Method Not Allowed
 
-    @patch('lessonplanner.services.ai_client.generate_metadata')
+    @patch('lessonplanner.views.generate_metadata')
     def test_fill_work_plan_success(self, mock_generate):
         """Test successful metadata generation"""
         # Mock AI service response
@@ -209,7 +209,7 @@ class FillWorkPlanViewTests(TestCase):
         data = response.json()
         self.assertEqual(data['error_code'], 'INVALID_INPUT')
 
-    @patch('lessonplanner.services.ai_client.generate_metadata')
+    @patch('lessonplanner.views.generate_metadata')
     def test_fill_work_plan_ai_service_error(self, mock_generate):
         """Test error handling: AI service failure"""
         mock_generate.side_effect = Exception('AI service error')
