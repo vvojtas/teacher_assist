@@ -13,6 +13,13 @@ global.bootstrap = {
   }
 };
 
+// Mock ClipboardItem (not available in jsdom)
+global.ClipboardItem = class ClipboardItem {
+  constructor(data) {
+    this.data = data;
+  }
+};
+
 // Mock navigator.clipboard API
 Object.assign(navigator, {
   clipboard: {
