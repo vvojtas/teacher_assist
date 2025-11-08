@@ -114,10 +114,14 @@ const AIService = {
             bulkBtn.disabled = true;
             bulkBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Przetwarzanie...';
 
+            // Set all rows to inactive state at the beginning
+            for (const row of rows) {
+                TableManager.setRowLoading(row.id, false);
+            }
+
             // Process each row sequentially
             let completed = 0;
             let succeeded = 0;
-            const failed = [];
 
             for (const row of rows) {
                 const controller = new AbortController();
@@ -158,11 +162,12 @@ const AIService = {
                     } else {
                         const errorMsg = data.error || 'Błąd serwera';
                         console.error(`Error for row ${row.id}:`, errorMsg);
-                        failed.push({
-                            id: row.id,
-                            activity: row.activity,
-                            error: errorMsg
-                        });
+
+                        // Show error modal immediately
+                        this.showError(
+                            `Błąd dla aktywności:\n"${row.activity.substring(0, 50)}..."\n\n` +
+                            `Szczegóły: ${errorMsg}`
+                        );
                     }
 
                 } catch (error) {
@@ -171,11 +176,12 @@ const AIService = {
                         ? 'Przekroczono limit czasu'
                         : (error.message || 'Nieznany błąd');
                     console.error(`Error generating metadata for row ${row.id}:`, errorMsg);
-                    failed.push({
-                        id: row.id,
-                        activity: row.activity,
-                        error: errorMsg
-                    });
+
+                    // Show error modal immediately
+                    this.showError(
+                        `Błąd dla aktywności:\n"${row.activity.substring(0, 50)}..."\n\n` +
+                        `Szczegóły: ${errorMsg}`
+                    );
                 } finally {
                     // Clear loading state for this row
                     TableManager.setRowLoading(row.id, false);
@@ -189,19 +195,8 @@ const AIService = {
                 progressText.textContent = `Przetwarzanie... (${completed}/${rows.length})`;
             }
 
-            // Show completion message with failure details
-            if (failed.length > 0) {
-                progressText.textContent = `Ukończono: ${succeeded}/${rows.length}. Nieudane: ${failed.length}`;
-
-                // Show detailed error message
-                const failedActivities = failed.map(f => `• ${f.activity.substring(0, 30)}...`).join('\n');
-                this.showError(
-                    `Przetworzono pomyślnie: ${succeeded}/${rows.length}\n\n` +
-                    `Nieudane wiersze (${failed.length}):\n${failedActivities}`
-                );
-            } else {
-                progressText.textContent = `Ukończono: ${succeeded}/${rows.length}`;
-            }
+            // Show completion message
+            progressText.textContent = `Ukończono: ${succeeded}/${rows.length}`;
 
             // Hide progress after delay
             setTimeout(() => {
