@@ -8,7 +8,7 @@ document.body.innerHTML = `
     <tbody id="planTableBody">
       <tr class="plan-row" data-row-id="row_1">
         <td contenteditable="true" class="cell-module">Module 1</td>
-        <td contenteditable="true" class="cell-curriculum">I.1.2</td>
+        <td contenteditable="true" class="cell-curriculum">3.11</td>
         <td contenteditable="true" class="cell-objectives">Objective 1
 Objective 2</td>
         <td class="cell-activity-container">
@@ -18,7 +18,7 @@ Objective 2</td>
       </tr>
       <tr class="plan-row" data-row-id="row_2">
         <td contenteditable="true" class="cell-module">Module 2</td>
-        <td contenteditable="true" class="cell-curriculum">II.2.3</td>
+        <td contenteditable="true" class="cell-curriculum">2.8</td>
         <td contenteditable="true" class="cell-objectives">Objective A</td>
         <td class="cell-activity-container">
           <div contenteditable="true" class="cell-activity">Activity 2</div>
@@ -43,8 +43,8 @@ global.ModalHelper = {
 global.AIService = {
   getCurriculumTooltip: jest.fn((code) => {
     const mockData = {
-      'I.1.2': 'Dziecko rozumie pojęcie liczby w zakresie 5',
-      'II.2.3': 'Rozwija umiejętności społeczne',
+      '3.11': 'Dziecko rozumie pojęcie liczby w zakresie 5',
+      '2.8': 'Rozwija umiejętności społeczne',
       '4.15': 'Potrafi przeliczać przedmioty',
     };
     return Promise.resolve(mockData[code] || `Nie znaleziono opisu dla kodu: ${code}`);
@@ -243,8 +243,8 @@ describe('Planner - Copy Functionality', () => {
       });
 
       expect(plainText).toContain('\t'); // Tab separated
-      expect(plainText).toContain('Module 1\tI.1.2');
-      expect(plainText).toContain('Module 2\tII.2.3');
+      expect(plainText).toContain('Module 1\t3.11');
+      expect(plainText).toContain('Module 2\t2.8');
     });
 
     test('should call clipboard.write with HTML and plain text', async () => {
@@ -345,12 +345,12 @@ describe('Planner - Tooltip Interactions', () => {
       // Simulate the tooltip fetch that would happen on hover
       await AIService.getCurriculumTooltip(code);
 
-      expect(AIService.getCurriculumTooltip).toHaveBeenCalledWith('I.1.2');
+      expect(AIService.getCurriculumTooltip).toHaveBeenCalledWith('3.11');
     });
 
     test('should display tooltip content for single curriculum code', async () => {
       const curriculumCell = document.querySelector('.cell-curriculum');
-      const code = 'I.1.2';
+      const code = '3.11';
       const expectedText = 'Dziecko rozumie pojęcie liczby w zakresie 5';
 
       // Simulate the tooltip fetch and display
@@ -366,9 +366,9 @@ describe('Planner - Tooltip Interactions', () => {
     test('should display tooltip content for multiple curriculum codes', async () => {
       // Create a cell with multiple codes
       const curriculumCell = document.querySelector('[data-row-id="row_1"] .cell-curriculum');
-      curriculumCell.textContent = 'I.1.2, 4.15';
+      curriculumCell.textContent = '3.11, 4.15';
 
-      const codes = ['I.1.2', '4.15'];
+      const codes = ['3.11', '4.15'];
       const texts = await Promise.all(
         codes.map(code => AIService.getCurriculumTooltip(code))
       );
@@ -384,7 +384,7 @@ describe('Planner - Tooltip Interactions', () => {
       tooltipContent.innerHTML = content;
       tooltip.style.display = 'block';
 
-      expect(tooltipContent.innerHTML).toContain('I.1.2');
+      expect(tooltipContent.innerHTML).toContain('3.11');
       expect(tooltipContent.innerHTML).toContain('4.15');
       expect(tooltipContent.innerHTML).toContain('Dziecko rozumie pojęcie liczby w zakresie 5');
       expect(tooltipContent.innerHTML).toContain('Potrafi przeliczać przedmioty');
@@ -467,7 +467,7 @@ describe('Planner - Tooltip Interactions', () => {
 
   describe('Tooltip Caching', () => {
     test('should call API only once for the same code', async () => {
-      const code = 'I.1.2';
+      const code = '3.11';
 
       // First call
       await AIService.getCurriculumTooltip(code);
@@ -484,17 +484,17 @@ describe('Planner - Tooltip Interactions', () => {
 
   describe('Tooltip Content Formatting', () => {
     test('should format single code with strong tag', async () => {
-      const code = 'I.1.2';
+      const code = '3.11';
       const text = await AIService.getCurriculumTooltip(code);
       const formatted = `<strong>${code}:</strong> ${text}`;
 
       tooltipContent.innerHTML = formatted;
 
-      expect(tooltipContent.innerHTML).toContain('<strong>I.1.2:</strong>');
+      expect(tooltipContent.innerHTML).toContain('<strong>3.11:</strong>');
     });
 
     test('should separate multiple codes with line breaks', async () => {
-      const codes = ['I.1.2', 'II.2.3'];
+      const codes = ['3.11', '2.8'];
       const texts = await Promise.all(
         codes.map(code => AIService.getCurriculumTooltip(code))
       );
