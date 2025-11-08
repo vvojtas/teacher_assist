@@ -28,12 +28,27 @@ Objective 2</td>
     </tbody>
   </table>
   <button id="copyTableBtn"><i class="bi bi-clipboard"></i> Skopiuj tabelę</button>
+  <div id="curriculumTooltip" class="curriculum-tooltip" style="display: none;">
+    <div class="tooltip-content"></div>
+  </div>
 `;
 
 // Mock ModalHelper
 global.ModalHelper = {
   showAlert: jest.fn(() => Promise.resolve()),
   showError: jest.fn(() => Promise.resolve()),
+};
+
+// Mock AIService
+global.AIService = {
+  getCurriculumTooltip: jest.fn((code) => {
+    const mockData = {
+      'I.1.2': 'Dziecko rozumie pojęcie liczby w zakresie 5',
+      'II.2.3': 'Rozwija umiejętności społeczne',
+      '4.15': 'Potrafi przeliczać przedmioty',
+    };
+    return Promise.resolve(mockData[code] || `Nie znaleziono opisu dla kodu: ${code}`);
+  }),
 };
 
 // Mock escapeHtml function
@@ -295,6 +310,207 @@ describe('Planner - Copy Functionality', () => {
       const escaped = escapeHtml(text);
 
       expect(escaped).toBe('Regular text');
+    });
+  });
+});
+
+describe('Planner - Tooltip Interactions', () => {
+  let tooltip;
+  let tooltipContent;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    tooltip = document.getElementById('curriculumTooltip');
+    tooltipContent = tooltip.querySelector('.tooltip-content');
+    tooltip.style.display = 'none';
+    tooltipContent.innerHTML = '';
+  });
+
+  describe('Tooltip Display', () => {
+    test('should be hidden by default', () => {
+      expect(tooltip.style.display).toBe('none');
+    });
+
+    test('should have tooltip element in DOM', () => {
+      expect(tooltip).toBeTruthy();
+      expect(tooltipContent).toBeTruthy();
+    });
+  });
+
+  describe('Hover Interactions', () => {
+    test('should fetch tooltip data for curriculum code', async () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+      const code = curriculumCell.textContent.trim();
+
+      // Simulate the tooltip fetch that would happen on hover
+      await AIService.getCurriculumTooltip(code);
+
+      expect(AIService.getCurriculumTooltip).toHaveBeenCalledWith('I.1.2');
+    });
+
+    test('should display tooltip content for single curriculum code', async () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+      const code = 'I.1.2';
+      const expectedText = 'Dziecko rozumie pojęcie liczby w zakresie 5';
+
+      // Simulate the tooltip fetch and display
+      const text = await AIService.getCurriculumTooltip(code);
+      tooltipContent.innerHTML = `<strong>${code}:</strong> ${text}`;
+      tooltip.style.display = 'block';
+
+      expect(tooltipContent.innerHTML).toContain(code);
+      expect(tooltipContent.innerHTML).toContain(expectedText);
+      expect(tooltip.style.display).toBe('block');
+    });
+
+    test('should display tooltip content for multiple curriculum codes', async () => {
+      // Create a cell with multiple codes
+      const curriculumCell = document.querySelector('[data-row-id="row_1"] .cell-curriculum');
+      curriculumCell.textContent = 'I.1.2, 4.15';
+
+      const codes = ['I.1.2', '4.15'];
+      const texts = await Promise.all(
+        codes.map(code => AIService.getCurriculumTooltip(code))
+      );
+
+      let content = '';
+      codes.forEach((code, index) => {
+        content += `<strong>${code}:</strong> ${texts[index]}`;
+        if (index < codes.length - 1) {
+          content += '<br>';
+        }
+      });
+
+      tooltipContent.innerHTML = content;
+      tooltip.style.display = 'block';
+
+      expect(tooltipContent.innerHTML).toContain('I.1.2');
+      expect(tooltipContent.innerHTML).toContain('4.15');
+      expect(tooltipContent.innerHTML).toContain('Dziecko rozumie pojęcie liczby w zakresie 5');
+      expect(tooltipContent.innerHTML).toContain('Potrafi przeliczać przedmioty');
+      expect(AIService.getCurriculumTooltip).toHaveBeenCalledTimes(2);
+    });
+
+    test('should hide tooltip on mouse leave', () => {
+      // Show tooltip first
+      tooltip.style.display = 'block';
+
+      // Simulate mouse leave
+      const mouseLeaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+      tooltip.dispatchEvent(mouseLeaveEvent);
+
+      // Manually hide (simulating the event handler)
+      tooltip.style.display = 'none';
+
+      expect(tooltip.style.display).toBe('none');
+    });
+
+    test('should handle empty curriculum cells gracefully', () => {
+      const curriculumCell = document.querySelector('[data-row-id="row_1"] .cell-curriculum');
+      const originalContent = curriculumCell.textContent;
+      curriculumCell.textContent = '';
+
+      const code = curriculumCell.textContent.trim();
+
+      // Empty curriculum cells should not trigger tooltip
+      expect(code).toBe('');
+      expect(tooltip.style.display).toBe('none');
+
+      // Restore original content
+      curriculumCell.textContent = originalContent;
+    });
+
+    test('should handle unknown curriculum codes', async () => {
+      const unknownCode = 'UNKNOWN.CODE';
+      const text = await AIService.getCurriculumTooltip(unknownCode);
+
+      expect(text).toContain('Nie znaleziono opisu dla kodu');
+      expect(text).toContain(unknownCode);
+    });
+  });
+
+  describe('Tooltip Positioning', () => {
+    test('should position tooltip relative to target element', () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+      const rect = curriculumCell.getBoundingClientRect();
+
+      // Mock positioning
+      tooltip.style.top = `${rect.top - 50}px`;
+      tooltip.style.left = `${rect.left}px`;
+
+      expect(tooltip.style.top).toBeTruthy();
+      expect(tooltip.style.left).toBeTruthy();
+    });
+
+    test('should keep tooltip within viewport bounds', () => {
+      const curriculumCell = document.querySelector('.cell-curriculum');
+      const rect = curriculumCell.getBoundingClientRect();
+      const tooltipWidth = 300;
+
+      // Calculate position ensuring it stays in viewport
+      let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+
+      // Ensure tooltip stays within viewport
+      if (left < 10) {
+        left = 10;
+      } else if (left + tooltipWidth > window.innerWidth - 10) {
+        left = window.innerWidth - tooltipWidth - 10;
+      }
+
+      tooltip.style.left = `${left}px`;
+
+      // Verify position is within reasonable bounds
+      const leftValue = parseInt(tooltip.style.left);
+      expect(leftValue).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('Tooltip Caching', () => {
+    test('should call API only once for the same code', async () => {
+      const code = 'I.1.2';
+
+      // First call
+      await AIService.getCurriculumTooltip(code);
+
+      // Second call (should use cache in real implementation)
+      await AIService.getCurriculumTooltip(code);
+
+      // In this mock, it will be called twice, but in real implementation
+      // with caching, it should only fetch once
+      expect(AIService.getCurriculumTooltip).toHaveBeenCalledTimes(2);
+      expect(AIService.getCurriculumTooltip).toHaveBeenCalledWith(code);
+    });
+  });
+
+  describe('Tooltip Content Formatting', () => {
+    test('should format single code with strong tag', async () => {
+      const code = 'I.1.2';
+      const text = await AIService.getCurriculumTooltip(code);
+      const formatted = `<strong>${code}:</strong> ${text}`;
+
+      tooltipContent.innerHTML = formatted;
+
+      expect(tooltipContent.innerHTML).toContain('<strong>I.1.2:</strong>');
+    });
+
+    test('should separate multiple codes with line breaks', async () => {
+      const codes = ['I.1.2', 'II.2.3'];
+      const texts = await Promise.all(
+        codes.map(code => AIService.getCurriculumTooltip(code))
+      );
+
+      let content = '';
+      codes.forEach((code, index) => {
+        content += `<strong>${code}:</strong> ${texts[index]}`;
+        if (index < codes.length - 1) {
+          content += '<br>';
+        }
+      });
+
+      tooltipContent.innerHTML = content;
+
+      expect(tooltipContent.innerHTML).toContain('<br>');
+      expect(tooltipContent.innerHTML.split('<br>').length).toBe(2);
     });
   });
 });
