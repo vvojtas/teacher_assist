@@ -54,6 +54,8 @@ teacher_assist/
 ## Documentation
 
 - **[docs/PRD.md](docs/PRD.md)** - Complete product requirements, user stories, technical specs, API contract, database schema
+- **[docs/ui.md](docs/ui.md)** - UI interaction reference and behavior specifications
+- **[docs/django_api.md](docs/django_api.md)** - Django REST API endpoints documentation
 - **[webserver/README.md](webserver/README.md)** - Django setup, commands, and development workflow
 - **[CLAUDE.md](CLAUDE.md)** - Development guidelines for Claude Code
 

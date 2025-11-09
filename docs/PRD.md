@@ -175,7 +175,7 @@ And my changes are preserved
 
 #### Story 6: Curriculum Reference Lookup
 ```
-Given a Podstawa Programowa field shows "I.1.2, II.3.1"
+Given a Podstawa Programowa field shows "4.15, 4.18"
 When I hover over the reference numbers
 Then a tooltip displays the full curriculum text
 ```
@@ -239,7 +239,7 @@ And updates the metadata with new suggestions
   2. **Podstawa Programowa** (Curriculum References)
      - Width: ~20%
      - Editable: Yes
-     - Format: Comma-separated refs (e.g., "I.1.2, II.3.1")
+     - Format: Comma-separated refs (e.g., "4.15, 4.18")
      - Interactive: Hover shows tooltip with full text
   3. **Cele** (Educational Objectives)
      - Width: ~30%
@@ -434,7 +434,7 @@ Content-Type: application/json
 ```sql
 CREATE TABLE curriculum_references (
     id INTEGER PRIMARY KEY,
-    reference_code VARCHAR(20) UNIQUE NOT NULL,  -- e.g., "I.1.2"
+    reference_code VARCHAR(20) UNIQUE NOT NULL,  -- e.g., "4.15"
     full_text TEXT NOT NULL,                      -- Polish curriculum text
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -518,7 +518,7 @@ CREATE TABLE educational_modules (
 ### 8.4 Interaction Patterns
 
 #### Hover Tooltip (Curriculum References)
-- **Trigger:** Mouse hover over reference code (e.g., "I.1.2")
+- **Trigger:** Mouse hover over reference code (e.g., "4.15")
 - **Appearance:** White box with gray border, drops shadow
 - **Content:** Full curriculum text
 - **Positioning:** Above or below reference, stays on screen
