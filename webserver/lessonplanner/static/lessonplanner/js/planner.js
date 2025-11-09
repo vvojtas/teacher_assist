@@ -246,8 +246,8 @@ function attachTooltipListeners() {
             // Get text content
             const text = cell.textContent.trim();
 
-            // Find curriculum codes (pattern: digits.digits or Roman.digits.digits)
-            const codePattern = /[IVX]+\.\d+\.\d+|\d+\.\d+/g;
+            // Find curriculum codes (pattern: digits.digits)
+            const codePattern = /\d+\.\d+/g;
             const codes = text.match(codePattern);
 
             if (codes && codes.length > 0) {
@@ -352,7 +352,7 @@ function formatObjectives(objectives) {
  * Utility: Parse curriculum refs from string
  */
 function parseCurriculumRefs(text) {
-    const codePattern = /[IVX]+\.\d+\.\d+|\d+\.\d+/g;
+    const codePattern = /\d+\.\d+/g;
     return text.match(codePattern) || [];
 }
 
