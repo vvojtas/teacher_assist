@@ -3,17 +3,20 @@ Views for the lesson planner application
 """
 
 import json
+import logging
+
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
+from django.utils.html import escape
 
-from .services.ai_client import generate_metadata, get_curriculum_text
+from .services import ai_client
+from .forms import FillWorkPlanForm
+from .fixtures.mock_data import MOCK_CURRICULUM_REFS, MOCK_EDUCATIONAL_MODULES
 
-
-# Constants for validation
-MAX_ACTIVITY_LENGTH = 500
-MAX_THEME_LENGTH = 200
+# Configure logger for this module
+logger = logging.getLogger(__name__)
 
 
 @ensure_csrf_cookie
@@ -26,14 +29,14 @@ def index(request):
 
 
 @require_http_methods(["POST"])
-def generate_metadata_view(request):
+def fill_work_plan_view(request):
     """
-    Generate metadata for a single activity.
+    Generate metadata for a single activity (Fill Work Plan endpoint).
 
     Expected POST body:
     {
-        "activity": "string (required)",
-        "theme": "string (optional)"
+        "activity": "string (required, 1-500 chars)",
+        "theme": "string (optional, max 200 chars)"
     }
 
     Returns:
@@ -42,185 +45,223 @@ def generate_metadata_view(request):
         "curriculum_refs": ["string", ...],
         "objectives": ["string", ...]
     }
+
+    Error responses follow django_api.md specification:
+    - 400 INVALID_INPUT - Empty or invalid activity field
+    - 503 AI_SERVICE_UNAVAILABLE - LangGraph service unreachable
+    - 504 AI_SERVICE_TIMEOUT - Request exceeds timeout
+    - 500 INTERNAL_ERROR - Unexpected server errors
     """
     try:
         # Parse request body
         data = json.loads(request.body)
-        activity = data.get('activity', '').strip()
-        theme = data.get('theme', '').strip()
 
-        # Validate activity
-        if not activity:
+        # Validate using Django form
+        form = FillWorkPlanForm(data)
+
+        if not form.is_valid():
+            # Get first error message
+            errors = form.errors.as_data()
+            first_error = None
+            for field, error_list in errors.items():
+                if error_list:
+                    first_error = error_list[0].message
+                    break
+
             return JsonResponse({
-                'error_code': 'VALIDATION_ERROR',
-                'error': 'Pole "Aktywność" nie może być puste.'
+                'error': first_error or 'Nieprawidłowe dane wejściowe',
+                'error_code': 'INVALID_INPUT'
             }, status=400)
 
-        # Validate activity length (1-500 chars as per PRD)
-        if len(activity) > MAX_ACTIVITY_LENGTH:
-            return JsonResponse({
-                'error_code': 'VALIDATION_ERROR',
-                'error': f'Opis aktywności jest zbyt długi (max {MAX_ACTIVITY_LENGTH} znaków).'
-            }, status=400)
-
-        # Validate theme length (0-200 chars as per PRD)
-        if len(theme) > MAX_THEME_LENGTH:
-            return JsonResponse({
-                'error_code': 'VALIDATION_ERROR',
-                'error': f'Temat tygodnia jest zbyt długi (max {MAX_THEME_LENGTH} znaków).'
-            }, status=400)
+        # Get cleaned data
+        activity = form.cleaned_data['activity']
+        theme = form.cleaned_data.get('theme', '')
 
         # Call AI client service
-        result = generate_metadata(activity, theme)
+        result = ai_client.generate_metadata(activity, theme)
 
         return JsonResponse(result, status=200)
 
     except json.JSONDecodeError:
         return JsonResponse({
-            'error_code': 'INVALID_JSON',
-            'error': 'Nieprawidłowy format danych.'
+            'error': 'Nieprawidłowy format danych JSON',
+            'error_code': 'INVALID_INPUT'
         }, status=400)
 
     except ValueError as e:
+        # ValueError can be raised by AI client for invalid input
         return JsonResponse({
-            'error_code': 'VALIDATION_ERROR',
-            'error': str(e)
+            'error': str(e) if str(e) else 'Nieprawidłowe dane wejściowe',
+            'error_code': 'INVALID_INPUT'
         }, status=400)
 
-    except Exception as e:
+    except ConnectionError:
         return JsonResponse({
-            'error_code': 'SERVER_ERROR',
-            'error': 'Nie można połączyć z usługą AI. Wypełnij dane ręcznie.'
-        }, status=500)
+            'error': 'Nie można połączyć z usługą AI. Wypełnij dane ręcznie.',
+            'error_code': 'AI_SERVICE_UNAVAILABLE'
+        }, status=503)
 
-
-@require_http_methods(["POST"])
-def generate_bulk_view(request):
-    """
-    Generate metadata for multiple activities in bulk.
-
-    Expected POST body:
-    {
-        "theme": "string (optional)",
-        "activities": [
-            {"id": "row_id", "activity": "string"},
-            ...
-        ]
-    }
-
-    Returns:
-    {
-        "results": [
-            {
-                "id": "row_id",
-                "success": true,
-                "data": {
-                    "module": "string",
-                    "curriculum_refs": ["string", ...],
-                    "objectives": ["string", ...]
-                }
-            },
-            ...
-        ]
-    }
-    """
-    try:
-        # Parse request body
-        data = json.loads(request.body)
-        theme = data.get('theme', '').strip()
-        activities = data.get('activities', [])
-
-        if not activities:
-            return JsonResponse({
-                'error_code': 'VALIDATION_ERROR',
-                'error': 'Brak aktywności do przetworzenia.'
-            }, status=400)
-
-        # Validate theme length
-        if len(theme) > MAX_THEME_LENGTH:
-            return JsonResponse({
-                'error_code': 'VALIDATION_ERROR',
-                'error': f'Temat tygodnia jest zbyt długi (max {MAX_THEME_LENGTH} znaków).'
-            }, status=400)
-
-        # Process each activity
-        results = []
-        for item in activities:
-            row_id = item.get('id')
-            activity = item.get('activity', '').strip()
-
-            if not activity:
-                # Skip empty activities
-                results.append({
-                    'id': row_id,
-                    'success': False,
-                    'error': 'Aktywność jest pusta'
-                })
-                continue
-
-            # Validate activity length
-            if len(activity) > MAX_ACTIVITY_LENGTH:
-                results.append({
-                    'id': row_id,
-                    'success': False,
-                    'error': f'Aktywność zbyt długa (max {MAX_ACTIVITY_LENGTH} znaków)'
-                })
-                continue
-
-            try:
-                # Generate metadata
-                metadata = generate_metadata(activity, theme)
-                results.append({
-                    'id': row_id,
-                    'success': True,
-                    'data': metadata
-                })
-            except Exception as e:
-                # Individual row error
-                results.append({
-                    'id': row_id,
-                    'success': False,
-                    'error': 'Błąd generowania danych'
-                })
-
-        return JsonResponse({'results': results}, status=200)
-
-    except json.JSONDecodeError:
+    except TimeoutError:
         return JsonResponse({
-            'error_code': 'INVALID_JSON',
-            'error': 'Nieprawidłowy format danych.'
-        }, status=400)
+            'error': 'Żądanie przekroczyło limit czasu. Spróbuj ponownie.',
+            'error_code': 'AI_SERVICE_TIMEOUT'
+        }, status=504)
 
     except Exception as e:
+        # Log unexpected errors for debugging
+        logger.error(
+            "Unexpected error in fill_work_plan_view: %s",
+            e,
+            exc_info=True  # Include full stack trace
+        )
         return JsonResponse({
-            'error_code': 'SERVER_ERROR',
-            'error': 'Nie można połączyć z usługą AI. Wypełnij dane ręcznie.'
+            'error': 'Wystąpił nieoczekiwany błąd serwera. Spróbuj ponownie lub wypełnij dane ręcznie.',
+            'error_code': 'INTERNAL_ERROR'
         }, status=500)
 
 
 @require_http_methods(["GET"])
-def get_curriculum_tooltip_view(request, code):
+def get_all_curriculum_refs_view(request):
     """
-    Get full curriculum text for a reference code (for tooltips).
+    Get all curriculum references (for tooltips and caching).
 
-    URL parameter: code (e.g., "I.1.2", "4.15")
+    MOCK IMPLEMENTATION: Returns sample curriculum reference data.
 
     Returns:
     {
-        "code": "I.1.2",
-        "text": "Full curriculum text in Polish"
+        "references": {
+            "1.1": "Full Polish text...",
+            "2.5": "Full Polish text...",
+            ...
+        },
+        "count": 123
     }
+
+    Error responses follow django_api.md specification:
+    - 500 DATABASE_ERROR - Database query failure
     """
     try:
-        text = get_curriculum_text(code)
-
         return JsonResponse({
-            'code': code,
-            'text': text
+            'references': MOCK_CURRICULUM_REFS,
+            'count': len(MOCK_CURRICULUM_REFS)
         }, status=200)
 
     except Exception as e:
+        logger.error(
+            "Unexpected error in get_all_curriculum_refs_view: %s",
+            e,
+            exc_info=True
+        )
         return JsonResponse({
-            'error_code': 'NOT_FOUND',
-            'error': f'Nie znaleziono opisu dla kodu: {code}'
-        }, status=404)
+            'error': 'Błąd bazy danych przy pobieraniu odniesień',
+            'error_code': 'DATABASE_ERROR'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_curriculum_ref_by_code_view(request, code):
+    """
+    Lookup curriculum reference by code.
+
+    MOCK IMPLEMENTATION: Returns sample curriculum reference data.
+
+    URL parameter: code (e.g., "3.8", "4.15")
+
+    Returns:
+    {
+        "reference_code": "3.8",
+        "full_text": "Full curriculum text in Polish",
+        "created_at": "2025-10-28T10:30:00Z"
+    }
+
+    Error responses follow django_api.md specification:
+    - 404 REFERENCE_NOT_FOUND - Curriculum reference code doesn't exist
+    - 400 INVALID_CODE_FORMAT - Invalid code format
+    """
+    try:
+        # Validate code format (basic check)
+        if not code or len(code) > 20:
+            return JsonResponse({
+                'error': 'Nieprawidłowy format kodu odniesienia',
+                'error_code': 'INVALID_CODE_FORMAT'
+            }, status=400)
+
+        # Lookup curriculum reference
+        if code not in MOCK_CURRICULUM_REFS:
+            return JsonResponse({
+                'error': f'Nie znaleziono odniesienia dla kodu: {escape(code)}',
+                'error_code': 'REFERENCE_NOT_FOUND'
+            }, status=404)
+
+        return JsonResponse({
+            'reference_code': code,
+            'full_text': MOCK_CURRICULUM_REFS[code],
+            'created_at': '2025-10-28T10:30:00Z'
+        }, status=200)
+
+    except Exception as e:
+        logger.error(
+            "Unexpected error in get_curriculum_ref_by_code_view: %s",
+            e,
+            exc_info=True
+        )
+        return JsonResponse({
+            'error': 'Błąd bazy danych',
+            'error_code': 'DATABASE_ERROR'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_modules_view(request):
+    """
+    Get all educational modules with optional filtering.
+
+    MOCK IMPLEMENTATION: Returns sample educational module data.
+
+    Query Parameters:
+    - ai_suggested (optional): Filter by AI-suggested flag (true/false)
+
+    Returns:
+    {
+        "modules": [
+            {
+                "id": 1,
+                "name": "JĘZYK",
+                "is_ai_suggested": false,
+                "created_at": "2025-10-28T10:00:00Z"
+            },
+            ...
+        ],
+        "count": 4
+    }
+
+    Error responses follow django_api.md specification:
+    - 500 DATABASE_ERROR - Database query failure
+    """
+    try:
+        # Get optional filter parameter
+        ai_suggested_param = request.GET.get('ai_suggested', None)
+
+        # Apply filtering if requested
+        if ai_suggested_param is not None:
+            # Convert string to boolean
+            ai_suggested = ai_suggested_param.lower() in ('true', '1', 'yes')
+            modules_data = [m for m in MOCK_EDUCATIONAL_MODULES if m['is_ai_suggested'] == ai_suggested]
+        else:
+            modules_data = MOCK_EDUCATIONAL_MODULES
+
+        return JsonResponse({
+            'modules': modules_data,
+            'count': len(modules_data)
+        }, status=200)
+
+    except Exception as e:
+        logger.error(
+            "Unexpected error in get_modules_view: %s",
+            e,
+            exc_info=True
+        )
+        return JsonResponse({
+            'error': 'Błąd bazy danych przy pobieraniu modułów',
+            'error_code': 'DATABASE_ERROR'
+        }, status=500)

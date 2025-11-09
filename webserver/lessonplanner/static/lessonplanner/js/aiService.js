@@ -5,16 +5,15 @@
 const AIService = {
     // API endpoints
     endpoints: {
-        generateMetadata: '/api/generate-metadata/',
-        generateBulk: '/api/generate-bulk/',
-        curriculumTooltip: '/api/curriculum/'
+        fillWorkPlan: '/api/fill-work-plan/',
+        curriculumTooltip: '/api/curriculum-refs/'
     },
 
     // Cache for curriculum tooltips
     tooltipCache: new Map(),
 
     // Request timeout in milliseconds (per PRD section 7.6)
-    REQUEST_TIMEOUT: 120000,
+    REQUEST_TIMEOUT: 120000,  // 120 seconds (2 minutes)
 
     /**
      * Get user-friendly error message based on error type
@@ -47,7 +46,7 @@ const AIService = {
             TableManager.setRowLoading(rowId, true);
 
             // Make API request
-            const response = await fetch(this.endpoints.generateMetadata, {
+            const response = await fetch(this.endpoints.fillWorkPlan, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -92,15 +91,13 @@ const AIService = {
     },
 
     /**
-     * Generate metadata for multiple rows (bulk operation)
+     * Generate metadata for multiple rows (sequential operation)
+     * Makes individual calls to fillWorkPlan for each row
      * @param {Array} rows - Array of row objects with id and activity
      * @param {string} theme - The optional theme text
      * @returns {Promise<void>}
      */
     async generateBulk(rows, theme = '') {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
-
         try {
             // Show progress container
             const progressContainer = document.getElementById('progressContainer');
@@ -117,53 +114,77 @@ const AIService = {
             bulkBtn.disabled = true;
             bulkBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Przetwarzanie...';
 
-            // Set all rows to loading state
-            rows.forEach(row => {
+            // Set all rows to loading state at the beginning
+            for (const row of rows) {
                 TableManager.setRowLoading(row.id, true);
-            });
-
-            // Prepare activities for bulk request
-            const activities = rows.map(row => ({
-                id: row.id,
-                activity: row.activity
-            }));
-
-            // Make bulk API request
-            const response = await fetch(this.endpoints.generateBulk, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCsrfToken()
-                },
-                body: JSON.stringify({
-                    theme: theme,
-                    activities: activities
-                }),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Błąd serwera');
             }
 
-            // Process results
+            // Process each row sequentially
             let completed = 0;
-            for (const result of data.results) {
-                if (result.success) {
-                    // Update row with generated data
-                    TableManager.setRowData(result.id, {
-                        module: result.data.module,
-                        curriculum: result.data.curriculum_refs,
-                        objectives: result.data.objectives,
-                        aiGenerated: true,
-                        userEdited: false
+            let succeeded = 0;
+            const failed = [];
+
+            for (const row of rows) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
+
+                try {
+                    // Row is already in loading state from above
+
+                    // Make individual API call for each row
+                    const response = await fetch(this.endpoints.fillWorkPlan, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCsrfToken()
+                        },
+                        body: JSON.stringify({
+                            activity: row.activity,
+                            theme: theme
+                        }),
+                        signal: controller.signal
                     });
-                } else {
-                    console.error(`Error for row ${result.id}:`, result.error);
+
+                    clearTimeout(timeoutId);
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        // Update row with generated data
+                        TableManager.setRowData(row.id, {
+                            module: data.module,
+                            curriculum: data.curriculum_refs,
+                            objectives: data.objectives,
+                            aiGenerated: true,
+                            userEdited: false
+                        });
+                        succeeded++;
+                    } else {
+                        const errorMsg = data.error || 'Błąd serwera';
+                        console.error(`Error for row ${row.id}:`, errorMsg);
+
+                        // Collect error for summary
+                        failed.push({
+                            activity: row.activity,
+                            error: errorMsg
+                        });
+                    }
+
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    const errorMsg = error.name === 'AbortError'
+                        ? 'Przekroczono limit czasu'
+                        : (error.message || 'Nieznany błąd');
+                    console.error(`Error generating metadata for row ${row.id}:`, errorMsg);
+
+                    // Collect error for summary
+                    failed.push({
+                        activity: row.activity,
+                        error: errorMsg
+                    });
+                } finally {
+                    // Clear loading state for this row
+                    TableManager.setRowLoading(row.id, false);
                 }
 
                 // Update progress
@@ -172,13 +193,24 @@ const AIService = {
                 progressBar.style.width = progress + '%';
                 progressBar.setAttribute('aria-valuenow', progress);
                 progressText.textContent = `Przetwarzanie... (${completed}/${rows.length})`;
-
-                // Small delay for visual feedback
-                await new Promise(resolve => setTimeout(resolve, 100));
             }
 
-            // Show completion message
-            progressText.textContent = `Ukończono: ${completed}/${rows.length}`;
+            // Show completion message with error summary
+            if (failed.length > 0) {
+                progressText.textContent = `Ukończono: ${succeeded}/${rows.length}. Nieudane: ${failed.length}`;
+
+                // Show summary modal with all failures
+                const failureDetails = failed.map(f =>
+                    `• ${f.activity.substring(0, 40)}...\n  Błąd: ${f.error}`
+                ).join('\n\n');
+
+                this.showError(
+                    `Przetworzono pomyślnie: ${succeeded}/${rows.length}\n\n` +
+                    `Nieudane wiersze (${failed.length}):\n\n${failureDetails}`
+                );
+            } else {
+                progressText.textContent = `Ukończono: ${succeeded}/${rows.length}`;
+            }
 
             // Hide progress after delay
             setTimeout(() => {
@@ -186,17 +218,11 @@ const AIService = {
             }, 2000);
 
         } catch (error) {
-            clearTimeout(timeoutId);
             console.error('Error in bulk generation:', error);
             this.showError(this.getUserFriendlyErrorMessage(error));
             throw error;
 
         } finally {
-            // Clear loading state for all rows
-            rows.forEach(row => {
-                TableManager.setRowLoading(row.id, false);
-            });
-
             // Re-enable bulk generate button
             const bulkBtn = document.getElementById('bulkGenerateBtn');
             bulkBtn.disabled = false;
@@ -215,13 +241,20 @@ const AIService = {
             return this.tooltipCache.get(code);
         }
 
+        // Set up timeout for tooltip fetch (10 seconds)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);  // 10 seconds for tooltips
+
         try {
             const response = await fetch(this.endpoints.curriculumTooltip + code + '/', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                }
+                },
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             const data = await response.json();
 
@@ -230,11 +263,16 @@ const AIService = {
             }
 
             // Cache the result
-            this.tooltipCache.set(code, data.text);
+            this.tooltipCache.set(code, data.full_text);
 
-            return data.text;
+            return data.full_text;
 
         } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.error('Tooltip fetch timeout:', code);
+                return 'Przekroczono limit czasu pobierania opisu';
+            }
             console.error('Error fetching tooltip:', error);
             return `Nie znaleziono opisu dla kodu: ${code}`;
         }

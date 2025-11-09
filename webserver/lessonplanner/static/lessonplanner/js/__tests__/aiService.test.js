@@ -1,5 +1,6 @@
 /**
  * Tests for aiService.js - API calls and error handling
+ * Updated for new API endpoints and sequential bulk processing
  */
 
 // Mock DOM elements
@@ -31,11 +32,11 @@ global.bootstrap = {
 // Create a mock AIService object
 const createAIService = () => ({
   endpoints: {
-    generateMetadata: '/api/generate-metadata/',
-    generateBulk: '/api/generate-bulk/',
-    curriculumTooltip: '/api/curriculum/'
+    fillWorkPlan: '/api/fill-work-plan/',
+    curriculumTooltip: '/api/curriculum-refs/'
   },
   tooltipCache: new Map(),
+  REQUEST_TIMEOUT: 120000
 });
 
 describe('AIService', () => {
@@ -49,11 +50,11 @@ describe('AIService', () => {
     document.getElementById('bulkGenerateBtn').disabled = false;
   });
 
-  describe('generateSingle', () => {
-    test('should call API with correct parameters', async () => {
+  describe('fill-work-plan endpoint', () => {
+    test('should call API with correct endpoint', async () => {
       const mockResponse = {
         module: 'Test Module',
-        curriculum_refs: ['I.1.2'],
+        curriculum_refs: ['4.15'],
         objectives: ['Objective 1']
       };
 
@@ -65,15 +66,14 @@ describe('AIService', () => {
       const activity = 'Test Activity';
       const theme = 'Test Theme';
 
-      // Simulate the call (would need actual function)
-      await fetch(AIService.endpoints.generateMetadata, {
+      await fetch(AIService.endpoints.fillWorkPlan, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ activity, theme })
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/generate-metadata/',
+        '/api/fill-work-plan/',
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -82,15 +82,13 @@ describe('AIService', () => {
       );
     });
 
-    test('should set row loading state before API call', () => {
+    test('should set row loading state', () => {
       const rowId = 'row_1';
-
       TableManager.setRowLoading(rowId, true);
-
       expect(TableManager.setRowLoading).toHaveBeenCalledWith(rowId, true);
     });
 
-    test('should clear row loading state after API call', async () => {
+    test('should clear row loading state', async () => {
       const rowId = 'row_1';
 
       global.fetch.mockResolvedValueOnce({
@@ -103,7 +101,7 @@ describe('AIService', () => {
       });
 
       try {
-        await fetch('/api/generate-metadata/', {
+        await fetch('/api/fill-work-plan/', {
           method: 'POST',
           body: JSON.stringify({ activity: 'test', theme: '' })
         });
@@ -117,7 +115,7 @@ describe('AIService', () => {
     test('should update row data on successful response', async () => {
       const mockData = {
         module: 'Test Module',
-        curriculum_refs: ['I.1.2', 'II.2.3'],
+        curriculum_refs: ['4.15', '4.18'],
         objectives: ['Objective 1', 'Objective 2']
       };
 
@@ -126,7 +124,7 @@ describe('AIService', () => {
         json: async () => mockData
       });
 
-      const response = await fetch('/api/generate-metadata/', {
+      const response = await fetch('/api/fill-work-plan/', {
         method: 'POST',
         body: JSON.stringify({ activity: 'test', theme: '' })
       });
@@ -142,7 +140,7 @@ describe('AIService', () => {
 
       expect(TableManager.setRowData).toHaveBeenCalledWith('row_1', {
         module: 'Test Module',
-        curriculum: ['I.1.2', 'II.2.3'],
+        curriculum: ['4.15', '4.18'],
         objectives: ['Objective 1', 'Objective 2'],
         aiGenerated: true,
         userEdited: false
@@ -155,7 +153,7 @@ describe('AIService', () => {
         json: async () => ({ error: 'Server error' })
       });
 
-      const response = await fetch('/api/generate-metadata/', {
+      const response = await fetch('/api/fill-work-plan/', {
         method: 'POST',
         body: JSON.stringify({ activity: 'test', theme: '' })
       });
@@ -164,7 +162,7 @@ describe('AIService', () => {
     });
   });
 
-  describe('generateBulk', () => {
+  describe('generateBulk - sequential processing', () => {
     const mockRows = [
       { id: 'row_1', activity: 'Activity 1' },
       { id: 'row_2', activity: 'Activity 2' }
@@ -193,38 +191,56 @@ describe('AIService', () => {
       expect(bulkBtn.innerHTML).toContain('Przetwarzanie...');
     });
 
-    test('should set all rows to loading state', () => {
+    test('should set loading state for each row individually', () => {
       mockRows.forEach(row => {
         TableManager.setRowLoading(row.id, true);
+        TableManager.setRowLoading(row.id, false);
       });
 
-      expect(TableManager.setRowLoading).toHaveBeenCalledTimes(2);
+      // Should be called twice per row (set true, then set false)
+      expect(TableManager.setRowLoading).toHaveBeenCalledTimes(4);
       expect(TableManager.setRowLoading).toHaveBeenCalledWith('row_1', true);
-      expect(TableManager.setRowLoading).toHaveBeenCalledWith('row_2', true);
+      expect(TableManager.setRowLoading).toHaveBeenCalledWith('row_1', false);
     });
 
-    test('should call bulk API endpoint', async () => {
+    test('should call fill-work-plan endpoint for each row sequentially', async () => {
       const theme = 'Test Theme';
 
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ results: [] })
-      });
+      // Mock successful responses for both rows
+      global.fetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ module: 'Module 1', curriculum_refs: [], objectives: [] })
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ module: 'Module 2', curriculum_refs: [], objectives: [] })
+        });
 
-      await fetch(AIService.endpoints.generateBulk, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme, activities: mockRows })
-      });
+      // Simulate sequential calls
+      for (const row of mockRows) {
+        await fetch(AIService.endpoints.fillWorkPlan, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ activity: row.activity, theme })
+        });
+      }
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/generate-bulk/',
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(global.fetch).toHaveBeenNthCalledWith(
+        1,
+        '/api/fill-work-plan/',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({
-            theme,
-            activities: mockRows
-          })
+          body: JSON.stringify({ activity: 'Activity 1', theme })
+        })
+      );
+      expect(global.fetch).toHaveBeenNthCalledWith(
+        2,
+        '/api/fill-work-plan/',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ activity: 'Activity 2', theme })
         })
       );
     });
@@ -246,6 +262,15 @@ describe('AIService', () => {
       expect(progressText.textContent).toBe('Przetwarzanie... (2/2)');
     });
 
+    test('should re-enable bulk generate button when complete', () => {
+      const bulkBtn = document.getElementById('bulkGenerateBtn');
+      bulkBtn.disabled = false;
+      bulkBtn.innerHTML = '<i class="bi bi-magic"></i> Wypełnij wszystko AI';
+
+      expect(bulkBtn.disabled).toBe(false);
+      expect(bulkBtn.innerHTML).toContain('Wypełnij wszystko AI');
+    });
+
     test('should clear loading state for all rows when complete', () => {
       mockRows.forEach(row => {
         TableManager.setRowLoading(row.id, false);
@@ -254,15 +279,6 @@ describe('AIService', () => {
       // Should have been called for both setting to true and false
       expect(TableManager.setRowLoading).toHaveBeenCalledWith('row_1', false);
       expect(TableManager.setRowLoading).toHaveBeenCalledWith('row_2', false);
-    });
-
-    test('should re-enable bulk generate button when complete', () => {
-      const bulkBtn = document.getElementById('bulkGenerateBtn');
-      bulkBtn.disabled = false;
-      bulkBtn.innerHTML = '<i class="bi bi-magic"></i> Wypełnij wszystko AI';
-
-      expect(bulkBtn.disabled).toBe(false);
-      expect(bulkBtn.innerHTML).toContain('Wypełnij wszystko AI');
     });
 
     test('should hide progress bar after delay', (done) => {
@@ -281,23 +297,26 @@ describe('AIService', () => {
 
   describe('getCurriculumTooltip', () => {
     test('should return cached value if available', () => {
-      const code = 'I.1.2';
+      const code = '4.15';
       const cachedText = 'Cached curriculum text';
 
       AIService.tooltipCache.set(code, cachedText);
-
       const result = AIService.tooltipCache.get(code);
 
       expect(result).toBe(cachedText);
     });
 
     test('should fetch from API if not in cache', async () => {
-      const code = 'II.3.1';
+      const code = '3.8';
       const responseText = 'Fetched curriculum text';
 
       global.fetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ text: responseText })
+        json: async () => ({
+          reference_code: code,
+          full_text: responseText,
+          created_at: '2025-10-28T10:30:00Z'
+        })
       });
 
       const response = await fetch(`${AIService.endpoints.curriculumTooltip}${code}/`, {
@@ -307,27 +326,31 @@ describe('AIService', () => {
       const data = await response.json();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/curriculum/II.3.1/',
+        '/api/curriculum-refs/3.8/',
         expect.objectContaining({
           method: 'GET'
         })
       );
-      expect(data.text).toBe(responseText);
+      expect(data.full_text).toBe(responseText);
     });
 
     test('should cache fetched value', async () => {
-      const code = 'III.1.1';
+      const code = '2.5';
       const text = 'New curriculum text';
 
       global.fetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ text })
+        json: async () => ({
+          reference_code: code,
+          full_text: text,
+          created_at: '2025-10-28T10:30:00Z'
+        })
       });
 
       const response = await fetch(`${AIService.endpoints.curriculumTooltip}${code}/`);
       const data = await response.json();
 
-      AIService.tooltipCache.set(code, data.text);
+      AIService.tooltipCache.set(code, data.full_text);
 
       expect(AIService.tooltipCache.get(code)).toBe(text);
     });
@@ -337,7 +360,10 @@ describe('AIService', () => {
 
       global.fetch.mockResolvedValueOnce({
         ok: false,
-        json: async () => ({ error: 'Not found' })
+        json: async () => ({
+          error: 'Nie znaleziono odniesienia dla kodu: INVALID',
+          error_code: 'REFERENCE_NOT_FOUND'
+        })
       });
 
       const response = await fetch(`${AIService.endpoints.curriculumTooltip}${code}/`);
@@ -364,7 +390,7 @@ describe('AIService', () => {
       global.fetch.mockRejectedValueOnce(new Error('Network error'));
 
       try {
-        await fetch('/api/generate-metadata/');
+        await fetch('/api/fill-work-plan/');
       } catch (error) {
         expect(error.message).toBe('Network error');
       }
@@ -377,7 +403,7 @@ describe('AIService', () => {
       });
 
       try {
-        const response = await fetch('/api/generate-metadata/');
+        const response = await fetch('/api/fill-work-plan/');
         await response.json();
       } catch (error) {
         expect(error.message).toBe('Invalid JSON');
