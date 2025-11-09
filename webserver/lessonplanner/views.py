@@ -11,7 +11,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from django.utils.html import escape
 
-from .services.ai_client import generate_metadata, get_curriculum_text
+from .services import ai_client
 from .forms import FillWorkPlanForm
 from .fixtures.mock_data import MOCK_CURRICULUM_REFS, MOCK_EDUCATIONAL_MODULES
 
@@ -78,7 +78,7 @@ def fill_work_plan_view(request):
         theme = form.cleaned_data.get('theme', '')
 
         # Call AI client service
-        result = generate_metadata(activity, theme)
+        result = ai_client.generate_metadata(activity, theme)
 
         return JsonResponse(result, status=200)
 
