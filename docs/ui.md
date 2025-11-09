@@ -65,7 +65,7 @@ All table cells are contenteditable:
 
 **Process:**
 1. Validates activity field not empty
-2. Checks for existing manual metadata → confirmation if present
+2. Checks for existing manual data entries → confirmation if present
 3. Makes POST request to `/api/fill-work-plan/`
 4. Shows loading overlay on row (120s timeout)
 5. Populates: module, curriculum_refs, objectives
@@ -175,7 +175,6 @@ All table cells are contenteditable:
 **Trigger:** Hover over Podstawa Programowa cell
 
 **Pattern Match:** `\d+\.\d+` (e.g., "4.15", "12.3")
-- ❌ Does NOT match: Roman numerals (I.1.2)
 
 **Behavior:**
 1. 300ms hover delay before showing
@@ -214,8 +213,8 @@ All table cells are contenteditable:
 ```
 
 ### State Transitions
-| Initial | After AI Gen | After User Edit | After Regenerate |
-|---------|--------------|-----------------|------------------|
+| Initial | After AI Gen | After User Edit (Post AI gen) | After Regenerate |
+|---------|--------------|-------------------------------|------------------|
 | `ai=false, edit=false` | `ai=true, edit=false` | `ai=true, edit=true` | `ai=true, edit=false` |
 
 ### Button Display Logic
