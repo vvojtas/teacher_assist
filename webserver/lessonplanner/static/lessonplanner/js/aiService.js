@@ -13,7 +13,7 @@ const AIService = {
     tooltipCache: new Map(),
 
     // Request timeout in milliseconds (per PRD section 7.6)
-    REQUEST_TIMEOUT: 120000,
+    REQUEST_TIMEOUT: 120000,  // 120 seconds (2 minutes)
 
     /**
      * Get user-friendly error message based on error type
@@ -122,6 +122,7 @@ const AIService = {
             // Process each row sequentially
             let completed = 0;
             let succeeded = 0;
+            const failed = [];
 
             for (const row of rows) {
                 const controller = new AbortController();
@@ -163,11 +164,11 @@ const AIService = {
                         const errorMsg = data.error || 'Błąd serwera';
                         console.error(`Error for row ${row.id}:`, errorMsg);
 
-                        // Show error modal immediately
-                        this.showError(
-                            `Błąd dla aktywności:\n"${row.activity.substring(0, 50)}..."\n\n` +
-                            `Szczegóły: ${errorMsg}`
-                        );
+                        // Collect error for summary
+                        failed.push({
+                            activity: row.activity,
+                            error: errorMsg
+                        });
                     }
 
                 } catch (error) {
@@ -177,11 +178,11 @@ const AIService = {
                         : (error.message || 'Nieznany błąd');
                     console.error(`Error generating metadata for row ${row.id}:`, errorMsg);
 
-                    // Show error modal immediately
-                    this.showError(
-                        `Błąd dla aktywności:\n"${row.activity.substring(0, 50)}..."\n\n` +
-                        `Szczegóły: ${errorMsg}`
-                    );
+                    // Collect error for summary
+                    failed.push({
+                        activity: row.activity,
+                        error: errorMsg
+                    });
                 } finally {
                     // Clear loading state for this row
                     TableManager.setRowLoading(row.id, false);
@@ -195,8 +196,22 @@ const AIService = {
                 progressText.textContent = `Przetwarzanie... (${completed}/${rows.length})`;
             }
 
-            // Show completion message
-            progressText.textContent = `Ukończono: ${succeeded}/${rows.length}`;
+            // Show completion message with error summary
+            if (failed.length > 0) {
+                progressText.textContent = `Ukończono: ${succeeded}/${rows.length}. Nieudane: ${failed.length}`;
+
+                // Show summary modal with all failures
+                const failureDetails = failed.map(f =>
+                    `• ${f.activity.substring(0, 40)}...\n  Błąd: ${f.error}`
+                ).join('\n\n');
+
+                this.showError(
+                    `Przetworzono pomyślnie: ${succeeded}/${rows.length}\n\n` +
+                    `Nieudane wiersze (${failed.length}):\n\n${failureDetails}`
+                );
+            } else {
+                progressText.textContent = `Ukończono: ${succeeded}/${rows.length}`;
+            }
 
             // Hide progress after delay
             setTimeout(() => {
@@ -227,13 +242,20 @@ const AIService = {
             return this.tooltipCache.get(code);
         }
 
+        // Set up timeout for tooltip fetch (10 seconds)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);  // 10 seconds for tooltips
+
         try {
             const response = await fetch(this.endpoints.curriculumTooltip + code + '/', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                }
+                },
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             const data = await response.json();
 
@@ -247,6 +269,11 @@ const AIService = {
             return data.full_text;
 
         } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.error('Tooltip fetch timeout:', code);
+                return 'Przekroczono limit czasu pobierania opisu';
+            }
             console.error('Error fetching tooltip:', error);
             return `Nie znaleziono opisu dla kodu: ${code}`;
         }

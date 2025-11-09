@@ -9,6 +9,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
+from django.utils.html import escape
 
 from .services.ai_client import generate_metadata, get_curriculum_text
 from .forms import FillWorkPlanForm
@@ -188,7 +189,7 @@ def get_curriculum_ref_by_code_view(request, code):
         # Lookup curriculum reference
         if code not in MOCK_CURRICULUM_REFS:
             return JsonResponse({
-                'error': f'Nie znaleziono odniesienia dla kodu: {code}',
+                'error': f'Nie znaleziono odniesienia dla kodu: {escape(code)}',
                 'error_code': 'REFERENCE_NOT_FOUND'
             }, status=404)
 

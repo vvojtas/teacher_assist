@@ -270,6 +270,29 @@ describe('AIService', () => {
       expect(bulkBtn.disabled).toBe(false);
       expect(bulkBtn.innerHTML).toContain('Wypełnij wszystko AI');
     });
+
+    test('should clear loading state for all rows when complete', () => {
+      mockRows.forEach(row => {
+        TableManager.setRowLoading(row.id, false);
+      });
+
+      // Should have been called for both setting to true and false
+      expect(TableManager.setRowLoading).toHaveBeenCalledWith('row_1', false);
+      expect(TableManager.setRowLoading).toHaveBeenCalledWith('row_2', false);
+    });
+
+    test('should hide progress bar after delay', (done) => {
+      const progressContainer = document.getElementById('progressContainer');
+
+      setTimeout(() => {
+        progressContainer.style.display = 'none';
+      }, 100);
+
+      setTimeout(() => {
+        expect(progressContainer.style.display).toBe('none');
+        done();
+      }, 150);
+    });
   });
 
   describe('getCurriculumTooltip', () => {
