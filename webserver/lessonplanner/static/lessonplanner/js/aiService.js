@@ -114,9 +114,9 @@ const AIService = {
             bulkBtn.disabled = true;
             bulkBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Przetwarzanie...';
 
-            // Set all rows to inactive state at the beginning
+            // Set all rows to loading state at the beginning
             for (const row of rows) {
-                TableManager.setRowLoading(row.id, false);
+                TableManager.setRowLoading(row.id, true);
             }
 
             // Process each row sequentially
@@ -129,8 +129,7 @@ const AIService = {
                 const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
 
                 try {
-                    // Set loading state for this row
-                    TableManager.setRowLoading(row.id, true);
+                    // Row is already in loading state from above
 
                     // Make individual API call for each row
                     const response = await fetch(this.endpoints.fillWorkPlan, {
