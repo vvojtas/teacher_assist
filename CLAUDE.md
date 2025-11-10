@@ -113,7 +113,7 @@ python manage.py runserver
 
 **SQLite is intentionally used** and the database file (`webserver/db.sqlite3`) **is committed to git** for portability. This allows pre-populated curriculum data to work across different systems without setup.
 
-**See [docs/PRD.md](docs/PRD.md) Section 7.5 for database schema details.**
+**See [docs/db_schema.md](docs/db_schema.md) for database schema details.**
 
 **Note:** MVP has no data persistence for lesson plans (session-only). Future phases will add save/load functionality.
 
