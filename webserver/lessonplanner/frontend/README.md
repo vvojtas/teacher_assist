@@ -5,6 +5,7 @@ This directory contains the React frontend for the Teacher Assist lesson plannin
 ## Technology Stack
 
 - **Framework:** React 18
+- **Language:** TypeScript 5
 - **Build Tool:** Vite
 - **Styling:** Tailwind CSS v3
 - **Component Library:** shadcn/ui
@@ -29,13 +30,27 @@ npm run build
 \`\`\`
 
 ### Auto-Build and Update Django Template
+
+**Linux/macOS:**
 \`\`\`bash
 ./build-and-update.sh
 \`\`\`
 
+**Windows (Command Prompt):**
+\`\`\`cmd
+build-and-update.bat
+\`\`\`
+
+**Windows (PowerShell):**
+\`\`\`powershell
+.\build-and-update.ps1
+\`\`\`
+
+See [BUILD_SCRIPTS_README.md](BUILD_SCRIPTS_README.md) for detailed instructions.
+
 ## Migration Summary
 
-Successfully migrated from Bootstrap 5 + Vanilla JS to React + Tailwind CSS + shadcn/ui with full feature parity.
+Successfully migrated from Bootstrap 5 + Vanilla JS to React + TypeScript + Tailwind CSS + shadcn/ui with full feature parity.
 
 All original features preserved:
 - Theme input, editable table cells
