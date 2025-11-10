@@ -50,20 +50,24 @@ psql teacher_assist -c "\dt"
 
 ### 2.2 Manual SQL Initialization (Alternative)
 
-If not using Django ORM, run the SQL schema directly:
+If not using Django ORM, you can run the SQL schema directly.
+
+**Step 1:** Copy the SQL schema from `docs/db_schema.md` Section 4 and save it to a file (e.g., `schema.sql`)
+
+**Step 2:** Run the SQL file:
 
 **SQLite:**
 ```bash
 cd webserver
-sqlite3 db.sqlite3 < ../docs/schema.sql
+sqlite3 db.sqlite3 < schema.sql
 ```
 
 **PostgreSQL:**
 ```bash
-psql teacher_assist < docs/schema.sql
+psql teacher_assist < schema.sql
 ```
 
-See `docs/db_schema.md` Section 4 for complete SQL schema definitions.
+See `docs/db_schema.md` Section 4 for complete SQL schema definitions (SQLite and PostgreSQL versions).
 
 ---
 
@@ -79,7 +83,7 @@ Django ORM abstracts database differences automatically and is the recommended a
 
 ### 3.1 Model Definitions
 
-Create the following models in your Django app (e.g., `webserver/yourapp/models.py`):
+Create the following models in your Django app (e.g., `webserver/lessonplanner/models.py`):
 
 ```python
 # models.py
@@ -216,10 +220,10 @@ INSERT INTO major_curriculum_references (reference_code, full_text) VALUES
 Create a custom management command:
 
 ```python
-# webserver/yourapp/management/commands/seed_major_curriculum.py
+# webserver/lessonplanner/management/commands/seed_major_curriculum.py
 
 from django.core.management.base import BaseCommand
-from yourapp.models import MajorCurriculumReference
+from lessonplanner.models import MajorCurriculumReference
 
 
 class Command(BaseCommand):
@@ -275,11 +279,11 @@ reference_code,full_text,major_code
 **Django Management Command:**
 
 ```python
-# webserver/yourapp/management/commands/import_curriculum.py
+# webserver/lessonplanner/management/commands/import_curriculum.py
 
 import csv
 from django.core.management.base import BaseCommand
-from yourapp.models import CurriculumReference, MajorCurriculumReference
+from lessonplanner.models import CurriculumReference, MajorCurriculumReference
 
 
 class Command(BaseCommand):
@@ -345,7 +349,7 @@ python manage.py import_curriculum ../data/curriculum_refs.csv
 ```json
 [
   {
-    "model": "yourapp.curriculumreference",
+    "model": "lessonplanner.curriculumreference",
     "pk": 1,
     "fields": {
       "reference_code": "1.1",
@@ -355,7 +359,7 @@ python manage.py import_curriculum ../data/curriculum_refs.csv
     }
   },
   {
-    "model": "yourapp.curriculumreference",
+    "model": "lessonplanner.curriculumreference",
     "pk": 2,
     "fields": {
       "reference_code": "4.15",
@@ -375,7 +379,7 @@ python manage.py loaddata initial_curriculum.json
 
 **Export Existing Data (to create fixture):**
 ```bash
-python manage.py dumpdata yourapp.CurriculumReference --indent 2 > initial_curriculum.json
+python manage.py dumpdata lessonplanner.CurriculumReference --indent 2 > initial_curriculum.json
 ```
 
 ### 4.3 Educational Modules
@@ -401,10 +405,10 @@ INSERT INTO educational_modules (module_name, is_ai_suggested) VALUES
 **Django Management Command:**
 
 ```python
-# webserver/yourapp/management/commands/seed_modules.py
+# webserver/lessonplanner/management/commands/seed_modules.py
 
 from django.core.management.base import BaseCommand
-from yourapp.models import EducationalModule
+from lessonplanner.models import EducationalModule
 
 
 class Command(BaseCommand):
@@ -448,18 +452,18 @@ python manage.py seed_modules
 
 ```json
 [
-  {"model": "yourapp.educationalmodule", "fields": {"module_name": "JĘZYK", "is_ai_suggested": false}},
-  {"model": "yourapp.educationalmodule", "fields": {"module_name": "MATEMATYKA", "is_ai_suggested": false}},
-  {"model": "yourapp.educationalmodule", "fields": {"module_name": "MOTORYKA MAŁA", "is_ai_suggested": false}},
-  {"model": "yourapp.educationalmodule", "fields": {"module_name": "MOTORYKA DUŻA", "is_ai_suggested": false}},
-  {"model": "yourapp.educationalmodule", "fields": {"module_name": "FORMY PLASTYCZNE", "is_ai_suggested": false}},
-  {"model": "yourapp.educationalmodule", "fields": {"module_name": "MUZYKA", "is_ai_suggested": false}},
-  {"model": "yourapp.educationalmodule", "fields": {"module_name": "POZNAWCZE", "is_ai_suggested": false}},
-  {"model": "yourapp.educationalmodule", "fields": {"module_name": "WSPÓŁPRACA", "is_ai_suggested": false}},
-  {"model": "yourapp.educationalmodule", "fields": {"module_name": "EMOCJE", "is_ai_suggested": false}},
-  {"model": "yourapp.educationalmodule", "fields": {"module_name": "SPOŁECZNE", "is_ai_suggested": false}},
-  {"model": "yourapp.educationalmodule", "fields": {"module_name": "SENSORYKA", "is_ai_suggested": false}},
-  {"model": "yourapp.educationalmodule", "fields": {"module_name": "ZDROWIE", "is_ai_suggested": false}}
+  {"model": "lessonplanner.educationalmodule", "fields": {"module_name": "JĘZYK", "is_ai_suggested": false}},
+  {"model": "lessonplanner.educationalmodule", "fields": {"module_name": "MATEMATYKA", "is_ai_suggested": false}},
+  {"model": "lessonplanner.educationalmodule", "fields": {"module_name": "MOTORYKA MAŁA", "is_ai_suggested": false}},
+  {"model": "lessonplanner.educationalmodule", "fields": {"module_name": "MOTORYKA DUŻA", "is_ai_suggested": false}},
+  {"model": "lessonplanner.educationalmodule", "fields": {"module_name": "FORMY PLASTYCZNE", "is_ai_suggested": false}},
+  {"model": "lessonplanner.educationalmodule", "fields": {"module_name": "MUZYKA", "is_ai_suggested": false}},
+  {"model": "lessonplanner.educationalmodule", "fields": {"module_name": "POZNAWCZE", "is_ai_suggested": false}},
+  {"model": "lessonplanner.educationalmodule", "fields": {"module_name": "WSPÓŁPRACA", "is_ai_suggested": false}},
+  {"model": "lessonplanner.educationalmodule", "fields": {"module_name": "EMOCJE", "is_ai_suggested": false}},
+  {"model": "lessonplanner.educationalmodule", "fields": {"module_name": "SPOŁECZNE", "is_ai_suggested": false}},
+  {"model": "lessonplanner.educationalmodule", "fields": {"module_name": "SENSORYKA", "is_ai_suggested": false}},
+  {"model": "lessonplanner.educationalmodule", "fields": {"module_name": "ZDROWIE", "is_ai_suggested": false}}
 ]
 ```
 
@@ -481,7 +485,7 @@ python manage.py shell
 ```
 
 ```python
-from yourapp.models import MajorCurriculumReference, CurriculumReference, EducationalModule
+from lessonplanner.models import MajorCurriculumReference, CurriculumReference, EducationalModule
 
 # Check major references
 print(f"Major references: {MajorCurriculumReference.objects.count()}")
@@ -668,7 +672,7 @@ python manage.py seed_modules
 # Step 6: Verify
 echo "Verifying data..."
 python manage.py shell -c "
-from yourapp.models import MajorCurriculumReference, CurriculumReference, EducationalModule
+from lessonplanner.models import MajorCurriculumReference, CurriculumReference, EducationalModule
 print(f'Major refs: {MajorCurriculumReference.objects.count()}')
 print(f'Curriculum refs: {CurriculumReference.objects.count()}')
 print(f'Modules: {EducationalModule.objects.count()}')

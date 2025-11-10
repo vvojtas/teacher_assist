@@ -443,7 +443,7 @@ Stores educational module categories (e.g., "MATEMATYKA", "JĘZYK"). Tracks both
 
 **Data Persistence:** Session data (themes, activities, generated metadata) is NOT persisted in MVP. Only reference data is stored.
 
-**Complete Schema Documentation:** See [docs/db_schema.md](db_schema.md) for detailed table definitions, column types, indexes, constraints, and Django model examples.
+**Complete Schema Documentation:** See [db_schema.md](db_schema.md) for detailed table definitions, column types, indexes, constraints, and Django model examples.
 
 ### 7.6 Performance Requirements
 
