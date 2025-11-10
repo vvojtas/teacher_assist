@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   resolve: {
     alias: {
@@ -21,5 +21,6 @@ export default defineConfig({
       input: path.resolve(__dirname, 'index.html'),
     },
   },
-  base: '/static/lessonplanner/dist/',
-})
+  // Use different base path for dev vs production
+  base: mode === 'production' ? '/static/lessonplanner/dist/' : '/',
+}))
