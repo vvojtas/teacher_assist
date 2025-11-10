@@ -107,11 +107,11 @@ class FillWorkPlanViewTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 405)  # Method Not Allowed
 
-    @patch('lessonplanner.services.ai_client.generate_metadata')
-    def test_fill_work_plan_success(self, mock_generate):
+    @patch('lessonplanner.services.ai_client.fill_work_plan')
+    def test_fill_work_plan_success(self, mock_fill_work_plan):
         """Test successful metadata generation"""
         # Mock AI service response
-        mock_generate.return_value = {
+        mock_fill_work_plan.return_value = {
             'module': 'MATEMATYKA',
             'curriculum_refs': ['4.15', '4.18'],
             'objectives': [
@@ -209,10 +209,10 @@ class FillWorkPlanViewTests(TestCase):
         data = response.json()
         self.assertEqual(data['error_code'], 'INVALID_INPUT')
 
-    @patch('lessonplanner.services.ai_client.generate_metadata')
-    def test_fill_work_plan_ai_service_error(self, mock_generate):
+    @patch('lessonplanner.services.ai_client.fill_work_plan')
+    def test_fill_work_plan_ai_service_error(self, mock_fill_work_plan):
         """Test error handling: AI service failure"""
-        mock_generate.side_effect = Exception('AI service error')
+        mock_fill_work_plan.side_effect = Exception('AI service error')
 
         response = self.client.post(
             self.url,
@@ -270,7 +270,7 @@ class FillWorkPlanViewTests(TestCase):
                 HTTP_X_CSRFTOKEN=csrf_token
             )
 
-        # Note: This will still fail with 500 because we're not mocking generate_metadata,
+        # Note: This will still fail with 500 because we're not mocking fill_work_plan,
         # but it proves CSRF validation passed (403 would indicate CSRF failure)
         self.assertNotEqual(response.status_code, 403)
 

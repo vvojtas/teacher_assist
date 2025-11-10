@@ -78,7 +78,7 @@ def fill_work_plan_view(request):
         theme = form.cleaned_data.get('theme', '')
 
         # Call AI client service
-        result = ai_client.generate_metadata(activity, theme)
+        result = ai_client.fill_work_plan(activity, theme)
 
         return JsonResponse(result, status=200)
 
