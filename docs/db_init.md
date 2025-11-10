@@ -67,9 +67,129 @@ See `docs/db_schema.md` Section 4 for complete SQL schema definitions.
 
 ---
 
-## 3. Data Seeding
+## 3. Django Models (Recommended)
 
-### 3.1 Major Curriculum References
+Django ORM abstracts database differences automatically and is the recommended approach for this project.
+
+**Django Advantages:**
+- Automatic migrations via `python manage.py makemigrations`
+- Database-agnostic (change `ENGINE` in settings.py to switch databases)
+- Built-in admin interface for data management
+- ORM query optimization
+
+### 3.1 Model Definitions
+
+Create the following models in your Django app (e.g., `webserver/yourapp/models.py`):
+
+```python
+# models.py
+
+from django.db import models
+
+
+class MajorCurriculumReference(models.Model):
+    """
+    Stores major sections of Polish curriculum (Podstawa Programowa).
+    Each major reference represents a top-level section (e.g., "4" for mathematics).
+    """
+    reference_code = models.CharField(
+        max_length=10,
+        unique=True,
+        db_index=True,
+        help_text="Major section code (e.g., '4')"
+    )
+    full_text = models.TextField(
+        help_text="Complete Polish text for major curriculum section"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'major_curriculum_references'
+        ordering = ['reference_code']
+        verbose_name = 'Major Curriculum Reference'
+        verbose_name_plural = 'Major Curriculum References'
+
+    def __str__(self):
+        return f"{self.reference_code}: {self.full_text[:50]}..."
+
+
+class CurriculumReference(models.Model):
+    """
+    Stores detailed Polish curriculum reference codes (Podstawa Programowa)
+    and their complete text descriptions for tooltip display.
+    """
+    reference_code = models.CharField(
+        max_length=20,
+        unique=True,
+        db_index=True,
+        help_text="Curriculum code (e.g., '4.15')"
+    )
+    full_text = models.TextField(
+        help_text="Complete Polish curriculum requirement text"
+    )
+    major_reference = models.ForeignKey(
+        MajorCurriculumReference,
+        on_delete=models.RESTRICT,
+        related_name='detailed_references',
+        help_text="Parent major curriculum section"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'curriculum_references'
+        ordering = ['reference_code']
+        verbose_name = 'Curriculum Reference'
+        verbose_name_plural = 'Curriculum References'
+
+    def __str__(self):
+        return f"{self.reference_code}: {self.full_text[:50]}..."
+
+
+class EducationalModule(models.Model):
+    """
+    Stores educational module categories (e.g., MATEMATYKA, JĘZYK).
+    Tracks both predefined modules and AI-suggested modules.
+    """
+    module_name = models.CharField(
+        max_length=200,
+        unique=True,
+        db_index=True,
+        help_text="Module name in Polish (e.g., 'MATEMATYKA')"
+    )
+    is_ai_suggested = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="TRUE if AI-suggested, FALSE if predefined"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'educational_modules'
+        ordering = ['module_name']
+        verbose_name = 'Educational Module'
+        verbose_name_plural = 'Educational Modules'
+
+    def __str__(self):
+        return self.module_name
+```
+
+### 3.2 Creating Migrations
+
+After defining your models, generate and apply migrations:
+
+```bash
+cd webserver
+python manage.py makemigrations
+python manage.py migrate
+```
+
+Django will automatically create the tables with proper column types for your database backend (SQLite, PostgreSQL, MySQL).
+
+---
+
+## 4. Data Seeding
+
+### 4.1 Major Curriculum References
 
 **Data Source:** Polish "Podstawa Programowa Wychowania Przedszkolnego" - major sections
 
@@ -131,7 +251,7 @@ cd webserver
 python manage.py seed_major_curriculum
 ```
 
-### 3.2 Detailed Curriculum References
+### 4.2 Detailed Curriculum References
 
 **Data Source:** Polish "Podstawa Programowa Wychowania Przedszkolnego" - detailed paragraphs
 
@@ -258,7 +378,7 @@ python manage.py loaddata initial_curriculum.json
 python manage.py dumpdata yourapp.CurriculumReference --indent 2 > initial_curriculum.json
 ```
 
-### 3.3 Educational Modules
+### 4.3 Educational Modules
 
 **Initial Predefined Modules:**
 
@@ -350,9 +470,9 @@ python manage.py loaddata initial_modules.json
 
 ---
 
-## 4. Verification
+## 5. Verification
 
-### 4.1 Verify Data Was Loaded
+### 5.1 Verify Data Was Loaded
 
 **Django Shell:**
 ```bash
@@ -400,7 +520,7 @@ FROM curriculum_references cr
 JOIN major_curriculum_references mcr ON cr.major_reference_id = mcr.id;
 ```
 
-### 4.2 Test API Endpoints
+### 5.2 Test API Endpoints
 
 **Start development server:**
 ```bash
@@ -422,9 +542,9 @@ curl http://localhost:8000/api/modules
 
 ---
 
-## 5. Database Backup
+## 6. Database Backup
 
-### 5.1 SQLite Backup (MVP)
+### 6.1 SQLite Backup (MVP)
 
 **Database File Location:** `webserver/db.sqlite3`
 
@@ -449,7 +569,7 @@ python manage.py dumpdata > backup/data-$(date +%Y%m%d).json
 python manage.py loaddata backup/data-20251110.json
 ```
 
-### 5.2 PostgreSQL Backup
+### 6.2 PostgreSQL Backup
 
 ```bash
 # Full database dump
@@ -464,7 +584,7 @@ psql teacher_assist < backup/teacher_assist-20251110.sql
 
 ---
 
-## 6. Common Issues and Troubleshooting
+## 7. Common Issues and Troubleshooting
 
 ### Issue: "Foreign key constraint fails" during import
 
@@ -511,7 +631,7 @@ python manage.py migrate --fake
 
 ---
 
-## 7. Complete Setup Script
+## 8. Complete Setup Script
 
 **Bash script for full initialization:**
 

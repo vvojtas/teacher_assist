@@ -288,113 +288,9 @@ CREATE INDEX idx_educational_modules_ai_suggested ON educational_modules(is_ai_s
 
 ---
 
-## 5. Django Models (Recommended)
+## 5. Performance Considerations
 
-Django ORM abstracts database differences automatically:
-
-```python
-# models.py
-
-from django.db import models
-
-
-class MajorCurriculumReference(models.Model):
-    """
-    Stores major sections of Polish curriculum (Podstawa Programowa).
-    Each major reference represents a top-level section (e.g., "4" for mathematics).
-    """
-    reference_code = models.CharField(
-        max_length=10,
-        unique=True,
-        db_index=True,
-        help_text="Major section code (e.g., '4')"
-    )
-    full_text = models.TextField(
-        help_text="Complete Polish text for major curriculum section"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'major_curriculum_references'
-        ordering = ['reference_code']
-        verbose_name = 'Major Curriculum Reference'
-        verbose_name_plural = 'Major Curriculum References'
-
-    def __str__(self):
-        return f"{self.reference_code}: {self.full_text[:50]}..."
-
-
-class CurriculumReference(models.Model):
-    """
-    Stores detailed Polish curriculum reference codes (Podstawa Programowa)
-    and their complete text descriptions for tooltip display.
-    """
-    reference_code = models.CharField(
-        max_length=20,
-        unique=True,
-        db_index=True,
-        help_text="Curriculum code (e.g., '4.15')"
-    )
-    full_text = models.TextField(
-        help_text="Complete Polish curriculum requirement text"
-    )
-    major_reference = models.ForeignKey(
-        MajorCurriculumReference,
-        on_delete=models.RESTRICT,
-        related_name='detailed_references',
-        help_text="Parent major curriculum section"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'curriculum_references'
-        ordering = ['reference_code']
-        verbose_name = 'Curriculum Reference'
-        verbose_name_plural = 'Curriculum References'
-
-    def __str__(self):
-        return f"{self.reference_code}: {self.full_text[:50]}..."
-
-
-class EducationalModule(models.Model):
-    """
-    Stores educational module categories (e.g., MATEMATYKA, JĘZYK).
-    Tracks both predefined modules and AI-suggested modules.
-    """
-    module_name = models.CharField(
-        max_length=200,
-        unique=True,
-        db_index=True,
-        help_text="Module name in Polish (e.g., 'MATEMATYKA')"
-    )
-    is_ai_suggested = models.BooleanField(
-        default=False,
-        db_index=True,
-        help_text="TRUE if AI-suggested, FALSE if predefined"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'educational_modules'
-        ordering = ['module_name']
-        verbose_name = 'Educational Module'
-        verbose_name_plural = 'Educational Modules'
-
-    def __str__(self):
-        return self.module_name
-```
-
-**Django Advantages:**
-- Automatic migrations via `python manage.py makemigrations`
-- Database-agnostic (change `ENGINE` in settings.py to switch databases)
-- Built-in admin interface for data management
-- ORM query optimization
-
----
-
-## 6. Performance Considerations
-
-### 6.1 Index Strategy
+### 5.1 Index Strategy
 
 **Current Indexes:**
 
@@ -406,7 +302,7 @@ class EducationalModule(models.Model):
 | educational_modules           | UNIQUE     | module_name          | Fast lookup by name              |
 | educational_modules           | INDEX      | is_ai_suggested      | Filter predefined vs AI-suggested|
 
-### 6.2 Query Optimization
+### 5.2 Query Optimization
 
 **Bulk Loading (Curriculum References):**
 ```sql
@@ -443,14 +339,14 @@ for ref in refs:
     print(ref.major_reference.reference_code)  # Additional query per ref!
 ```
 
-### 6.3 Expected Query Volume
+### 5.3 Expected Query Volume
 
 **MVP Phase:**
 - Page load: 1-2 queries (load curriculum refs, load modules)
 - Frequency: ~20 sessions/month
 - Database size: <1 MB
 
-### 6.4 Foreign Key Delete Behavior
+### 5.4 Foreign Key Delete Behavior
 
 **RESTRICT on major_curriculum_references:**
 - If attempting to delete a major section that has detailed references, the deletion will be blocked
@@ -459,7 +355,7 @@ for ref in refs:
 
 ---
 
-## 7. Database Diagram (ASCII)
+## 6. Database Diagram (ASCII)
 
 ```
 ┌────────────────────────────────┐
