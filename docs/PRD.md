@@ -430,27 +430,20 @@ Content-Type: application/json
 
 ### 7.5 Database Schema
 
+The MVP uses three tables for reference data storage:
+
+#### Table: `major_curriculum_references`
+Stores major sections of Polish curriculum (Podstawa Programowa). Examples: "1", "2", "3", "4" representing top-level curriculum areas.
+
 #### Table: `curriculum_references`
-```sql
-CREATE TABLE curriculum_references (
-    id INTEGER PRIMARY KEY,
-    reference_code VARCHAR(20) UNIQUE NOT NULL,  -- e.g., "4.15"
-    full_text TEXT NOT NULL,                      -- Polish curriculum text
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+Stores detailed curriculum paragraph references with their full Polish text. Examples: "4.15", "3.8", "2.5". Each reference belongs to a major curriculum section (1:N relationship).
 
 #### Table: `educational_modules`
-```sql
-CREATE TABLE educational_modules (
-    id INTEGER PRIMARY KEY,
-    module_name VARCHAR(200) UNIQUE NOT NULL,    -- e.g., "Zabawy matematyczne"
-    is_ai_suggested BOOLEAN DEFAULT TRUE,             -- True if AI-suggested
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+Stores educational module categories (e.g., "MATEMATYKA", "JĘZYK"). Tracks both predefined and AI-suggested modules via `is_ai_suggested` boolean flag.
 
-**Note:** Session data (themes, activities, generated metadata) is NOT persisted in MVP.
+**Data Persistence:** Session data (themes, activities, generated metadata) is NOT persisted in MVP. Only reference data is stored.
+
+**Complete Schema Documentation:** See [docs/db_schema.md](db_schema.md) for detailed table definitions, column types, indexes, constraints, and Django model examples.
 
 ### 7.6 Performance Requirements
 
