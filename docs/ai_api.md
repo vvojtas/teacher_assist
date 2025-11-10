@@ -223,5 +223,3 @@ All error responses follow this structure:
 ## Related Documents
 
 - [PRD.md](PRD.md) - Product Requirements Document
-- [django_api.md](django_api.md) - Django Backend API (consumer of this API)
-- [db_schema.md](db_schema.md) - Database schema
