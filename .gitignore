@@ -219,5 +219,8 @@ yarn-error.log*
 package-lock.json
 .npm
 
+# But DO track frontend lib/ directories (exception to Python lib/ ignore)
+!webserver/lessonplanner/frontend/src/lib/
+
 # Jest coverage
 coverage/
