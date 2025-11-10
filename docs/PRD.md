@@ -377,6 +377,7 @@ Content-Type: application/json
 **Success Response (200):**
 ```json
 {
+  "activity": "string",
   "module": "string",
   "curriculum_refs": ["string", "string"],
   "objectives": ["string", "string", "string"]
@@ -386,6 +387,7 @@ Content-Type: application/json
 **Success Response Example:**
 ```json
 {
+  "activity": "Zabawa w sklep z owocami",
   "module": "MATEMATYKA",
   "curriculum_refs": ["4.15", "4.18"],
   "objectives": [
