@@ -81,7 +81,10 @@ Quick summary: Single-page table interface for lesson planning with AI-powered a
 
 **Two-Process Design:** Django web server (port 8000) + LangGraph AI service (port 8001) communicating via REST API.
 
-**See [docs/PRD.md](docs/PRD.md) Section 7 for detailed API contract, database schema, and LangGraph workflow specs.**
+**See API Documentation:**
+- [docs/ai_api.md](docs/ai_api.md) - AI Service REST API specification
+- [docs/django_api.md](docs/django_api.md) - Django Backend API specification
+- [docs/PRD.md](docs/PRD.md) Section 7 - Architecture overview and requirements
 
 ### Starting Both Services
 
@@ -100,17 +103,17 @@ python manage.py runserver
 
 ### Quick Reference
 
-- **AI Endpoint:** `POST http://localhost:8001/api/generate-metadata`
+- **AI Endpoint:** `POST http://localhost:8001/api/fill-work-plan`
 - **LLM Gateway:** OpenRouter (for model flexibility)
 - **Budget:** ~$1/month (use cost-effective models)
-- **Timeout:** 30 seconds
+- **Timeout:** 120 seconds
 - **Language:** Polish (UI and AI responses)
 
 ## Database
 
 **SQLite is intentionally used** and the database file (`webserver/db.sqlite3`) **is committed to git** for portability. This allows pre-populated curriculum data to work across different systems without setup.
 
-**See [docs/PRD.md](docs/PRD.md) Section 7.5 for database schema details.**
+**See [docs/db_schema.md](docs/db_schema.md) for database schema details.**
 
 **Note:** MVP has no data persistence for lesson plans (session-only). Future phases will add save/load functionality.
 

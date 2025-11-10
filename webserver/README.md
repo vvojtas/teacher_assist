@@ -85,7 +85,7 @@ csrf_token = session.cookies['csrftoken']
 
 # 2. Make API request with CSRF token
 response = session.post(
-    'http://localhost:8000/api/generate-metadata/',
+    'http://localhost:8000/api/fill-work-plan',
     json={
         'activity': 'Test activity',
         'theme': 'Test theme'
@@ -107,7 +107,7 @@ curl -c cookies.txt http://localhost:8000/
 CSRF_TOKEN=$(grep csrftoken cookies.txt | cut -f7)
 
 # 3. Make API request
-curl -X POST http://localhost:8000/api/generate-metadata/ \
+curl -X POST http://localhost:8000/api/fill-work-plan \
   -H "Content-Type: application/json" \
   -H "X-CSRFToken: $CSRF_TOKEN" \
   -b cookies.txt \
@@ -119,11 +119,13 @@ rm cookies.txt
 
 #### Available Endpoints
 
-- `POST /api/generate-metadata/` - Generate metadata for single activity
-- `POST /api/generate-bulk/` - Generate metadata for multiple activities
-- `GET /api/curriculum/<code>/` - Get curriculum text for tooltip (no CSRF needed)
+- `POST /api/fill-work-plan` - Generate metadata for single activity
+- `GET /api/curriculum-refs/<code>` - Get curriculum text for tooltip (no CSRF needed)
+- `GET /api/curriculum-refs` - Get all curriculum references (no CSRF needed)
+- `GET /api/modules` - Get educational modules (no CSRF needed)
 
-**Note:** The curriculum tooltip endpoint (GET) does not require CSRF tokens, only POST endpoints do.
+**Note:** GET endpoints do not require CSRF tokens, only POST endpoints do.
+**Note:** Bulk operations are handled by the frontend making sequential calls to `/api/fill-work-plan`.
 
 ### JavaScript Tests
 

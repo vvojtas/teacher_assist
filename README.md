@@ -56,6 +56,7 @@ teacher_assist/
 - **[docs/PRD.md](docs/PRD.md)** - Complete product requirements, user stories, technical specs
 - **[docs/db_schema.md](docs/db_schema.md)** - Database schema definitions and table structures
 - **[docs/django_api.md](docs/django_api.md)** - Django REST API endpoints documentation
+- **[docs/ai_api.md](docs/ai_api.md)** - AI Service REST API specification (LangGraph service)
 - **[docs/ui.md](docs/ui.md)** - UI interaction reference and behavior specifications
 - **[webserver/README.md](webserver/README.md)** - Django setup, commands, and development workflow
 - **[CLAUDE.md](CLAUDE.md)** - Development guidelines for Claude Code
