@@ -1,4 +1,32 @@
-import { useCallback, useRef } from 'react'
+import { useCallback } from 'react'
+import type { Row } from './useTableManager'
+
+export interface GenerateResult {
+  module: string
+  curriculum: string
+  objectives: string
+  aiGenerated: boolean
+  userEdited: boolean
+}
+
+export interface ProgressCallback {
+  rowId: string
+  success: boolean
+  data?: GenerateResult
+  error?: string
+  completed: number
+  total: number
+}
+
+export interface BulkResult {
+  succeeded: number
+  failed: Array<{
+    rowId: string
+    activity: string
+    error: string
+  }>
+  total: number
+}
 
 /**
  * Custom hook for AI service API calls
@@ -10,9 +38,9 @@ export function useAIService() {
   /**
    * Get CSRF token from cookies for Django requests
    */
-  const getCsrfToken = useCallback(() => {
+  const getCsrfToken = useCallback((): string | null => {
     const name = 'csrftoken'
-    let cookieValue = null
+    let cookieValue: string | null = null
     if (document.cookie && document.cookie !== '') {
       const cookies = document.cookie.split(';')
       for (let i = 0; i < cookies.length; i++) {
@@ -29,7 +57,7 @@ export function useAIService() {
   /**
    * Get user-friendly error message based on error type
    */
-  const getUserFriendlyErrorMessage = useCallback((error) => {
+  const getUserFriendlyErrorMessage = useCallback((error: Error): string => {
     if (error.name === 'AbortError') {
       return 'Żądanie przekroczyło limit czasu (120s). Spróbuj ponownie.'
     } else if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
@@ -42,7 +70,7 @@ export function useAIService() {
   /**
    * Generate metadata for a single activity
    */
-  const generateSingle = useCallback(async (activity, theme = '') => {
+  const generateSingle = useCallback(async (activity: string, theme = ''): Promise<GenerateResult> => {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
 
@@ -51,7 +79,7 @@ export function useAIService() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': getCsrfToken()
+          'X-CSRFToken': getCsrfToken() || ''
         },
         body: JSON.stringify({
           activity: activity,
@@ -83,15 +111,19 @@ export function useAIService() {
     } catch (error) {
       clearTimeout(timeoutId)
       console.error('Error generating metadata:', error)
-      throw new Error(getUserFriendlyErrorMessage(error))
+      throw new Error(getUserFriendlyErrorMessage(error as Error))
     }
   }, [getCsrfToken, getUserFriendlyErrorMessage])
 
   /**
    * Generate metadata for multiple rows (sequential)
    */
-  const generateBulk = useCallback(async (rows, theme, onProgress) => {
-    const results = {
+  const generateBulk = useCallback(async (
+    rows: Row[],
+    theme: string,
+    onProgress?: (progress: ProgressCallback) => void
+  ): Promise<BulkResult> => {
+    const results: BulkResult = {
       succeeded: 0,
       failed: [],
       total: rows.length
@@ -118,7 +150,7 @@ export function useAIService() {
         results.failed.push({
           rowId: row.id,
           activity: row.activity,
-          error: error.message
+          error: (error as Error).message
         })
 
         // Call progress callback with error
@@ -126,7 +158,7 @@ export function useAIService() {
           onProgress({
             rowId: row.id,
             success: false,
-            error: error.message,
+            error: (error as Error).message,
             completed: i + 1,
             total: rows.length
           })

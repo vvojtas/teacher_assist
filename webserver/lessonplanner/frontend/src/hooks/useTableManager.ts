@@ -1,11 +1,32 @@
 import { useState, useCallback } from 'react'
 
+export interface Row {
+  id: string
+  module: string
+  curriculum: string
+  objectives: string
+  activity: string
+  aiGenerated: boolean
+  userEdited: boolean
+  loading: boolean
+}
+
+export interface RowUpdate {
+  module?: string
+  curriculum?: string
+  objectives?: string
+  activity?: string
+  aiGenerated?: boolean
+  userEdited?: boolean
+  loading?: boolean
+}
+
 /**
  * Custom hook for managing table rows and their state
  * Replaces the TableManager singleton from vanilla JS
  */
 export function useTableManager() {
-  const [rows, setRows] = useState(() => {
+  const [rows, setRows] = useState<Row[]>(() => {
     // Initialize with 5 empty rows
     return Array.from({ length: 5 }, (_, i) => ({
       id: `row_${i + 1}`,
@@ -26,7 +47,7 @@ export function useTableManager() {
    */
   const addRows = useCallback((count = 1) => {
     setRows(prev => {
-      const newRows = Array.from({ length: count }, (_, i) => ({
+      const newRows: Row[] = Array.from({ length: count }, (_, i) => ({
         id: `row_${nextRowId + i}`,
         module: '',
         curriculum: '',
@@ -44,7 +65,7 @@ export function useTableManager() {
   /**
    * Delete a specific row
    */
-  const deleteRow = useCallback((rowId) => {
+  const deleteRow = useCallback((rowId: string) => {
     setRows(prev => prev.filter(row => row.id !== rowId))
   }, [])
 
@@ -68,7 +89,7 @@ export function useTableManager() {
   /**
    * Update a specific row's data
    */
-  const updateRow = useCallback((rowId, updates) => {
+  const updateRow = useCallback((rowId: string, updates: RowUpdate) => {
     setRows(prev => prev.map(row =>
       row.id === rowId ? { ...row, ...updates } : row
     ))
@@ -77,7 +98,7 @@ export function useTableManager() {
   /**
    * Set row loading state
    */
-  const setRowLoading = useCallback((rowId, loading) => {
+  const setRowLoading = useCallback((rowId: string, loading: boolean) => {
     setRows(prev => prev.map(row =>
       row.id === rowId ? { ...row, loading } : row
     ))
@@ -100,7 +121,7 @@ export function useTableManager() {
   /**
    * Mark that user has edited a row (for regenerate confirmation)
    */
-  const markUserEdited = useCallback((rowId) => {
+  const markUserEdited = useCallback((rowId: string) => {
     setRows(prev => prev.map(row =>
       row.id === rowId && row.aiGenerated
         ? { ...row, userEdited: true }

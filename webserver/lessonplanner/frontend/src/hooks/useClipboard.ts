@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import type { Row } from './useTableManager'
 
 /**
  * Custom hook for copying table data to clipboard
@@ -8,7 +9,7 @@ export function useClipboard() {
   /**
    * Escape HTML special characters
    */
-  const escapeHtml = useCallback((text) => {
+  const escapeHtml = useCallback((text: string): string => {
     const div = document.createElement('div')
     div.textContent = text
     return div.innerHTML
@@ -17,7 +18,7 @@ export function useClipboard() {
   /**
    * Build HTML table from rows
    */
-  const buildHtmlTable = useCallback((rows, includeHeaders = true) => {
+  const buildHtmlTable = useCallback((rows: Row[], includeHeaders = true): string => {
     let html = '<table border="1" style="border-collapse: collapse;">'
 
     // Add headers if needed
@@ -48,7 +49,7 @@ export function useClipboard() {
   /**
    * Build TSV (tab-separated values) from rows
    */
-  const buildTsvTable = useCallback((rows, includeHeaders = true) => {
+  const buildTsvTable = useCallback((rows: Row[], includeHeaders = true): string => {
     let tsv = ''
 
     if (includeHeaders) {
@@ -65,7 +66,7 @@ export function useClipboard() {
   /**
    * Copy rows to clipboard in both HTML and TSV formats
    */
-  const copyToClipboard = useCallback(async (rows, includeHeaders = true) => {
+  const copyToClipboard = useCallback(async (rows: Row[], includeHeaders = true): Promise<boolean> => {
     if (!rows || rows.length === 0) {
       throw new Error('Brak wierszy do skopiowania.')
     }

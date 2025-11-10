@@ -1,12 +1,19 @@
 import { useState, useCallback } from 'react'
 
+interface ModalState {
+  open: boolean
+  title: string
+  message: string
+  resolve: ((value: boolean | void) => void) | null
+}
+
 /**
  * Custom hook for managing modal states
  * Replaces the ModalHelper from vanilla JS
  */
 export function useModal() {
   // Confirm modal state
-  const [confirmModal, setConfirmModal] = useState({
+  const [confirmModal, setConfirmModal] = useState<ModalState>({
     open: false,
     title: 'Potwierdzenie',
     message: '',
@@ -14,7 +21,7 @@ export function useModal() {
   })
 
   // Alert modal state
-  const [alertModal, setAlertModal] = useState({
+  const [alertModal, setAlertModal] = useState<ModalState>({
     open: false,
     title: 'Informacja',
     message: '',
@@ -22,7 +29,7 @@ export function useModal() {
   })
 
   // Error modal state
-  const [errorModal, setErrorModal] = useState({
+  const [errorModal, setErrorModal] = useState<ModalState>({
     open: false,
     title: 'Błąd',
     message: '',
@@ -33,13 +40,13 @@ export function useModal() {
    * Show confirmation dialog
    * Returns a promise that resolves to true/false
    */
-  const showConfirm = useCallback((message, title = 'Potwierdzenie') => {
+  const showConfirm = useCallback((message: string, title = 'Potwierdzenie'): Promise<boolean> => {
     return new Promise((resolve) => {
       setConfirmModal({
         open: true,
         title,
         message,
-        resolve
+        resolve: resolve as (value: boolean) => void
       })
     })
   }, [])
@@ -47,9 +54,9 @@ export function useModal() {
   /**
    * Handle confirm modal response
    */
-  const handleConfirm = useCallback((confirmed) => {
+  const handleConfirm = useCallback((confirmed: boolean) => {
     if (confirmModal.resolve) {
-      confirmModal.resolve(confirmed)
+      (confirmModal.resolve as (value: boolean) => void)(confirmed)
     }
     setConfirmModal({ open: false, title: '', message: '', resolve: null })
   }, [confirmModal])
@@ -58,13 +65,13 @@ export function useModal() {
    * Show alert dialog
    * Returns a promise that resolves when closed
    */
-  const showAlert = useCallback((message, title = 'Informacja') => {
+  const showAlert = useCallback((message: string, title = 'Informacja'): Promise<void> => {
     return new Promise((resolve) => {
       setAlertModal({
         open: true,
         title,
         message,
-        resolve
+        resolve: resolve as () => void
       })
     })
   }, [])
@@ -74,7 +81,7 @@ export function useModal() {
    */
   const handleAlertClose = useCallback(() => {
     if (alertModal.resolve) {
-      alertModal.resolve()
+      (alertModal.resolve as () => void)()
     }
     setAlertModal({ open: false, title: '', message: '', resolve: null })
   }, [alertModal])
@@ -83,13 +90,13 @@ export function useModal() {
    * Show error dialog
    * Returns a promise that resolves when closed
    */
-  const showError = useCallback((message, title = 'Błąd') => {
+  const showError = useCallback((message: string, title = 'Błąd'): Promise<void> => {
     return new Promise((resolve) => {
       setErrorModal({
         open: true,
         title,
         message,
-        resolve
+        resolve: resolve as () => void
       })
     })
   }, [])
@@ -99,7 +106,7 @@ export function useModal() {
    */
   const handleErrorClose = useCallback(() => {
     if (errorModal.resolve) {
-      errorModal.resolve()
+      (errorModal.resolve as () => void)()
     }
     setErrorModal({ open: false, title: '', message: '', resolve: null })
   }, [errorModal])

@@ -1,19 +1,24 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback } from 'react'
+
+export interface CurriculumCode {
+  code: string
+  text: string
+}
 
 /**
  * Custom hook for fetching and caching curriculum reference tooltips
  */
 export function useCurriculumTooltip() {
-  const [tooltipCache] = useState(new Map())
+  const [tooltipCache] = useState(new Map<string, string>())
   const TOOLTIP_TIMEOUT = 10000 // 10 seconds
 
   /**
    * Fetch curriculum reference text for tooltip
    */
-  const fetchCurriculumText = useCallback(async (code) => {
+  const fetchCurriculumText = useCallback(async (code: string): Promise<string> => {
     // Check cache first
     if (tooltipCache.has(code)) {
-      return tooltipCache.get(code)
+      return tooltipCache.get(code)!
     }
 
     const controller = new AbortController()
@@ -43,7 +48,7 @@ export function useCurriculumTooltip() {
 
     } catch (error) {
       clearTimeout(timeoutId)
-      if (error.name === 'AbortError') {
+      if ((error as Error).name === 'AbortError') {
         console.error('Tooltip fetch timeout:', code)
         return 'Przekroczono limit czasu pobierania opisu'
       }
@@ -55,7 +60,7 @@ export function useCurriculumTooltip() {
   /**
    * Parse curriculum codes from text (e.g., "4.15, 4.18" -> ["4.15", "4.18"])
    */
-  const parseCurriculumCodes = useCallback((text) => {
+  const parseCurriculumCodes = useCallback((text: string): string[] => {
     if (!text) return []
     const codePattern = /\d+\.\d+/g
     return text.match(codePattern) || []
@@ -64,7 +69,7 @@ export function useCurriculumTooltip() {
   /**
    * Fetch tooltip texts for multiple codes
    */
-  const fetchMultipleCodes = useCallback(async (codes) => {
+  const fetchMultipleCodes = useCallback(async (codes: string[]): Promise<CurriculumCode[]> => {
     const results = await Promise.all(
       codes.map(code => fetchCurriculumText(code))
     )
