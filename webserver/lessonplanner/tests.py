@@ -227,6 +227,102 @@ class FillWorkPlanViewTests(TestCase):
         data = response.json()
         self.assertEqual(data['error_code'], 'INTERNAL_ERROR')
 
+    @patch('lessonplanner.services.ai_client.requests.post')
+    def test_fill_work_plan_integration_flow(self, mock_requests_post):
+        """
+        Integration test: Verify complete Django -> AI Service -> Response flow.
+
+        This test mocks the HTTP request to AI service and verifies:
+        1. Request is sent to correct URL with correct payload
+        2. Response is properly parsed and returned to client
+        3. All data transformations are correct
+        """
+        # Mock AI service HTTP response
+        mock_response = mock_requests_post.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'activity': 'Zabawa w sklep z owocami',
+            'module': 'MATEMATYKA',
+            'curriculum_refs': ['4.15', '4.18'],
+            'objectives': [
+                'Dziecko potrafi przeliczać w zakresie 5',
+                'Rozpoznaje poznane wcześniej cyfry'
+            ]
+        }
+
+        # Make request to Django endpoint
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'activity': 'Zabawa w sklep z owocami',
+                'theme': 'Jesień - zbiory'
+            }),
+            content_type='application/json'
+        )
+
+        # Verify Django response
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['module'], 'MATEMATYKA')
+        self.assertIn('4.15', data['curriculum_refs'])
+        self.assertEqual(len(data['objectives']), 2)
+
+        # Verify HTTP request was made correctly
+        mock_requests_post.assert_called_once()
+        call_args = mock_requests_post.call_args
+
+        # Check URL
+        self.assertIn('/api/fill-work-plan', call_args[0][0])
+
+        # Check payload
+        sent_payload = call_args[1]['json']
+        self.assertEqual(sent_payload['activity'], 'Zabawa w sklep z owocami')
+        self.assertEqual(sent_payload['theme'], 'Jesień - zbiory')
+
+        # Check headers and timeout
+        self.assertEqual(call_args[1]['headers']['Content-Type'], 'application/json')
+        self.assertEqual(call_args[1]['timeout'], 120)
+
+    @patch('lessonplanner.services.ai_client.requests.post')
+    def test_fill_work_plan_connection_error_handling(self, mock_requests_post):
+        """Test that connection errors are properly handled in integration flow"""
+        # Simulate connection error
+        mock_requests_post.side_effect = __import__('requests').exceptions.ConnectionError(
+            'Connection refused'
+        )
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'activity': 'Test activity',
+                'theme': 'Test theme'
+            }),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 503)
+        data = response.json()
+        self.assertEqual(data['error_code'], 'AI_SERVICE_UNAVAILABLE')
+
+    @patch('lessonplanner.services.ai_client.requests.post')
+    def test_fill_work_plan_timeout_error_handling(self, mock_requests_post):
+        """Test that timeout errors are properly handled in integration flow"""
+        # Simulate timeout
+        mock_requests_post.side_effect = __import__('requests').exceptions.Timeout()
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'activity': 'Test activity',
+                'theme': 'Test theme'
+            }),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 504)
+        data = response.json()
+        self.assertEqual(data['error_code'], 'AI_SERVICE_TIMEOUT')
+
     def test_fill_work_plan_csrf_required(self):
         """Test that CSRF token validation is enforced"""
         # Create client with CSRF checks enabled

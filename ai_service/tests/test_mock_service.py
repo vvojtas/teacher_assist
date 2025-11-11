@@ -49,15 +49,23 @@ class TestMockAIService:
 
         assert result.activity == "Test activity"
 
-    def test_generate_metadata_empty_activity_raises_error(self, service):
-        """Test that empty activity raises ValueError"""
-        with pytest.raises(ValueError, match="Activity cannot be empty"):
-            service.generate_metadata(activity="")
+    def test_generate_metadata_empty_activity_still_works(self, service):
+        """
+        Test that empty activity doesn't raise error in mock service.
 
-    def test_generate_metadata_whitespace_only_raises_error(self, service):
-        """Test that whitespace-only activity raises ValueError"""
-        with pytest.raises(ValueError, match="Activity cannot be empty"):
-            service.generate_metadata(activity="   ")
+        Note: Validation is handled by Pydantic FillWorkPlanRequest model,
+        not by the mock service itself.
+        """
+        # Mock service trusts that validation happened upstream
+        result = service.generate_metadata(activity="")
+        # It will process even empty string (Pydantic prevents this in real flow)
+        assert result is not None
+
+    def test_generate_metadata_whitespace_gets_stripped(self, service):
+        """Test that whitespace activity gets stripped"""
+        result = service.generate_metadata(activity="   Test   ")
+        # Activity gets stripped in the response
+        assert result.activity == "Test"
 
     def test_generate_metadata_returns_valid_curriculum_refs(self, service):
         """Test that returned curriculum refs are from valid set"""

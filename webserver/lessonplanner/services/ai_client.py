@@ -4,6 +4,7 @@ AI client service for communicating with the LangGraph AI service.
 This module handles HTTP communication between Django and the AI service.
 """
 
+import os
 import requests
 import logging
 from typing import Dict
@@ -11,9 +12,9 @@ from typing import Dict
 # Configure logger
 logger = logging.getLogger(__name__)
 
-# AI Service configuration
-AI_SERVICE_URL = "http://localhost:8001"
-AI_SERVICE_TIMEOUT = 120  # seconds (as per API spec)
+# AI Service configuration (configurable via environment variables)
+AI_SERVICE_URL = os.getenv('AI_SERVICE_URL', 'http://localhost:8001')
+AI_SERVICE_TIMEOUT = int(os.getenv('AI_SERVICE_TIMEOUT', '120'))  # seconds
 
 
 def fill_work_plan(activity: str, theme: str = "") -> dict:

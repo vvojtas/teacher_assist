@@ -54,7 +54,7 @@ echo       Started in minimized window
 REM Start Django Web Server (port 8000) in new window
 echo.
 echo [2/2] Starting Django Web Server on http://localhost:8000
-start "Teacher Assist - Django Server" /MIN python webserver/manage.py runserver 0.0.0.0:8000
+start "Teacher Assist - Django Server" /MIN python webserver/manage.py runserver 127.0.0.1:8000
 timeout /t 3 /nobreak >nul
 echo       Started in minimized window
 

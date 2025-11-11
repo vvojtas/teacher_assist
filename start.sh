@@ -72,7 +72,7 @@ fi
 echo ""
 echo -e "${BLUE}[2/2] Starting Django Web Server on http://localhost:8000${NC}"
 cd webserver
-$PYTHON_CMD manage.py runserver 0.0.0.0:8000 > "$DJANGO_LOG" 2>&1 &
+$PYTHON_CMD manage.py runserver 127.0.0.1:8000 > "$DJANGO_LOG" 2>&1 &
 DJANGO_PID=$!
 cd ..
 echo "      Django PID: $DJANGO_PID"

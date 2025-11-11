@@ -73,36 +73,16 @@ async def fill_work_plan(request: FillWorkPlanRequest) -> FillWorkPlanResponse:
         FillWorkPlanResponse: Generated metadata (module, curriculum_refs, objectives)
 
     Raises:
-        400: Invalid request data
-        500: Internal server error
+        400: Invalid request data (handled by global exception handlers)
+        500: Internal server error (handled by global exception handlers)
     """
-    try:
-        # Call mock AI service to generate metadata
-        result = ai_service.generate_metadata(
-            activity=request.activity,
-            theme=request.theme
-        )
-        return result
-
-    except ValueError as e:
-        # Return validation error
-        return JSONResponse(
-            status_code=400,
-            content=ErrorResponse(
-                error=str(e),
-                error_code="VALIDATION_ERROR"
-            ).model_dump()
-        )
-
-    except Exception as e:
-        # Return internal error
-        return JSONResponse(
-            status_code=500,
-            content=ErrorResponse(
-                error=f"Wystąpił błąd wewnętrzny: {str(e)}",
-                error_code="INTERNAL_ERROR"
-            ).model_dump()
-        )
+    # Call mock AI service to generate metadata
+    # Exceptions propagate to global handlers
+    result = ai_service.generate_metadata(
+        activity=request.activity,
+        theme=request.theme
+    )
+    return result
 
 
 @app.exception_handler(RequestValidationError)
@@ -206,7 +186,7 @@ def main():
 
     uvicorn.run(
         "ai_service.main:app",
-        host="0.0.0.0",
+        host="127.0.0.1",  # localhost-only for security
         port=8001,
         reload=True,  # Enable auto-reload during development
         log_level="info"

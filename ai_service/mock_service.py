@@ -77,19 +77,16 @@ class MockAIService:
         Generate mock educational metadata for an activity.
 
         Args:
-            activity: Teacher's activity description (required)
+            activity: Teacher's activity description (validated by Pydantic before this call)
             theme: Optional weekly theme for context
 
         Returns:
             FillWorkPlanResponse: Mock metadata with module, curriculum refs, and objectives
 
-        Raises:
-            ValueError: If activity is empty or invalid
+        Note:
+            Input validation is handled by FillWorkPlanRequest Pydantic model,
+            so we trust that activity is already validated and non-empty.
         """
-        # Validate input
-        if not activity or not activity.strip():
-            raise ValueError("Activity cannot be empty")
-
         # Simulate API processing delay (1-2 seconds)
         if self.simulate_delay:
             time.sleep(random.uniform(1.0, 2.0))
