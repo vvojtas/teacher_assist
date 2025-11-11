@@ -29,6 +29,7 @@ $templateContent = @"
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Teacher Assist - Planowanie Lekcji</title>
 
     <!-- React App CSS -->
@@ -49,4 +50,4 @@ $templateContent | Out-File -FilePath $templateFile -Encoding UTF8 -NoNewline
 Write-Host "`nDjango template updated with:" -ForegroundColor Cyan
 Write-Host "  CSS: $cssFile" -ForegroundColor Yellow
 Write-Host "  JS: $jsFile" -ForegroundColor Yellow
-Write-Host "`nBuild complete! ✓" -ForegroundColor Green
+Write-Host "`nBuild complete! [OK]" -ForegroundColor Green

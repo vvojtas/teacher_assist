@@ -31,6 +31,7 @@ echo ^<html lang="pl"^>
 echo ^<head^>
 echo     ^<meta charset="UTF-8"^>
 echo     ^<meta name="viewport" content="width=device-width, initial-scale=1.0"^>
+echo     ^<meta name="csrf-token" content="{{ csrf_token }}"^>
 echo     ^<title^>Teacher Assist - Planowanie Lekcji^</title^>
 echo.
 echo     ^<!-- React App CSS --^>
@@ -51,4 +52,4 @@ echo Django template updated with:
 echo   CSS: %CSS_FILE%
 echo   JS: %JS_FILE%
 echo.
-echo Build complete! ✓
+echo Build complete! [OK]
