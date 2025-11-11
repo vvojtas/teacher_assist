@@ -11,8 +11,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import mimetypes
 from pathlib import Path
 from dotenv import load_dotenv
+
+# Fix MIME type for JavaScript modules on Windows
+# Ensures .js files are served with correct MIME type
+mimetypes.add_type("application/javascript", ".js", True)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
