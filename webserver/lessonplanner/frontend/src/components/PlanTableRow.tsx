@@ -36,23 +36,23 @@ export function PlanTableRow({
         value={row.module}
         onValueChange={(value) => handleCellChange('module', value)}
         onBlur={handleCellBlur}
-        className="w-[20%]"
+        className="w-[15%]"
       />
       <EditableCell
         field="curriculum"
         value={row.curriculum}
         onValueChange={(value) => handleCellChange('curriculum', value)}
         onBlur={handleCellBlur}
-        className="w-[20%]"
+        className="w-[15%]"
       />
       <EditableCell
         field="objectives"
         value={row.objectives}
         onValueChange={(value) => handleCellChange('objectives', value)}
         onBlur={handleCellBlur}
-        className="w-[30%]"
+        className="w-[25%]"
       />
-      <TableCell className="w-[30%]">
+      <TableCell className="w-[45%]">
         <EditableCell
           field="activity"
           value={row.activity}
