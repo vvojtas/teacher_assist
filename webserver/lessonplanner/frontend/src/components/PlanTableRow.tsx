@@ -57,7 +57,7 @@ export function PlanTableRow({
           field="activity"
           value={row.activity}
           onValueChange={(value) => handleCellChange('activity', value)}
-          className="border-0 p-0"
+          className="border-0 p-1"
         />
         <RowActions
           rowId={row.id}
