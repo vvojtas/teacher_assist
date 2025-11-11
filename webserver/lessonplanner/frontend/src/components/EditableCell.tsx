@@ -48,43 +48,46 @@ export function EditableCell({ field, value, onValueChange, onBlur, className })
     }
   }
 
-  const cellContent = (
-    <TableCell className={cn("p-2", className)}>
-      <div
-        ref={contentRef}
-        contentEditable
-        suppressContentEditableWarning
-        onInput={handleInput}
-        onBlur={handleBlur}
-        onPaste={handlePaste}
-        onMouseEnter={handleMouseEnter}
-        className={cn(
-          "outline-none",
-          field === 'objectives' && 'cell-objectives'
-        )}
-        data-field={field}
-      >
-        {value}
-      </div>
-    </TableCell>
+  const editableContent = (
+    <div
+      ref={contentRef}
+      contentEditable
+      suppressContentEditableWarning
+      onInput={handleInput}
+      onBlur={handleBlur}
+      onPaste={handlePaste}
+      onMouseEnter={handleMouseEnter}
+      className={cn(
+        "outline-none",
+        field === 'objectives' && 'cell-objectives'
+      )}
+      data-field={field}
+    >
+      {value}
+    </div>
   )
 
-  if (showTooltip && tooltipData && tooltipData.length > 0) {
-    return (
-      <HoverCard openDelay={300}>
-        <HoverCardTrigger asChild>
-          {cellContent}
-        </HoverCardTrigger>
-        <HoverCardContent className="w-96">
-          {tooltipData.map(({ code, text }, index) => (
-            <div key={code} className={index > 0 ? 'mt-3' : ''}>
-              <strong>{code}:</strong> {text}
+  return (
+    <TableCell className={cn("p-2", className)}>
+      {showTooltip && tooltipData && tooltipData.length > 0 ? (
+        <HoverCard openDelay={300}>
+          <HoverCardTrigger asChild>
+            <div className="cursor-text">
+              {editableContent}
             </div>
-          ))}
-        </HoverCardContent>
-      </HoverCard>
-    )
-  }
-
-  return cellContent
+          </HoverCardTrigger>
+          <HoverCardContent className="w-96 max-h-96 overflow-auto">
+            {tooltipData.map(({ code, text }, index) => (
+              <div key={code} className={index > 0 ? 'mt-3 pt-3 border-t' : ''}>
+                <strong className="text-primary">{code}:</strong>{' '}
+                <span className="text-sm">{text}</span>
+              </div>
+            ))}
+          </HoverCardContent>
+        </HoverCard>
+      ) : (
+        editableContent
+      )}
+    </TableCell>
+  )
 }

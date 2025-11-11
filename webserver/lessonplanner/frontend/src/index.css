@@ -86,16 +86,18 @@
   padding: 8px;
   min-height: 40px;
   cursor: text;
+  /* Delicate green tint background to distinguish input fields */
+  background-color: hsl(142 30% 98%);
 }
 
 [contenteditable="true"]:hover {
-  background-color: hsl(var(--accent) / 0.3);
+  background-color: hsl(var(--accent) / 0.4);
 }
 
 [contenteditable="true"]:focus {
   outline: none;
   box-shadow: 0 0 0 2px hsl(var(--ring));
-  background-color: hsl(var(--background));
+  background-color: hsl(0 0% 100%);
 }
 
 [contenteditable="true"]:empty:before {
@@ -115,4 +117,10 @@
   position: relative;
   pointer-events: none;
   opacity: 0.6;
+}
+
+/* Prevent tooltip from causing layout shift */
+[data-radix-popper-content-wrapper] {
+  position: fixed !important;
+  z-index: 50;
 }
