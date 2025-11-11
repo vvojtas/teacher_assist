@@ -52,12 +52,12 @@ export function PlanTableRow({
         onBlur={handleCellBlur}
         className="w-[30%] p-1"
       />
-      <TableCell className="w-[30%] p-0">
+      <TableCell className="w-[30%] p-1">
         <EditableCell
           field="activity"
           value={row.activity}
           onValueChange={(value) => handleCellChange('activity', value)}
-          className="border-0 p-1"
+          className="border-0 p-0"
         />
         <RowActions
           rowId={row.id}

@@ -88,6 +88,9 @@
   cursor: text;
   /* Delicate green tint background to distinguish input fields */
   background-color: hsl(142 30% 98%);
+  /* Take full width of parent */
+  display: block;
+  width: 100%;
 }
 
 [contenteditable="true"]:hover {
