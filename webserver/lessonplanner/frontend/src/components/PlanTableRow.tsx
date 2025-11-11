@@ -52,7 +52,7 @@ export function PlanTableRow({
         onBlur={handleCellBlur}
         className="w-[30%] p-1"
       />
-      <TableCell className="w-[30%] p-1">
+      <TableCell className="w-[30%] p-0">
         <EditableCell
           field="activity"
           value={row.activity}
