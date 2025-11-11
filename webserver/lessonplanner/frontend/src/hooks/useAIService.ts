@@ -36,9 +36,10 @@ export function useAIService() {
   const REQUEST_TIMEOUT = 120000 // 120 seconds
 
   /**
-   * Get CSRF token from cookies for Django requests
+   * Get CSRF token from cookies or meta tag for Django requests
    */
   const getCsrfToken = useCallback((): string | null => {
+    // Try to get from cookie first (Django default)
     const name = 'csrftoken'
     let cookieValue: string | null = null
     if (document.cookie && document.cookie !== '') {
@@ -51,6 +52,20 @@ export function useAIService() {
         }
       }
     }
+
+    // Fallback to meta tag if cookie not found
+    if (!cookieValue) {
+      const metaTag = document.querySelector('meta[name="csrf-token"]')
+      if (metaTag) {
+        cookieValue = metaTag.getAttribute('content')
+      }
+    }
+
+    // Debug logging
+    if (!cookieValue) {
+      console.warn('CSRF token not found in cookie or meta tag')
+    }
+
     return cookieValue
   }, [])
 
@@ -89,6 +104,19 @@ export function useAIService() {
       })
 
       clearTimeout(timeoutId)
+
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        // Django returned HTML error page (likely CSRF failure)
+        const text = await response.text()
+        console.error('Non-JSON response:', text.substring(0, 500))
+
+        if (response.status === 403) {
+          throw new Error('Błąd CSRF - odśwież stronę i spróbuj ponownie.')
+        }
+        throw new Error(`Błąd serwera (${response.status}): Nieprawidłowy format odpowiedzi`)
+      }
 
       const data = await response.json()
 
