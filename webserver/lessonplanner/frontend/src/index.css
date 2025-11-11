@@ -4,48 +4,67 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Green Education Theme */
+    --background: 0 0% 100%; /* Pure white */
+    --foreground: 140 10% 15%; /* Dark gray-green text */
+
+    --card: 0 0% 100%; /* White cards */
+    --card-foreground: 140 10% 15%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --popover-foreground: 140 10% 15%;
+
+    --primary: 142 76% 36%; /* Forest green */
+    --primary-foreground: 0 0% 100%; /* White text on green */
+
+    --secondary: 142 30% 92%; /* Very light green */
+    --secondary-foreground: 142 76% 25%; /* Dark green text */
+
+    --muted: 142 20% 95%; /* Soft green-gray */
+    --muted-foreground: 140 10% 45%; /* Muted text */
+
+    --accent: 142 50% 88%; /* Light green accent */
+    --accent-foreground: 142 76% 30%; /* Dark green text */
+
+    --destructive: 0 84% 60%; /* Red for destructive actions */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 142 20% 88%; /* Light green border */
+    --input: 142 20% 92%; /* Light input background */
+    --ring: 142 76% 40%; /* Focus ring green */
+
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    /* Dark green theme */
+    --background: 140 20% 8%; /* Dark green-black */
+    --foreground: 142 15% 95%;
+
+    --card: 140 15% 12%;
+    --card-foreground: 142 15% 95%;
+
+    --popover: 140 15% 12%;
+    --popover-foreground: 142 15% 95%;
+
+    --primary: 142 70% 45%; /* Bright green */
+    --primary-foreground: 140 20% 8%;
+
+    --secondary: 140 25% 15%;
+    --secondary-foreground: 142 15% 95%;
+
+    --muted: 140 25% 15%;
+    --muted-foreground: 142 15% 70%;
+
+    --accent: 140 30% 20%;
+    --accent-foreground: 142 15% 95%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 142 15% 95%;
+
+    --border: 140 25% 20%;
+    --input: 140 25% 20%;
+    --ring: 142 70% 50%;
   }
 }
 
@@ -70,7 +89,7 @@
 }
 
 [contenteditable="true"]:hover {
-  background-color: hsl(var(--muted) / 0.5);
+  background-color: hsl(var(--accent) / 0.3);
 }
 
 [contenteditable="true"]:focus {

@@ -238,14 +238,20 @@ function App() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 max-w-7xl">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Teacher Assist - Planowanie Lekcji</h1>
+      <div className="bg-gradient-to-r from-primary to-green-600 text-primary-foreground shadow-md">
+        <div className="container mx-auto px-4 py-6 max-w-7xl">
+          <h1 className="text-3xl font-bold">🍎 Teacher Assist - Planowanie Lekcji</h1>
+          <p className="text-sm text-primary-foreground/80 mt-1">
+            Asystent planowania zajęć przedszkolnych z AI
+          </p>
+        </div>
       </div>
 
-      {/* Theme Input */}
-      <ThemeInput value={theme} onChange={setTheme} />
+      <div className="container mx-auto py-6 px-4 max-w-7xl">
+        {/* Theme Input */}
+        <ThemeInput value={theme} onChange={setTheme} />
 
       {/* Action Bar */}
       <ActionBar
@@ -298,6 +304,7 @@ function App() {
         message={errorModal.message}
         onClose={handleErrorClose}
       />
+      </div>
     </div>
   )
 }
