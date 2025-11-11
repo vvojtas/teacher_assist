@@ -16,10 +16,10 @@ export function PlanTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[15%]">Moduł</TableHead>
-            <TableHead className="w-[15%]">Podstawa Programowa</TableHead>
-            <TableHead className="w-[25%]">Cele</TableHead>
-            <TableHead className="w-[45%]">Aktywność</TableHead>
+            <TableHead className="w-[20%]">Moduł</TableHead>
+            <TableHead className="w-[20%]">Podstawa Programowa</TableHead>
+            <TableHead className="w-[30%]">Cele</TableHead>
+            <TableHead className="w-[30%]">Aktywność</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

@@ -83,8 +83,8 @@
 /* Custom styles for lesson planner */
 [contenteditable="true"] {
   @apply rounded-sm transition-colors;
-  padding: 8px;
-  min-height: 40px;
+  padding: 4px 6px;
+  min-height: 36px;
   cursor: text;
   /* Delicate green tint background to distinguish input fields */
   background-color: hsl(142 30% 98%);
