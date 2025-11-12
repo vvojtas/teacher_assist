@@ -18,7 +18,11 @@ from pydantic import ValidationError
 from common.models import FillWorkPlanRequest, FillWorkPlanResponse, ErrorResponse
 from ai_service.mock_service import MockAIService
 
-# Configure logger
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 

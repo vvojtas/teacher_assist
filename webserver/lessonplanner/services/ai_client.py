@@ -7,9 +7,24 @@ This module handles HTTP communication between Django and the AI service.
 import os
 import requests
 import logging
+from typing import TypedDict
 from pydantic import ValidationError
 
 from common.models import FillWorkPlanRequest, FillWorkPlanResponse
+
+
+class WorkPlanMetadata(TypedDict):
+    """
+    Metadata returned by fill_work_plan function.
+
+    Attributes:
+        module: Educational module name in Polish (e.g., "MATEMATYKA")
+        curriculum_refs: List of curriculum reference codes (e.g., ["4.15", "4.18"])
+        objectives: List of learning objectives in Polish
+    """
+    module: str
+    curriculum_refs: list[str]
+    objectives: list[str]
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -19,7 +34,7 @@ AI_SERVICE_URL = os.getenv('AI_SERVICE_URL', 'http://localhost:8001')
 AI_SERVICE_TIMEOUT = int(os.getenv('AI_SERVICE_TIMEOUT', '120'))  # seconds
 
 
-def fill_work_plan(activity: str, theme: str = "") -> dict:
+def fill_work_plan(activity: str, theme: str = "") -> WorkPlanMetadata:
     """
     Call AI service to generate metadata for a lesson activity.
 

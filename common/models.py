@@ -8,7 +8,7 @@ These models are shared between:
 API specification: docs/ai_api.md
 """
 
-from typing import List, Optional, Dict, Any
+from typing import Optional, Any
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
@@ -76,13 +76,13 @@ class FillWorkPlanResponse(BaseModel):
         ...,
         description="Educational module name (e.g., 'MATEMATYKA')"
     )
-    curriculum_refs: List[str] = Field(
+    curriculum_refs: list[str] = Field(
         ...,
         min_length=1,
         max_length=10,
         description="Curriculum reference codes (e.g., ['4.15', '4.18'])"
     )
-    objectives: List[str] = Field(
+    objectives: list[str] = Field(
         ...,
         min_length=1,
         max_length=10,
@@ -121,7 +121,7 @@ class ErrorResponse(BaseModel):
         ...,
         description="Machine-readable error code (e.g., 'VALIDATION_ERROR')"
     )
-    details: Optional[Dict[str, Any]] = Field(
+    details: Optional[dict[str, Any]] = Field(
         default=None,
         description="Optional additional error details"
     )

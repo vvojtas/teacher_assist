@@ -19,6 +19,7 @@ cd "$PROJECT_ROOT"
 # Log files
 AI_SERVICE_LOG="$PROJECT_ROOT/ai_service.log"
 DJANGO_LOG="$PROJECT_ROOT/django.log"
+VENV_DIR="$PROJECT_ROOT/.venv"
 
 echo "============================================================"
 echo -e "${BLUE}Teacher Assist - Starting Application${NC}"
@@ -37,6 +38,29 @@ if ! command -v python3 &> /dev/null; then
 fi
 
 echo -e "${GREEN}Using Python: $PYTHON_CMD${NC}"
+
+# Check if virtual environment exists, create if not
+if [ ! -d "$VENV_DIR" ]; then
+    echo ""
+    echo -e "${YELLOW}Creating virtual environment in .venv/${NC}"
+    $PYTHON_CMD -m venv "$VENV_DIR"
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Error: Failed to create virtual environment${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Virtual environment created${NC}"
+fi
+
+# Activate virtual environment
+echo "Activating virtual environment..."
+source "$VENV_DIR/bin/activate"
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Error: Failed to activate virtual environment${NC}"
+    exit 1
+fi
+
+# Update PYTHON_CMD to use venv python
+PYTHON_CMD="$VENV_DIR/bin/python"
 
 # Check if required packages are installed
 echo ""

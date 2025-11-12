@@ -27,6 +27,28 @@ REM Check Python version
 for /f "tokens=2" %%i in ('python --version 2^>^&1') do set PYTHON_VERSION=%%i
 echo Using Python: %PYTHON_VERSION%
 
+REM Check if virtual environment exists, create if not
+if not exist "%PROJECT_ROOT%.venv\" (
+    echo.
+    echo [INFO] Creating virtual environment in .venv\
+    python -m venv "%PROJECT_ROOT%.venv"
+    if %errorlevel% neq 0 (
+        echo [ERROR] Failed to create virtual environment
+        pause
+        exit /b 1
+    )
+    echo [SUCCESS] Virtual environment created
+)
+
+REM Activate virtual environment
+echo Activating virtual environment...
+call "%PROJECT_ROOT%.venv\Scripts\activate.bat"
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to activate virtual environment
+    pause
+    exit /b 1
+)
+
 REM Check if required packages are installed
 echo.
 echo Checking Python dependencies...
