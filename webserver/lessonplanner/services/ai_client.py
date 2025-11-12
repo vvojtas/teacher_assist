@@ -14,7 +14,6 @@ sys.path.insert(0, str(project_root))
 
 import requests
 import logging
-from typing import Dict
 from pydantic import ValidationError
 
 from common.models import FillWorkPlanRequest, FillWorkPlanResponse
