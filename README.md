@@ -70,12 +70,12 @@ teacher_assist/
 ├── ai_service/                 # FastAPI AI service (mock implementation)
 │   ├── main.py                # FastAPI application entry point
 │   ├── mock_service.py        # Mock AI metadata generator
-│   └── tests/                 # AI service tests (28 tests)
+│   └── tests/                 # AI service tests
 ├── webserver/                  # Django web application
 │   ├── lessonplanner/         # Main Django app
 │   │   ├── services/          # Business logic layer
 │   │   │   └── ai_client.py   # HTTP client for AI service
-│   │   └── tests.py           # Django tests (27 tests)
+│   │   └── tests.py           # Django tests
 │   └── README.md              # Django setup and commands
 ├── pyproject.toml              # Modern Python package configuration
 ├── requirements.txt            # Python dependencies
