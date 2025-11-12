@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "teacher-assist"
+version = "1.0.0"
+description = "Teacher Assist - AI-powered lesson planning for Polish kindergarten teachers"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Teacher Assist Team"}
+]
+
+dependencies = [
+    # Django web framework
+    "asgiref==3.10.0",
+    "Django==5.2.7",
+    "python-dotenv==1.2.1",
+    "sqlparse==0.5.3",
+
+    # HTTP client for Django to call AI service
+    "requests==2.32.5",
+
+    # FastAPI AI service
+    "fastapi==0.121.1",
+    "uvicorn[standard]==0.38.0",
+    "pydantic==2.12.4",
+
+    # Testing
+    "pytest==9.0.0",
+    "httpx==0.28.1",
+]
+
+[tool.setuptools.packages.find]
+include = ["common", "common.*", "ai_service", "ai_service.*"]
+exclude = ["webserver*", "docs*", "*.tests", "*.tests.*"]
+
+[tool.pytest.ini_options]
+pythonpath = "."
+testpaths = ["ai_service/tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"

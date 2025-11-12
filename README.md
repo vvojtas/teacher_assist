@@ -18,6 +18,23 @@ Teachers enter activity descriptions in Polish, and the system generates:
 
 ## Quick Start
 
+**Option 1: Using Startup Scripts (Recommended)**
+
+```bash
+# Linux/Mac
+./start.sh
+
+# Windows
+start.bat
+```
+
+The startup scripts will:
+- Install dependencies automatically
+- Start both AI service (port 8001) and web server (port 8000)
+- Open browser to http://localhost:8000
+
+**Option 2: Manual Setup**
+
 ```bash
 # Clone and setup
 git clone <repository-url>
@@ -26,13 +43,16 @@ python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Configure environment
-cp .env.example .env
-# Edit .env and set DJANGO_SECRET_KEY
+# Install package (required for imports)
+pip install -e .
 
-# Run Django server
+# Terminal 1 - Start AI Service
+python ai_service/main.py
+# Runs on http://localhost:8001
+
+# Terminal 2 - Start Django server
 cd webserver
-python manage.py migrate
+python manage.py migrate  # First time only
 python manage.py runserver
 # Access at http://localhost:8000
 ```
@@ -42,12 +62,25 @@ python manage.py runserver
 ```
 teacher_assist/
 ├── docs/                       # Documentation
-│   └── PRD.md                 # Product Requirements Document (detailed specs)
+│   ├── PRD.md                 # Product Requirements Document (detailed specs)
+│   ├── ai_api.md              # AI Service REST API specification
+│   └── django_api.md          # Django REST API documentation
+├── common/                     # Shared Pydantic models
+│   └── models.py              # Request/response models for API communication
+├── ai_service/                 # FastAPI AI service (mock implementation)
+│   ├── main.py                # FastAPI application entry point
+│   ├── mock_service.py        # Mock AI metadata generator
+│   └── tests/                 # AI service tests
 ├── webserver/                  # Django web application
+│   ├── lessonplanner/         # Main Django app
+│   │   ├── services/          # Business logic layer
+│   │   │   └── ai_client.py   # HTTP client for AI service
+│   │   └── tests.py           # Django tests
 │   └── README.md              # Django setup and commands
-├── ai_service/                 # LangGraph AI service (future)
+├── pyproject.toml              # Modern Python package configuration
 ├── requirements.txt            # Python dependencies
-├── .env.example               # Environment variables template
+├── start.sh                    # Linux/Mac startup script
+├── start.bat                   # Windows startup script
 └── CLAUDE.md                  # Development guidelines
 ```
 
