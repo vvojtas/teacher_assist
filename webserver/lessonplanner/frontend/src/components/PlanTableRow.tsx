@@ -31,33 +31,35 @@ export function PlanTableRow({
         "hover:bg-muted/50"
       )}
     >
-      <EditableCell
-        field="module"
-        value={row.module}
-        onValueChange={(value) => handleCellChange('module', value)}
-        onBlur={handleCellBlur}
-        className="w-[20%] p-1"
-      />
-      <EditableCell
-        field="curriculum"
-        value={row.curriculum}
-        onValueChange={(value) => handleCellChange('curriculum', value)}
-        onBlur={handleCellBlur}
-        className="w-[20%] p-1"
-      />
-      <EditableCell
-        field="objectives"
-        value={row.objectives}
-        onValueChange={(value) => handleCellChange('objectives', value)}
-        onBlur={handleCellBlur}
-        className="w-[30%] p-1"
-      />
+      <TableCell className="w-[20%] p-1">
+        <EditableCell
+          field="module"
+          value={row.module}
+          onValueChange={(value) => handleCellChange('module', value)}
+          onBlur={handleCellBlur}
+        />
+      </TableCell>
+      <TableCell className="w-[20%] p-1">
+        <EditableCell
+          field="curriculum"
+          value={row.curriculum}
+          onValueChange={(value) => handleCellChange('curriculum', value)}
+          onBlur={handleCellBlur}
+        />
+      </TableCell>
+      <TableCell className="w-[30%] p-1">
+        <EditableCell
+          field="objectives"
+          value={row.objectives}
+          onValueChange={(value) => handleCellChange('objectives', value)}
+          onBlur={handleCellBlur}
+        />
+      </TableCell>
       <TableCell className="w-[30%] p-1">
         <EditableCell
           field="activity"
           value={row.activity}
           onValueChange={(value) => handleCellChange('activity', value)}
-          className="border-0 p-0"
         />
         <RowActions
           rowId={row.id}

@@ -1,5 +1,4 @@
 import React, { useRef, useEffect, useState } from 'react'
-import { TableCell } from "@/components/ui/table"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { useCurriculumTooltip } from "@/hooks/useCurriculumTooltip"
 import { cn } from "@/lib/utils"
@@ -59,7 +58,8 @@ export function EditableCell({ field, value, onValueChange, onBlur, className })
       onMouseEnter={handleMouseEnter}
       className={cn(
         "outline-none",
-        field === 'objectives' && 'cell-objectives'
+        field === 'objectives' && 'cell-objectives',
+        className
       )}
       data-field={field}
     >
@@ -67,27 +67,25 @@ export function EditableCell({ field, value, onValueChange, onBlur, className })
     </div>
   )
 
-  return (
-    <TableCell className={cn("p-2", className)}>
-      {showTooltip && tooltipData && tooltipData.length > 0 ? (
-        <HoverCard openDelay={300}>
-          <HoverCardTrigger asChild>
-            <div className="cursor-text">
-              {editableContent}
+  if (showTooltip && tooltipData && tooltipData.length > 0) {
+    return (
+      <HoverCard openDelay={300}>
+        <HoverCardTrigger asChild>
+          <div className="cursor-text">
+            {editableContent}
+          </div>
+        </HoverCardTrigger>
+        <HoverCardContent className="w-96 max-h-96 overflow-auto">
+          {tooltipData.map(({ code, text }, index) => (
+            <div key={code} className={index > 0 ? 'mt-3 pt-3 border-t' : ''}>
+              <strong className="text-primary">{code}:</strong>{' '}
+              <span className="text-sm">{text}</span>
             </div>
-          </HoverCardTrigger>
-          <HoverCardContent className="w-96 max-h-96 overflow-auto">
-            {tooltipData.map(({ code, text }, index) => (
-              <div key={code} className={index > 0 ? 'mt-3 pt-3 border-t' : ''}>
-                <strong className="text-primary">{code}:</strong>{' '}
-                <span className="text-sm">{text}</span>
-              </div>
-            ))}
-          </HoverCardContent>
-        </HoverCard>
-      ) : (
-        editableContent
-      )}
-    </TableCell>
-  )
+          ))}
+        </HoverCardContent>
+      </HoverCard>
+    )
+  }
+
+  return editableContent
 }
