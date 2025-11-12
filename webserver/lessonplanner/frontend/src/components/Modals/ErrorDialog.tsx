@@ -9,7 +9,14 @@ import {
 import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
 
-export function ErrorDialog({ open, title, message, onClose }) {
+interface ErrorDialogProps {
+  open: boolean
+  title: string
+  message: string
+  onClose: () => void
+}
+
+export function ErrorDialog({ open, title, message, onClose }: ErrorDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>

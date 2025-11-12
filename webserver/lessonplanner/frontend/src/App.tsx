@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { ThemeInput } from './components/ThemeInput'
 import { ActionBar } from './components/ActionBar'
 import { ProgressBar } from './components/ProgressBar'
@@ -10,6 +10,9 @@ import { useTableManager } from './hooks/useTableManager'
 import { useAIService } from './hooks/useAIService'
 import { useClipboard } from './hooks/useClipboard'
 import { useModal } from './hooks/useModal'
+
+// Progress bar auto-hide delay after completion (milliseconds)
+const PROGRESS_HIDE_DELAY_MS = 2000
 
 function App() {
   const [theme, setTheme] = useState('')
@@ -43,7 +46,7 @@ function App() {
   } = useModal()
 
   // Handle single row generation
-  const handleGenerate = async (rowId) => {
+  const handleGenerate = useCallback(async (rowId: string) => {
     const row = rows.find(r => r.id === rowId)
     if (!row) return
 
@@ -64,14 +67,14 @@ function App() {
       const data = await generateSingle(row.activity, theme)
       updateRow(rowId, data)
     } catch (error) {
-      await showError(error.message)
+      await showError((error as Error).message)
     } finally {
       setRowLoading(rowId, false)
     }
-  }
+  }, [rows, showAlert, showConfirm, setRowLoading, theme, generateSingle, updateRow, showError])
 
   // Handle regeneration
-  const handleRegenerate = async (rowId) => {
+  const handleRegenerate = useCallback(async (rowId: string) => {
     const row = rows.find(r => r.id === rowId)
     if (!row) return
 
@@ -91,11 +94,11 @@ function App() {
       const data = await generateSingle(row.activity, theme)
       updateRow(rowId, data)
     } catch (error) {
-      await showError(error.message)
+      await showError((error as Error).message)
     } finally {
       setRowLoading(rowId, false)
     }
-  }
+  }, [rows, showAlert, showConfirm, setRowLoading, theme, generateSingle, updateRow, showError])
 
   // Handle bulk generation
   const handleBulkGenerate = async () => {
@@ -155,7 +158,7 @@ function App() {
       // Hide progress after delay
       setTimeout(() => {
         setProgress({ visible: false, value: 0, text: '' })
-      }, 2000)
+      }, PROGRESS_HIDE_DELAY_MS)
 
     } catch (error) {
       await showError(error.message)

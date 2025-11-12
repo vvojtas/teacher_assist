@@ -1,6 +1,9 @@
 import { useCallback } from 'react'
 import type { Row } from './useTableManager'
 
+// Request timeout for AI generation API calls (milliseconds)
+const REQUEST_TIMEOUT_MS = 120000 // 120 seconds
+
 export interface GenerateResult {
   module: string
   curriculum: string
@@ -33,8 +36,6 @@ export interface BulkResult {
  * Replaces the AIService singleton from vanilla JS
  */
 export function useAIService() {
-  const REQUEST_TIMEOUT = 120000 // 120 seconds
-
   /**
    * Get CSRF token from cookies or meta tag for Django requests
    */
@@ -86,15 +87,21 @@ export function useAIService() {
    * Generate metadata for a single activity
    */
   const generateSingle = useCallback(async (activity: string, theme = ''): Promise<GenerateResult> => {
+    // Validate CSRF token exists before making request
+    const csrfToken = getCsrfToken()
+    if (!csrfToken) {
+      throw new Error('Brak tokenu CSRF. Odśwież stronę i spróbuj ponownie.')
+    }
+
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
     try {
       const response = await fetch('/api/fill-work-plan/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': getCsrfToken() || ''
+          'X-CSRFToken': csrfToken
         },
         body: JSON.stringify({
           activity: activity,

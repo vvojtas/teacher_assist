@@ -1,6 +1,11 @@
 import { Input } from "@/components/ui/input"
 
-export function ThemeInput({ value, onChange }) {
+interface ThemeInputProps {
+  value: string
+  onChange: (value: string) => void
+}
+
+export function ThemeInput({ value, onChange }: ThemeInputProps) {
   return (
     <div className="mb-4">
       <label htmlFor="themeInput" className="block text-sm font-medium mb-2">

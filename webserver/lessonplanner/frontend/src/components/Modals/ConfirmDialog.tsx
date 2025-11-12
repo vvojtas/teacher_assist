@@ -9,7 +9,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-export function ConfirmDialog({ open, title, message, onConfirm, onCancel }) {
+interface ConfirmDialogProps {
+  open: boolean
+  title: string
+  message: string
+  onConfirm: () => void
+  onCancel: () => void
+}
+
+export function ConfirmDialog({ open, title, message, onConfirm, onCancel }: ConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={(open) => !open && onCancel()}>
       <AlertDialogContent>

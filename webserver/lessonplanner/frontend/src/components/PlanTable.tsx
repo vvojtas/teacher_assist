@@ -1,5 +1,17 @@
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PlanTableRow } from "./PlanTableRow"
+import type { Row, RowUpdate } from "@/hooks/useTableManager"
+
+interface PlanTableProps {
+  rows: Row[]
+  selectedRows: Set<string>
+  onRowUpdate: (rowId: string, update: RowUpdate) => void
+  onGenerate: (rowId: string) => void
+  onRegenerate: (rowId: string) => void
+  onDelete: (rowId: string) => void
+  onSelectChange: (rowId: string, checked: boolean) => void
+  onMarkUserEdited: (rowId: string) => void
+}
 
 export function PlanTable({
   rows,
@@ -10,7 +22,7 @@ export function PlanTable({
   onDelete,
   onSelectChange,
   onMarkUserEdited
-}) {
+}: PlanTableProps) {
   return (
     <div className="border rounded-lg overflow-hidden mb-4">
       <Table>

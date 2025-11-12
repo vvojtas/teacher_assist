@@ -1,6 +1,12 @@
 import { Progress } from "@/components/ui/progress"
 
-export function ProgressBar({ visible, progress, text }) {
+interface ProgressBarProps {
+  visible: boolean
+  progress: number
+  text: string
+}
+
+export function ProgressBar({ visible, progress, text }: ProgressBarProps) {
   if (!visible) return null
 
   return (

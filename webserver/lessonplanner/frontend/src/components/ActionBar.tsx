@@ -1,6 +1,15 @@
 import { Button } from "@/components/ui/button"
 import { Wand2, Plus, Trash2, Clipboard, Loader2 } from "lucide-react"
 
+interface ActionBarProps {
+  bulkGenerating: boolean
+  selectedRowCount: number
+  onBulkGenerate: () => void
+  onAddRow: () => void
+  onClearAll: () => void
+  onCopyTable: () => void
+}
+
 export function ActionBar({
   bulkGenerating,
   selectedRowCount,
@@ -8,7 +17,7 @@ export function ActionBar({
   onAddRow,
   onClearAll,
   onCopyTable
-}) {
+}: ActionBarProps) {
   return (
     <div className="flex flex-wrap gap-2 mb-4">
       <Button

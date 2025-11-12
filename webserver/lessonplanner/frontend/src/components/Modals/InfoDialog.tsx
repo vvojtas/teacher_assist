@@ -8,7 +8,14 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 
-export function InfoDialog({ open, title, message, onClose }) {
+interface InfoDialogProps {
+  open: boolean
+  title: string
+  message: string
+  onClose: () => void
+}
+
+export function InfoDialog({ open, title, message, onClose }: InfoDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>

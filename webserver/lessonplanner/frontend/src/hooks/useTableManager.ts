@@ -1,5 +1,8 @@
 import { useState, useCallback } from 'react'
 
+// Initial number of empty rows on page load
+const INITIAL_ROW_COUNT = 5
+
 export interface Row {
   id: string
   module: string
@@ -27,8 +30,8 @@ export interface RowUpdate {
  */
 export function useTableManager() {
   const [rows, setRows] = useState<Row[]>(() => {
-    // Initialize with 5 empty rows
-    return Array.from({ length: 5 }, (_, i) => ({
+    // Initialize with empty rows
+    return Array.from({ length: INITIAL_ROW_COUNT }, (_, i) => ({
       id: `row_${i + 1}`,
       module: '',
       curriculum: '',
@@ -40,15 +43,15 @@ export function useTableManager() {
     }))
   })
 
-  const [nextRowId, setNextRowId] = useState(6)
+  const [nextRowId, setNextRowId] = useState(INITIAL_ROW_COUNT + 1)
 
   /**
    * Add a specified number of empty rows
    */
   const addRows = useCallback((count = 1) => {
-    setRows(prev => {
+    setNextRowId(currentId => {
       const newRows: Row[] = Array.from({ length: count }, (_, i) => ({
-        id: `row_${nextRowId + i}`,
+        id: `row_${currentId + i}`,
         module: '',
         curriculum: '',
         objectives: '',
@@ -57,10 +60,10 @@ export function useTableManager() {
         userEdited: false,
         loading: false,
       }))
-      setNextRowId(nextRowId + count)
-      return [...prev, ...newRows]
+      setRows(prev => [...prev, ...newRows])
+      return currentId + count
     })
-  }, [nextRowId])
+  }, [])
 
   /**
    * Delete a specific row
@@ -70,10 +73,10 @@ export function useTableManager() {
   }, [])
 
   /**
-   * Clear all rows and reset to 5 empty rows
+   * Clear all rows and reset to initial empty rows
    */
   const clearAll = useCallback(() => {
-    setRows(Array.from({ length: 5 }, (_, i) => ({
+    setRows(Array.from({ length: INITIAL_ROW_COUNT }, (_, i) => ({
       id: `row_${i + 1}`,
       module: '',
       curriculum: '',
@@ -83,7 +86,7 @@ export function useTableManager() {
       userEdited: false,
       loading: false,
     })))
-    setNextRowId(6)
+    setNextRowId(INITIAL_ROW_COUNT + 1)
   }, [])
 
   /**

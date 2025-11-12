@@ -2,6 +2,17 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Wand2, RotateCw, X } from "lucide-react"
 
+interface RowActionsProps {
+  rowId: string
+  aiGenerated: boolean
+  loading: boolean
+  selected: boolean
+  onGenerate: (rowId: string) => void
+  onRegenerate: (rowId: string) => void
+  onDelete: (rowId: string) => void
+  onSelectChange: (checked: boolean) => void
+}
+
 export function RowActions({
   rowId,
   aiGenerated,
@@ -11,7 +22,7 @@ export function RowActions({
   onRegenerate,
   onDelete,
   onSelectChange
-}) {
+}: RowActionsProps) {
   return (
     <div className="flex items-center gap-2 mt-2">
       {!aiGenerated ? (

@@ -2,6 +2,18 @@ import { TableRow, TableCell } from "@/components/ui/table"
 import { EditableCell } from "./EditableCell"
 import { RowActions } from "./RowActions"
 import { cn } from "@/lib/utils"
+import type { Row, RowUpdate } from "@/hooks/useTableManager"
+
+interface PlanTableRowProps {
+  row: Row
+  selected: boolean
+  onRowUpdate: (rowId: string, update: RowUpdate) => void
+  onGenerate: (rowId: string) => void
+  onRegenerate: (rowId: string) => void
+  onDelete: (rowId: string) => void
+  onSelectChange: (checked: boolean) => void
+  onMarkUserEdited: (rowId: string) => void
+}
 
 export function PlanTableRow({
   row,
@@ -12,8 +24,8 @@ export function PlanTableRow({
   onDelete,
   onSelectChange,
   onMarkUserEdited
-}) {
-  const handleCellChange = (field, value) => {
+}: PlanTableRowProps) {
+  const handleCellChange = (field: string, value: string) => {
     onRowUpdate(row.id, { [field]: value })
   }
 
