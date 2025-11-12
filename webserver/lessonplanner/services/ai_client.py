@@ -131,7 +131,3 @@ def fill_work_plan(activity: str, theme: str = "") -> dict:
     except requests.exceptions.RequestException as e:
         logger.error(f"AI service request failed: {e}")
         raise Exception(f"Błąd komunikacji z usługą AI: {str(e)}")
-
-
-# Alias for backwards compatibility (will be updated in Django views)
-generate_metadata = fill_work_plan
