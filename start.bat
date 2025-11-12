@@ -94,8 +94,7 @@ echo.
 echo ============================================================
 echo.
 echo To stop the application:
-echo   1. Close both minimized console windows, OR
-echo   2. Run: stop.bat
+echo   * Close both minimized console windows
 echo.
 echo You can close this window now.
 echo.
