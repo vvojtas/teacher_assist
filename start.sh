@@ -16,9 +16,6 @@ NC='\033[0m' # No Color
 PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$PROJECT_ROOT"
 
-# Set PYTHONPATH to include project root for imports
-export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
-
 # Log files
 AI_SERVICE_LOG="$PROJECT_ROOT/ai_service.log"
 DJANGO_LOG="$PROJECT_ROOT/django.log"
@@ -48,6 +45,19 @@ $PYTHON_CMD -c "import django; import fastapi; import requests" 2>/dev/null
 if [ $? -ne 0 ]; then
     echo -e "${YELLOW}Installing required Python packages...${NC}"
     $PYTHON_CMD -m pip install -r requirements.txt
+fi
+
+# Install project in editable mode for proper package imports
+echo "Checking package installation..."
+$PYTHON_CMD -c "import common.models" 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo -e "${YELLOW}Installing teacher-assist package in editable mode...${NC}"
+    $PYTHON_CMD -m pip install -e . --quiet
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Error: Failed to install package${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Package installed successfully${NC}"
 fi
 
 echo ""

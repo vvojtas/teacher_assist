@@ -8,9 +8,6 @@ REM Get project root directory
 set "PROJECT_ROOT=%~dp0"
 cd /d "%PROJECT_ROOT%"
 
-REM Set PYTHONPATH to include project root for imports
-set "PYTHONPATH=%PROJECT_ROOT%;%PYTHONPATH%"
-
 REM Colors and formatting
 echo ============================================================
 echo Teacher Assist - Starting Application
@@ -42,6 +39,20 @@ if %errorlevel% neq 0 (
         pause
         exit /b 1
     )
+)
+
+REM Install project in editable mode for proper package imports
+echo Checking package installation...
+python -c "import common.models" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [INFO] Installing teacher-assist package in editable mode...
+    python -m pip install -e . --quiet >nul 2>&1
+    if %errorlevel% neq 0 (
+        echo [ERROR] Failed to install package
+        pause
+        exit /b 1
+    )
+    echo [SUCCESS] Package installed successfully
 )
 
 echo.
