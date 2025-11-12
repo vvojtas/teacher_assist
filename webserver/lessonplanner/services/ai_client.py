@@ -5,9 +5,19 @@ This module handles HTTP communication between Django and the AI service.
 """
 
 import os
+import sys
+from pathlib import Path
+
+# Add project root to Python path for imports
+project_root = Path(__file__).parent.parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 import requests
 import logging
 from typing import Dict
+from pydantic import ValidationError
+
+from common.models import FillWorkPlanRequest, FillWorkPlanResponse
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -21,8 +31,8 @@ def fill_work_plan(activity: str, theme: str = "") -> dict:
     """
     Call AI service to generate metadata for a lesson activity.
 
-    This function replaces the mock generate_metadata function and makes
-    actual HTTP requests to the LangGraph AI service running on port 8001.
+    This function makes HTTP requests to the LangGraph AI service running on port 8001.
+    Uses Pydantic models from common package for request/response validation.
 
     Args:
         activity (str): The activity description (required, 1-500 chars)
@@ -44,15 +54,23 @@ def fill_work_plan(activity: str, theme: str = "") -> dict:
 
     API Specification: docs/ai_api.md
     """
-    # Validate input
-    if not activity or not activity.strip():
-        raise ValueError("Activity cannot be empty")
+    try:
+        # Validate and prepare request using Pydantic model
+        request_data = FillWorkPlanRequest(
+            activity=activity,
+            theme=theme
+        )
 
-    # Prepare request payload
-    payload = {
-        "activity": activity.strip(),
-        "theme": theme.strip() if theme else ""
-    }
+        # Convert to dict for JSON serialization
+        payload = request_data.model_dump()
+
+    except ValidationError as e:
+        # Pydantic validation failed
+        errors = e.errors()
+        first_error = errors[0] if errors else {}
+        error_msg = first_error.get("msg", "Invalid input")
+        logger.warning(f"Request validation error: {error_msg}")
+        raise ValueError(error_msg)
 
     try:
         # Make POST request to AI service
@@ -66,7 +84,7 @@ def fill_work_plan(activity: str, theme: str = "") -> dict:
 
         # Handle error responses
         if response.status_code == 400:
-            # Validation error
+            # Validation error from AI service
             error_data = response.json()
             error_msg = error_data.get("error", "Nieprawidłowe dane wejściowe")
             logger.warning(f"AI service validation error: {error_msg}")
@@ -87,15 +105,20 @@ def fill_work_plan(activity: str, theme: str = "") -> dict:
             logger.error(f"AI service error: HTTP {response.status_code}")
             raise Exception(f"AI service returned error: {response.status_code}")
 
-        # Parse successful response
-        data = response.json()
+        # Parse and validate response using Pydantic model
+        response_data = FillWorkPlanResponse(**response.json())
 
         # Return only the required fields (not the echoed activity)
         return {
-            "module": data["module"],
-            "curriculum_refs": data["curriculum_refs"],
-            "objectives": data["objectives"]
+            "module": response_data.module,
+            "curriculum_refs": response_data.curriculum_refs,
+            "objectives": response_data.objectives
         }
+
+    except ValidationError as e:
+        # Response validation failed
+        logger.error(f"AI service returned invalid response format: {e}")
+        raise Exception("Nieprawidłowa odpowiedź z usługi AI")
 
     except requests.exceptions.Timeout:
         logger.error("AI service request timeout")
