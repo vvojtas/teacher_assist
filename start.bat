@@ -8,6 +8,9 @@ REM Get project root directory
 set "PROJECT_ROOT=%~dp0"
 cd /d "%PROJECT_ROOT%"
 
+REM Set PYTHONPATH to include project root for imports
+set "PYTHONPATH=%PROJECT_ROOT%;%PYTHONPATH%"
+
 REM Colors and formatting
 echo ============================================================
 echo Teacher Assist - Starting Application

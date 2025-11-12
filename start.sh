@@ -16,6 +16,9 @@ NC='\033[0m' # No Color
 PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$PROJECT_ROOT"
 
+# Set PYTHONPATH to include project root for imports
+export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
+
 # Log files
 AI_SERVICE_LOG="$PROJECT_ROOT/ai_service.log"
 DJANGO_LOG="$PROJECT_ROOT/django.log"

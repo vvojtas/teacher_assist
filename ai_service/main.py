@@ -5,17 +5,10 @@ Run with:
     python ai_service/main.py
 
 Or with uvicorn:
-    uvicorn ai_service.main:app --host 0.0.0.0 --port 8001 --reload
+    uvicorn ai_service.main:app --host 127.0.0.1 --port 8001 --reload
 """
 
-import sys
-import os
-from pathlib import Path
-
-# Add project root to Python path for imports
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
+import logging
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -24,6 +17,9 @@ from pydantic import ValidationError
 
 from common.models import FillWorkPlanRequest, FillWorkPlanResponse, ErrorResponse
 from ai_service.mock_service import MockAIService
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 
 # Initialize FastAPI app
@@ -85,19 +81,16 @@ async def fill_work_plan(request: FillWorkPlanRequest) -> FillWorkPlanResponse:
     return result
 
 
-@app.exception_handler(RequestValidationError)
-async def request_validation_exception_handler(request: Request, exc: RequestValidationError):
+def _create_validation_error_response(errors: list) -> JSONResponse:
     """
-    Handle FastAPI request validation errors.
+    Create a standardized validation error response.
 
     Args:
-        request: FastAPI request
-        exc: FastAPI RequestValidationError
+        errors: List of validation errors from Pydantic
 
     Returns:
-        JSONResponse: Error response with validation details (400 Bad Request per API spec)
+        JSONResponse: Formatted error response with 400 status
     """
-    errors = exc.errors()
     first_error = errors[0] if errors else {}
 
     # Extract field name and error message
@@ -116,6 +109,21 @@ async def request_validation_exception_handler(request: Request, exc: RequestVal
             }
         ).model_dump()
     )
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Handle FastAPI request validation errors.
+
+    Args:
+        request: FastAPI request
+        exc: FastAPI RequestValidationError
+
+    Returns:
+        JSONResponse: Error response with validation details (400 Bad Request per API spec)
+    """
+    return _create_validation_error_response(exc.errors())
 
 
 @app.exception_handler(ValidationError)
@@ -130,25 +138,7 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
     Returns:
         JSONResponse: Error response with validation details (400 Bad Request per API spec)
     """
-    errors = exc.errors()
-    first_error = errors[0] if errors else {}
-
-    # Extract field name and error message
-    field_loc = first_error.get("loc", ["unknown"])
-    field_name = field_loc[-1] if field_loc else "unknown"
-    error_msg = first_error.get("msg", "Unknown validation error")
-
-    return JSONResponse(
-        status_code=400,  # Return 400 per API spec (not default 422)
-        content=ErrorResponse(
-            error="Nieprawidłowe dane wejściowe",
-            error_code="VALIDATION_ERROR",
-            details={
-                "field": field_name,
-                "reason": error_msg
-            }
-        ).model_dump()
-    )
+    return _create_validation_error_response(exc.errors())
 
 
 @app.exception_handler(Exception)
@@ -163,6 +153,9 @@ async def general_exception_handler(request: Request, exc: Exception):
     Returns:
         JSONResponse: Generic error response
     """
+    # Log the exception with full traceback for debugging
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(

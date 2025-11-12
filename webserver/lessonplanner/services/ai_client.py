@@ -5,13 +5,6 @@ This module handles HTTP communication between Django and the AI service.
 """
 
 import os
-import sys
-from pathlib import Path
-
-# Add project root to Python path for imports
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
-
 import requests
 import logging
 from pydantic import ValidationError
