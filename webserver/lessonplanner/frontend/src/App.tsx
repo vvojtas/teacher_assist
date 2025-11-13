@@ -161,7 +161,7 @@ function App() {
       }, PROGRESS_HIDE_DELAY_MS)
 
     } catch (error) {
-      await showError(error.message)
+      await showError((error as Error).message)
     } finally {
       setBulkGenerating(false)
       rowsToProcess.forEach(row => setRowLoading(row.id, false))
@@ -169,7 +169,7 @@ function App() {
   }
 
   // Handle row deletion
-  const handleDelete = (rowId) => {
+  const handleDelete = (rowId: string) => {
     deleteRow(rowId)
     // Remove from selected rows if it was selected
     setSelectedRows(prev => {
@@ -190,7 +190,7 @@ function App() {
   }
 
   // Handle row selection
-  const handleSelectChange = (rowId, checked) => {
+  const handleSelectChange = (rowId: string, checked: boolean) => {
     setSelectedRows(prev => {
       const next = new Set(prev)
       if (checked) {
