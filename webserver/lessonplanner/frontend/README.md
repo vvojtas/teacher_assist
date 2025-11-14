@@ -1,6 +1,6 @@
 # Teacher Assist - React Frontend
 
-This directory contains the React frontend for the Teacher Assist lesson planning application, migrated from vanilla JavaScript + Bootstrap to React + Tailwind CSS + shadcn/ui.
+This directory contains the React frontend for the Teacher Assist lesson planning application.
 
 ## Technology Stack
 
@@ -11,51 +11,78 @@ This directory contains the React frontend for the Teacher Assist lesson plannin
 - **Component Library:** shadcn/ui
 - **Icons:** Lucide React
 - **State Management:** React Hooks (custom hooks)
+- **Testing:** Vitest + React Testing Library
 
 ## Development
 
 ### Install Dependencies
-\`\`\`bash
+```bash
 npm install
-\`\`\`
+```
 
 ### Development Server
-\`\`\`bash
+```bash
 npm run dev
-\`\`\`
+```
 
 ### Build for Production
-\`\`\`bash
+```bash
 npm run build
-\`\`\`
+```
+
+### Run Tests
+```bash
+npm test              # Run tests in watch mode
+npm run test:run      # Run tests once
+npm run test:ui       # Open Vitest UI
+npm run test:coverage # Generate coverage report
+```
 
 ### Auto-Build and Update Django Template
 
 **Linux/macOS:**
-\`\`\`bash
+```bash
 ./build-and-update.sh
-\`\`\`
+```
 
-**Windows (Command Prompt):**
-\`\`\`cmd
+**Windows:**
+```cmd
 build-and-update.bat
-\`\`\`
-
-**Windows (PowerShell):**
-\`\`\`powershell
-.\build-and-update.ps1
-\`\`\`
+```
 
 See [BUILD_SCRIPTS_README.md](BUILD_SCRIPTS_README.md) for detailed instructions.
 
-## Migration Summary
+## Project Structure
 
-Successfully migrated from Bootstrap 5 + Vanilla JS to React + TypeScript + Tailwind CSS + shadcn/ui with full feature parity.
+```
+src/
+├── components/         # React components
+│   ├── ui/            # shadcn/ui primitives
+│   ├── Modals/        # Dialog components
+│   ├── ActionBar.tsx
+│   ├── EditableCell.tsx
+│   ├── PlanTable.tsx
+│   ├── ProgressBar.tsx
+│   └── ...
+├── hooks/             # Custom React hooks
+│   ├── useTableManager.ts
+│   ├── useAIService.ts
+│   ├── useClipboard.ts
+│   └── ...
+├── lib/               # Utilities
+├── test/              # Test setup
+├── App.tsx            # Main application
+├── main.tsx           # Entry point
+└── index.css          # Global styles
+```
 
-All original features preserved:
-- Theme input, editable table cells
+## Features
+
+- Editable table cells with contenteditable
 - Single & bulk AI generation
-- Copy to clipboard (HTML + TSV)
-- Curriculum tooltips with caching
-- Modal confirmations in Polish
+- Copy to clipboard (HTML + TSV formats)
+- Curriculum reference tooltips with API caching
+- Modal confirmations (Polish language)
 - Loading states and error handling
+- TypeScript type safety
+- Comprehensive test coverage
