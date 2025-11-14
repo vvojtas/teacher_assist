@@ -1,4 +1,4 @@
-import { expect, afterEach, vi } from 'vitest'
+import { expect, afterEach, beforeEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import * as matchers from '@testing-library/jest-dom/matchers'
 
@@ -9,6 +9,11 @@ expect.extend(matchers)
 afterEach(() => {
   cleanup()
 })
+
+// Ensure document is available (jsdom should provide this)
+if (typeof document === 'undefined') {
+  throw new Error('document is not defined - jsdom environment not loaded')
+}
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -35,3 +40,30 @@ global.IntersectionObserver = class IntersectionObserver {
   }
   unobserve() {}
 } as any
+
+// Mock ResizeObserver
+global.ResizeObserver = class ResizeObserver {
+  constructor() {}
+  disconnect() {}
+  observe() {}
+  unobserve() {}
+} as any
+
+// Suppress React 19 error boundary warnings in tests
+const originalError = console.error
+beforeEach(() => {
+  console.error = (...args: any[]) => {
+    if (
+      typeof args[0] === 'string' &&
+      (args[0].includes('Warning: ReactDOM.render') ||
+       args[0].includes('Not implemented: HTMLFormElement.prototype.submit'))
+    ) {
+      return
+    }
+    originalError.call(console, ...args)
+  }
+})
+
+afterEach(() => {
+  console.error = originalError
+})
