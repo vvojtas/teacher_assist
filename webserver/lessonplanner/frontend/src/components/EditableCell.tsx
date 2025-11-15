@@ -18,11 +18,15 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
   const contentRef = useRef<HTMLDivElement>(null)
   const { parseCurriculumCodes, fetchMultipleCodes } = useCurriculumTooltip()
   const [tooltipData, setTooltipData] = useState<Array<{ code: string; text: string }> | null>(null)
+  // Track the last value we sent to parent to distinguish external updates from our own
+  const lastValueRef = useRef(value)
 
-  // Update contenteditable when value changes externally
+  // Update contenteditable only when value changes externally (not from our own onValueChange)
+  // This handles AI-generated content and programmatic updates while preserving cursor during typing
   useEffect(() => {
-    if (contentRef.current && contentRef.current.textContent !== value) {
+    if (value !== lastValueRef.current && contentRef.current) {
       contentRef.current.textContent = value
+      lastValueRef.current = value
     }
   }, [value])
 
@@ -35,10 +39,13 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
       if (contentRef.current) {
         contentRef.current.textContent = truncated
       }
+      lastValueRef.current = truncated
       onValueChange(truncated)
       return
     }
 
+    // Update our tracking ref before calling parent to prevent echo
+    lastValueRef.current = newValue
     onValueChange(newValue)
   }
 
@@ -51,6 +58,7 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
   // Handle paste to strip formatting using modern Selection API
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault()
+
     let text = e.clipboardData.getData('text/plain')
 
     // Calculate remaining space for XSS/DoS protection
@@ -83,8 +91,9 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
 
     // Trigger state update
     if (contentRef.current) {
-      const newValue = contentRef.current.textContent
-      onValueChange(newValue || '')
+      const newValue = contentRef.current.textContent || ''
+      lastValueRef.current = newValue
+      onValueChange(newValue)
     }
   }
 
@@ -117,9 +126,7 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
         className
       )}
       data-field={field}
-    >
-      {value}
-    </div>
+    />
   )
 
   if (showTooltip && tooltipData && tooltipData.length > 0) {
