@@ -175,6 +175,109 @@ class EducationalModule(models.Model):
 
     def __str__(self):
         return self.module_name
+
+
+class WorkPlan(models.Model):
+    """
+    Stores weekly lesson plans with their themes.
+    Each work plan contains multiple work plan entries (individual activities).
+    """
+    theme = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Weekly theme (optional, e.g., 'Jesień - zbiory')"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'work_plans'
+        ordering = ['-created_at']
+        verbose_name = 'Work Plan'
+        verbose_name_plural = 'Work Plans'
+
+    def __str__(self):
+        theme_display = self.theme if self.theme else "Untitled"
+        return f"Work Plan: {theme_display} ({self.created_at.strftime('%Y-%m-%d')})"
+
+
+class WorkPlanEntry(models.Model):
+    """
+    Stores individual activity rows within a work plan.
+    Each entry corresponds to one row in the UI table.
+    The is_example flag marks entries for use as LLM training examples.
+    """
+    work_plan = models.ForeignKey(
+        WorkPlan,
+        on_delete=models.CASCADE,
+        related_name='entries',
+        help_text="Work plan this entry belongs to"
+    )
+    module = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Educational module name (e.g., 'MATEMATYKA')"
+    )
+    objectives = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Educational objectives (typically 2-3 items)"
+    )
+    activity = models.CharField(
+        max_length=500,
+        help_text="Activity description (required)"
+    )
+    curriculum_references = models.ManyToManyField(
+        CurriculumReference,
+        through='WorkPlanEntryCurriculumRef',
+        related_name='work_plan_entries',
+        blank=True,
+        help_text="Curriculum reference codes for this activity"
+    )
+    is_example = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="TRUE if should be used as LLM training example"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'work_plan_entries'
+        ordering = ['id']
+        verbose_name = 'Work Plan Entry'
+        verbose_name_plural = 'Work Plan Entries'
+
+    def __str__(self):
+        return f"{self.activity[:50]}... (Plan: {self.work_plan_id})"
+
+
+class WorkPlanEntryCurriculumRef(models.Model):
+    """
+    Junction table for many-to-many relationship between
+    work plan entries and curriculum references.
+    """
+    work_plan_entry = models.ForeignKey(
+        WorkPlanEntry,
+        on_delete=models.CASCADE,
+        help_text="Work plan entry"
+    )
+    curriculum_reference = models.ForeignKey(
+        CurriculumReference,
+        on_delete=models.RESTRICT,
+        help_text="Curriculum reference"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'work_plan_entry_curriculum_refs'
+        unique_together = [['work_plan_entry', 'curriculum_reference']]
+        verbose_name = 'Work Plan Entry Curriculum Reference'
+        verbose_name_plural = 'Work Plan Entry Curriculum References'
+
+    def __str__(self):
+        return f"Entry {self.work_plan_entry_id} -> Curriculum {self.curriculum_reference.reference_code}"
 ```
 
 ### 3.2 Creating Migrations
@@ -485,7 +588,10 @@ python manage.py shell
 ```
 
 ```python
-from lessonplanner.models import MajorCurriculumReference, CurriculumReference, EducationalModule
+from lessonplanner.models import (
+    MajorCurriculumReference, CurriculumReference, EducationalModule,
+    WorkPlan, WorkPlanEntry, WorkPlanEntryCurriculumRef
+)
 
 # Check major references
 print(f"Major references: {MajorCurriculumReference.objects.count()}")
@@ -504,6 +610,36 @@ ref = CurriculumReference.objects.get(reference_code='4.15')
 print(f"Reference: {ref.reference_code}")
 print(f"Major section: {ref.major_reference.reference_code}")
 print(f"Major text: {ref.major_reference.full_text}")
+
+# Test work plan creation and relationships
+wp = WorkPlan.objects.create(theme="Jesień - zbiory")
+print(f"Created work plan: {wp}")
+
+# Create work plan entry
+entry = WorkPlanEntry.objects.create(
+    work_plan=wp,
+    activity="Zabawa w sklep z owocami",
+    module="MATEMATYKA",
+    objectives="Dziecko potrafi przeliczać w zakresie 5\nRozpoznaje poznane wcześniej cyfry",
+    is_example=True
+)
+print(f"Created work plan entry: {entry}")
+
+# Add curriculum references to entry
+ref1 = CurriculumReference.objects.get(reference_code='4.15')
+ref2 = CurriculumReference.objects.get(reference_code='4.18')
+entry.curriculum_references.add(ref1, ref2)
+
+# Verify many-to-many relationship
+print(f"Entry curriculum refs: {entry.curriculum_references.all()}")
+print(f"Entry curriculum codes: {list(entry.curriculum_references.values_list('reference_code', flat=True))}")
+
+# Query work plan with all entries
+wp_with_entries = WorkPlan.objects.prefetch_related('entries__curriculum_references').get(id=wp.id)
+for e in wp_with_entries.entries.all():
+    print(f"Activity: {e.activity}")
+    print(f"  Module: {e.module}")
+    print(f"  Curriculum refs: {list(e.curriculum_references.values_list('reference_code', flat=True))}")
 ```
 
 **Direct SQL:**
@@ -515,6 +651,9 @@ sqlite3 webserver/db.sqlite3
 SELECT COUNT(*) FROM major_curriculum_references;
 SELECT COUNT(*) FROM curriculum_references;
 SELECT COUNT(*) FROM educational_modules;
+SELECT COUNT(*) FROM work_plans;
+SELECT COUNT(*) FROM work_plan_entries;
+SELECT COUNT(*) FROM work_plan_entry_curriculum_refs;
 
 # Check relationship
 SELECT
@@ -522,6 +661,18 @@ SELECT
     mcr.reference_code as major_code
 FROM curriculum_references cr
 JOIN major_curriculum_references mcr ON cr.major_reference_id = mcr.id;
+
+# Check work plan with entries
+SELECT
+    wp.theme,
+    wpe.activity,
+    wpe.module,
+    GROUP_CONCAT(cr.reference_code, ', ') as curriculum_codes
+FROM work_plans wp
+JOIN work_plan_entries wpe ON wp.id = wpe.work_plan_id
+LEFT JOIN work_plan_entry_curriculum_refs wpcr ON wpe.id = wpcr.work_plan_entry_id
+LEFT JOIN curriculum_references cr ON wpcr.curriculum_reference_id = cr.id
+GROUP BY wp.id, wpe.id;
 ```
 
 ### 5.2 Test API Endpoints
@@ -695,6 +846,7 @@ chmod +x setup_database.sh
 | Version | Date       | Author | Changes                                   |
 |---------|------------|--------|-------------------------------------------|
 | 1.0     | 2025-11-10 | Dev    | Initial database initialization guide     |
+| 2.0     | 2025-11-15 | Dev    | Added Django models for work plan persistence tables (WorkPlan, WorkPlanEntry, WorkPlanEntryCurriculumRef) |
 
 ---
 
