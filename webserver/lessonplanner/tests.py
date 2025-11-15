@@ -24,75 +24,48 @@ class LessonPlannerViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'lessonplanner/index.html')
 
-    def test_index_page_has_required_elements(self):
-        """Test that the index page contains all required UI elements"""
+    def test_index_page_has_react_root(self):
+        """Test that the index page contains React app root element"""
         response = self.client.get(reverse('lessonplanner:index'))
         content = response.content.decode('utf-8')
 
-        # Check for main buttons
-        self.assertIn('id="bulkGenerateBtn"', content)
-        self.assertIn('id="addRowBtn"', content)
-        self.assertIn('id="clearAllBtn"', content)
-        self.assertIn('id="copyTableBtn"', content)
+        # Check for React root div
+        self.assertIn('id="root"', content)
 
-        # Check for copy button with correct text
-        self.assertIn('Skopiuj tabelę', content)
-
-        # Check for table structure
-        self.assertIn('id="planTable"', content)
-        self.assertIn('id="planTableBody"', content)
-
-        # Check for theme input
-        self.assertIn('id="themeInput"', content)
-
-    def test_index_page_has_row_checkboxes(self):
-        """Test that the row template includes checkboxes for copy functionality"""
+    def test_index_page_has_csrf_token_meta(self):
+        """Test that the page includes CSRF token in meta tag"""
         response = self.client.get(reverse('lessonplanner:index'))
         content = response.content.decode('utf-8')
 
-        # Check for checkbox in row template
-        self.assertIn('class="form-check-input row-checkbox', content)
-        self.assertIn('type="checkbox"', content)
+        # Check for CSRF meta tag
+        self.assertIn('name="csrf-token"', content)
+        self.assertIn('content="', content)
 
-    def test_index_page_has_table_headers(self):
-        """Test that the table has correct column headers"""
+    def test_index_page_includes_vite_assets(self):
+        """Test that Vite bundled assets are included"""
         response = self.client.get(reverse('lessonplanner:index'))
         content = response.content.decode('utf-8')
 
-        # Check for all column headers
-        self.assertIn('Moduł', content)
-        self.assertIn('Podstawa Programowa', content)
-        self.assertIn('Cele', content)
-        self.assertIn('Aktywność', content)
+        # Check for Vite-bundled JavaScript (module script)
+        self.assertIn('type="module"', content)
+        self.assertIn('/static/lessonplanner/dist/assets/', content)
 
-    def test_index_page_includes_javascript_files(self):
-        """Test that all required JavaScript files are loaded"""
+    def test_index_page_includes_bundled_css(self):
+        """Test that Vite bundled CSS is included"""
         response = self.client.get(reverse('lessonplanner:index'))
         content = response.content.decode('utf-8')
 
-        # Check for JavaScript files
-        self.assertIn('modalHelper.js', content)
-        self.assertIn('tableManager.js', content)
-        self.assertIn('aiService.js', content)
-        self.assertIn('planner.js', content)
+        # Check for bundled CSS file
+        self.assertIn('/static/lessonplanner/dist/assets/index-', content)
+        self.assertIn('.css', content)
 
-    def test_index_page_includes_css_file(self):
-        """Test that the custom CSS file is loaded"""
+    def test_index_page_has_correct_title(self):
+        """Test that the page has the correct title"""
         response = self.client.get(reverse('lessonplanner:index'))
         content = response.content.decode('utf-8')
 
-        # Check for CSS file
-        self.assertIn('planner.css', content)
-
-    def test_index_page_has_modals(self):
-        """Test that the page includes all required Bootstrap modals"""
-        response = self.client.get(reverse('lessonplanner:index'))
-        content = response.content.decode('utf-8')
-
-        # Check for modals
-        self.assertIn('id="errorModal"', content)
-        self.assertIn('id="confirmModal"', content)
-        self.assertIn('id="alertModal"', content)
+        # Check for page title
+        self.assertIn('Teacher Assist - Planowanie Lekcji', content)
 
 
 class FillWorkPlanViewTests(TestCase):
@@ -387,8 +360,8 @@ class CurriculumRefsViewTests(TestCase):
 
         self.assertIn('references', data)
         self.assertIn('count', data)
-        # Mock data has 5 references
-        self.assertEqual(data['count'], 5)
+        # Mock data has 17 references
+        self.assertEqual(data['count'], 17)
         self.assertIn('1.1', data['references'])
         self.assertIn('2.5', data['references'])
         self.assertIn('3.8', data['references'])
@@ -451,8 +424,8 @@ class ModulesViewTests(TestCase):
 
         self.assertIn('modules', data)
         self.assertIn('count', data)
-        # Mock data has 5 modules
-        self.assertEqual(data['count'], 5)
+        # Mock data has 12 modules
+        self.assertEqual(data['count'], 12)
 
         # Verify structure
         module = data['modules'][0]
@@ -468,8 +441,8 @@ class ModulesViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
-        # Mock data has 4 non-AI-suggested modules
-        self.assertEqual(data['count'], 4)
+        # Mock data has 7 non-AI-suggested modules
+        self.assertEqual(data['count'], 7)
         for module in data['modules']:
             self.assertFalse(module['is_ai_suggested'])
 
@@ -480,8 +453,9 @@ class ModulesViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
-        # Mock data has 1 AI-suggested module
-        self.assertEqual(data['count'], 1)
-        self.assertTrue(data['modules'][0]['is_ai_suggested'])
+        # Mock data has 5 AI-suggested modules
+        self.assertEqual(data['count'], 5)
+        for module in data['modules']:
+            self.assertTrue(module['is_ai_suggested'])
 
 
