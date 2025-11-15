@@ -95,8 +95,6 @@ Reduce time spent on lesson plan documentation by 60-70% through AI-assisted met
 
 
 ### Out of Scope (Future Phases)
-❌ Data persistence between sessions
-
 ❌ User authentication
 
 ❌ Multiple teacher accounts
@@ -110,6 +108,11 @@ Reduce time spent on lesson plan documentation by 60-70% through AI-assisted met
 ❌ Mobile responsive design
 
 ❌ Print formatting
+
+### Phase 2 (In Progress)
+🔄 Data persistence between sessions (work plans can be saved and loaded)
+
+🔄 Example entry management (marking entries for LLM training)
 
 ---
 
@@ -432,18 +435,40 @@ Content-Type: application/json
 
 ### 7.5 Database Schema
 
-The MVP uses three tables for reference data storage:
+The application uses six tables divided into two categories:
 
-#### Table: `major_curriculum_references`
+#### Reference Data Tables (Read-Only)
+
+**Table: `major_curriculum_references`**
 Stores major sections of Polish curriculum (Podstawa Programowa). Examples: "1", "2", "3", "4" representing top-level curriculum areas.
 
-#### Table: `curriculum_references`
+**Table: `curriculum_references`**
 Stores detailed curriculum paragraph references with their full Polish text. Examples: "4.15", "3.8", "2.5". Each reference belongs to a major curriculum section (1:N relationship).
 
-#### Table: `educational_modules`
+**Table: `educational_modules`**
 Stores educational module categories (e.g., "MATEMATYKA", "JĘZYK"). Tracks both predefined and AI-suggested modules via `is_ai_suggested` boolean flag.
 
-**Data Persistence:** Session data (themes, activities, generated metadata) is NOT persisted in MVP. Only reference data is stored.
+#### Work Plan Persistence Tables (Phase 2)
+
+**Table: `work_plans`**
+Stores weekly lesson plans with themes. Each work plan represents a complete planning session.
+- Columns: id, theme (VARCHAR 200), created_at, updated_at
+
+**Table: `work_plan_entries`**
+Stores individual activity rows within a work plan (corresponds to UI table rows).
+- Columns: id, work_plan_id (FK), module, objectives, activity, is_example (boolean), created_at
+- Relationship: N:1 with work_plans
+- The `is_example` flag marks entries for use as LLM training examples
+
+**Table: `work_plan_entry_curriculum_refs`**
+Junction table implementing many-to-many relationship between work plan entries and curriculum references.
+- Columns: id, work_plan_entry_id (FK), curriculum_reference_id (FK), created_at
+- Unique constraint on (work_plan_entry_id, curriculum_reference_id)
+
+**Data Persistence:**
+- **Phase 1 (MVP):** Session data stored in browser memory only
+- **Phase 2 (Current):** Work plans can be saved to database and loaded later
+- Reference data is pre-populated and read-only
 
 **Complete Schema Documentation:** See [db_schema.md](db_schema.md) for detailed table definitions, column types, indexes, constraints, and Django model examples.
 
