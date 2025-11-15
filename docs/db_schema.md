@@ -237,7 +237,6 @@ INSERT INTO educational_modules (module_name, is_ai_suggested) VALUES
 
 **Indexes:**
 - PRIMARY KEY on `id` (automatic)
-- INDEX on `created_at` (for chronological ordering)
 
 **Constraints:**
 - `theme` can be NULL (optional theme)
@@ -422,8 +421,6 @@ CREATE TABLE IF NOT EXISTS work_plans (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_work_plans_created_at ON work_plans(created_at);
-
 -- Table: work_plan_entries
 CREATE TABLE IF NOT EXISTS work_plan_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -498,8 +495,6 @@ CREATE TABLE IF NOT EXISTS work_plans (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_work_plans_created_at ON work_plans(created_at);
-
 -- Table: work_plan_entries
 CREATE TABLE IF NOT EXISTS work_plan_entries (
     id SERIAL PRIMARY KEY,
@@ -549,7 +544,6 @@ CREATE INDEX idx_wpe_curr_refs_curr_id ON work_plan_entry_curriculum_refs(curric
 | curriculum_references         | UNIQUE     | reference_code       | Fast lookup by detailed code     |
 | curriculum_references         | INDEX      | major_reference_id   | Fast joins with major sections   |
 | educational_modules           | UNIQUE     | module_name          | Fast lookup by name              |
-| work_plans                    | INDEX      | created_at           | Chronological ordering           |
 | work_plan_entries             | INDEX      | work_plan_id         | Fast joins with work plans       |
 | work_plan_entries             | INDEX      | is_example           | Filter example entries for LLM   |
 | work_plan_entry_curriculum_refs | UNIQUE   | (entry_id, curr_id)  | Prevent duplicate associations   |
