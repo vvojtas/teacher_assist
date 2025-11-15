@@ -13,7 +13,7 @@ from django.utils.html import escape
 
 from .services import ai_client
 from .forms import FillWorkPlanForm
-from .fixtures.mock_data import MOCK_CURRICULUM_REFS, MOCK_EDUCATIONAL_MODULES
+from .services.mock_data import CURRICULUM_REFERENCES, EDUCATIONAL_MODULES
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -142,8 +142,8 @@ def get_all_curriculum_refs_view(request):
     """
     try:
         return JsonResponse({
-            'references': MOCK_CURRICULUM_REFS,
-            'count': len(MOCK_CURRICULUM_REFS)
+            'references': CURRICULUM_REFERENCES,
+            'count': len(CURRICULUM_REFERENCES)
         }, status=200)
 
     except Exception as e:
@@ -187,7 +187,7 @@ def get_curriculum_ref_by_code_view(request, code):
             }, status=400)
 
         # Lookup curriculum reference
-        if code not in MOCK_CURRICULUM_REFS:
+        if code not in CURRICULUM_REFERENCES:
             return JsonResponse({
                 'error': f'Nie znaleziono odniesienia dla kodu: {escape(code)}',
                 'error_code': 'REFERENCE_NOT_FOUND'
@@ -195,7 +195,7 @@ def get_curriculum_ref_by_code_view(request, code):
 
         return JsonResponse({
             'reference_code': code,
-            'full_text': MOCK_CURRICULUM_REFS[code],
+                'full_text': CURRICULUM_REFERENCES[code],
             'created_at': '2025-10-28T10:30:00Z'
         }, status=200)
 
@@ -246,9 +246,9 @@ def get_modules_view(request):
         if ai_suggested_param is not None:
             # Convert string to boolean
             ai_suggested = ai_suggested_param.lower() in ('true', '1', 'yes')
-            modules_data = [m for m in MOCK_EDUCATIONAL_MODULES if m['is_ai_suggested'] == ai_suggested]
+            modules_data = [m for m in EDUCATIONAL_MODULES if m['is_ai_suggested'] == ai_suggested]
         else:
-            modules_data = MOCK_EDUCATIONAL_MODULES
+            modules_data = EDUCATIONAL_MODULES
 
         return JsonResponse({
             'modules': modules_data,

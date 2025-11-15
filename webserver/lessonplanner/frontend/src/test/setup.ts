@@ -1,0 +1,104 @@
+import { expect, afterEach, beforeEach, vi } from 'vitest'
+import { cleanup } from '@testing-library/react'
+import * as matchers from '@testing-library/jest-dom/matchers'
+
+// Extend Vitest's expect with jest-dom matchers
+expect.extend(matchers)
+
+// Cleanup after each test
+afterEach(() => {
+  cleanup()
+})
+
+// Ensure document is available (jsdom should provide this)
+if (typeof document === 'undefined') {
+  throw new Error('document is not defined - jsdom environment not loaded')
+}
+
+// Mock window.matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
+
+// Mock IntersectionObserver
+global.IntersectionObserver = class IntersectionObserver {
+  constructor() {}
+  disconnect() {}
+  observe() {}
+  takeRecords() {
+    return []
+  }
+  unobserve() {}
+} as any
+
+// Mock ResizeObserver
+global.ResizeObserver = class ResizeObserver {
+  constructor() {}
+  disconnect() {}
+  observe() {}
+  unobserve() {}
+} as any
+
+// Mock ClipboardEvent and DataTransfer for paste tests
+class MockDataTransfer {
+  private data: { [key: string]: string } = {}
+
+  getData(format: string): string {
+    return this.data[format] || ''
+  }
+
+  setData(format: string, data: string): void {
+    this.data[format] = data
+  }
+}
+
+if (typeof global.ClipboardEvent === 'undefined') {
+  global.ClipboardEvent = class ClipboardEvent extends Event {
+    clipboardData: any
+
+    constructor(type: string, init?: any) {
+      super(type, init)
+      this.clipboardData = init?.clipboardData || new MockDataTransfer()
+    }
+  } as any
+}
+
+if (typeof global.DataTransfer === 'undefined') {
+  global.DataTransfer = MockDataTransfer as any
+}
+
+// Mock ClipboardItem for paste/copy tests
+if (typeof global.ClipboardItem === 'undefined') {
+  global.ClipboardItem = class ClipboardItem {
+    constructor(public data: any) {}
+  } as any
+}
+
+// Suppress React 19 error boundary warnings in tests
+const originalError = console.error
+beforeEach(() => {
+  console.error = (...args: any[]) => {
+    if (
+      typeof args[0] === 'string' &&
+      (args[0].includes('Warning: ReactDOM.render') ||
+       args[0].includes('Not implemented: HTMLFormElement.prototype.submit'))
+    ) {
+      return
+    }
+    originalError.call(console, ...args)
+  }
+})
+
+afterEach(() => {
+  console.error = originalError
+})
