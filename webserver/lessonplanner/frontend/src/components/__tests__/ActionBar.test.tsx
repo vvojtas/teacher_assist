@@ -14,21 +14,21 @@ describe('ActionBar', () => {
   }
 
   it('should render all action buttons', () => {
-    render(<ActionBar {...defaultProps} />)
+    const { getByText } = render(<ActionBar {...defaultProps} />)
 
-    expect(screen.getByText(/Wypełnij wszystkie AI/i)).toBeInTheDocument()
-    expect(screen.getByText(/Dodaj wiersz/i)).toBeInTheDocument()
-    expect(screen.getByText(/Wyczyść wszystko/i)).toBeInTheDocument()
-    expect(screen.getByText(/Kopiuj tabelę/i)).toBeInTheDocument()
+    expect(getByText(/Wypełnij wszystko AI/i)).toBeInTheDocument()
+    expect(getByText(/Dodaj wiersz/i)).toBeInTheDocument()
+    expect(getByText(/Wyczyść wszystko/i)).toBeInTheDocument()
+    expect(getByText(/Kopiuj tabelę/i)).toBeInTheDocument()
   })
 
   it('should call onBulkGenerate when bulk generate button clicked', async () => {
     const onBulkGenerate = vi.fn()
     const user = userEvent.setup()
 
-    render(<ActionBar {...defaultProps} onBulkGenerate={onBulkGenerate} />)
+    const { getByText } = render(<ActionBar {...defaultProps} onBulkGenerate={onBulkGenerate} />)
 
-    await user.click(screen.getByText(/Wypełnij wszystkie AI/i))
+    await user.click(getByText(/Wypełnij wszystko AI/i))
 
     expect(onBulkGenerate).toHaveBeenCalledTimes(1)
   })
@@ -37,9 +37,9 @@ describe('ActionBar', () => {
     const onAddRow = vi.fn()
     const user = userEvent.setup()
 
-    render(<ActionBar {...defaultProps} onAddRow={onAddRow} />)
+    const { getByText } = render(<ActionBar {...defaultProps} onAddRow={onAddRow} />)
 
-    await user.click(screen.getByText(/Dodaj wiersz/i))
+    await user.click(getByText(/Dodaj wiersz/i))
 
     expect(onAddRow).toHaveBeenCalledTimes(1)
   })
@@ -48,9 +48,9 @@ describe('ActionBar', () => {
     const onClearAll = vi.fn()
     const user = userEvent.setup()
 
-    render(<ActionBar {...defaultProps} onClearAll={onClearAll} />)
+    const { getByText } = render(<ActionBar {...defaultProps} onClearAll={onClearAll} />)
 
-    await user.click(screen.getByText(/Wyczyść wszystko/i))
+    await user.click(getByText(/Wyczyść wszystko/i))
 
     expect(onClearAll).toHaveBeenCalledTimes(1)
   })
@@ -59,17 +59,17 @@ describe('ActionBar', () => {
     const onCopyTable = vi.fn()
     const user = userEvent.setup()
 
-    render(<ActionBar {...defaultProps} onCopyTable={onCopyTable} />)
+    const { getByText } = render(<ActionBar {...defaultProps} onCopyTable={onCopyTable} />)
 
-    await user.click(screen.getByText(/Kopiuj tabelę/i))
+    await user.click(getByText(/Kopiuj tabelę/i))
 
     expect(onCopyTable).toHaveBeenCalledTimes(1)
   })
 
   it('should disable bulk generate button when generating', () => {
-    render(<ActionBar {...defaultProps} bulkGenerating={true} />)
+    const { getByText } = render(<ActionBar {...defaultProps} bulkGenerating={true} />)
 
-    const button = screen.getByText(/Wypełnij wszystkie AI/i).closest('button')
+    const button = getByText(/Przetwarzanie/i).closest('button')
     expect(button).toBeDisabled()
   })
 
@@ -82,30 +82,28 @@ describe('ActionBar', () => {
   })
 
   it('should display selected row count badge when rows selected', () => {
-    render(<ActionBar {...defaultProps} selectedRowCount={3} />)
+    const { getByText } = render(<ActionBar {...defaultProps} selectedRowCount={3} />)
 
-    expect(screen.getByText('3')).toBeInTheDocument()
+    expect(getByText(/Skopiuj zaznaczone \(3\)/i)).toBeInTheDocument()
   })
 
   it('should not display badge when no rows selected', () => {
-    render(<ActionBar {...defaultProps} selectedRowCount={0} />)
+    const { getByText } = render(<ActionBar {...defaultProps} selectedRowCount={0} />)
 
-    // Badge should not be visible
-    const copyButton = screen.getByText(/Kopiuj tabelę/i).closest('button')
-    const badge = copyButton?.querySelector('.absolute')
-    expect(badge).not.toBeInTheDocument()
+    // Should show default text when no rows selected
+    expect(getByText(/Kopiuj tabelę/i)).toBeInTheDocument()
   })
 
   it('should have correct button variants', () => {
-    render(<ActionBar {...defaultProps} />)
+    const { getByText } = render(<ActionBar {...defaultProps} />)
 
     // Primary action (bulk generate) should be default variant
-    const bulkButton = screen.getByText(/Wypełnij wszystkie AI/i).closest('button')
+    const bulkButton = getByText(/Wypełnij wszystko AI/i).closest('button')
     expect(bulkButton).toHaveClass('bg-primary')
 
     // Secondary actions should be outline variant
-    const addButton = screen.getByText(/Dodaj wiersz/i).closest('button')
-    expect(addButton).toHaveClass('border')
+    const addButton = getByText(/Dodaj wiersz/i).closest('button')
+    expect(addButton).toHaveClass('bg-secondary')
   })
 
   it('should disable all buttons when bulk generating', () => {

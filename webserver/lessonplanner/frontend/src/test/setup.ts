@@ -49,6 +49,41 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
 } as any
 
+// Mock ClipboardEvent and DataTransfer for paste tests
+class MockDataTransfer {
+  private data: { [key: string]: string } = {}
+
+  getData(format: string): string {
+    return this.data[format] || ''
+  }
+
+  setData(format: string, data: string): void {
+    this.data[format] = data
+  }
+}
+
+if (typeof global.ClipboardEvent === 'undefined') {
+  global.ClipboardEvent = class ClipboardEvent extends Event {
+    clipboardData: any
+
+    constructor(type: string, init?: any) {
+      super(type, init)
+      this.clipboardData = init?.clipboardData || new MockDataTransfer()
+    }
+  } as any
+}
+
+if (typeof global.DataTransfer === 'undefined') {
+  global.DataTransfer = MockDataTransfer as any
+}
+
+// Mock ClipboardItem for paste/copy tests
+if (typeof global.ClipboardItem === 'undefined') {
+  global.ClipboardItem = class ClipboardItem {
+    constructor(public data: any) {}
+  } as any
+}
+
 // Suppress React 19 error boundary warnings in tests
 const originalError = console.error
 beforeEach(() => {

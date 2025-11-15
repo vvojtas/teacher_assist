@@ -28,9 +28,9 @@ describe('EditableCell', () => {
     const onValueChange = vi.fn()
     const user = userEvent.setup()
 
-    render(<EditableCell {...defaultProps} onValueChange={onValueChange} />)
+    const { container } = render(<EditableCell {...defaultProps} onValueChange={onValueChange} />)
 
-    const cell = screen.getByText('').parentElement as HTMLElement
+    const cell = container.querySelector('[data-field="activity"]') as HTMLElement
     await user.click(cell)
     await user.type(cell, 'New text')
 
@@ -41,9 +41,9 @@ describe('EditableCell', () => {
     const onValueChange = vi.fn()
     const user = userEvent.setup()
 
-    render(<EditableCell {...defaultProps} onValueChange={onValueChange} />)
+    const { container } = render(<EditableCell {...defaultProps} onValueChange={onValueChange} />)
 
-    const cell = screen.getByText('').parentElement as HTMLElement
+    const cell = container.querySelector('[data-field="activity"]') as HTMLElement
 
     // Create string longer than MAX_INPUT_LENGTH (10000)
     const longText = 'a'.repeat(10001)
@@ -62,9 +62,9 @@ describe('EditableCell', () => {
     const onBlur = vi.fn()
     const user = userEvent.setup()
 
-    render(<EditableCell {...defaultProps} onBlur={onBlur} />)
+    const { container } = render(<EditableCell {...defaultProps} onBlur={onBlur} />)
 
-    const cell = screen.getByText('').parentElement as HTMLElement
+    const cell = container.querySelector('[data-field="activity"]') as HTMLElement
     await user.click(cell)
     await user.tab() // Blur
 
@@ -103,9 +103,9 @@ describe('EditableCell', () => {
     it('should strip HTML formatting on paste', async () => {
       const onValueChange = vi.fn()
 
-      render(<EditableCell {...defaultProps} onValueChange={onValueChange} />)
+      const { container } = render(<EditableCell {...defaultProps} onValueChange={onValueChange} />)
 
-      const cell = screen.getByText('').parentElement as HTMLElement
+      const cell = container.querySelector('[data-field="activity"]') as HTMLElement
 
       // Create paste event with HTML content
       const pasteEvent = new ClipboardEvent('paste', {
@@ -137,9 +137,9 @@ describe('EditableCell', () => {
     it('should truncate pasted text if it exceeds max length', async () => {
       const onValueChange = vi.fn()
 
-      render(<EditableCell {...defaultProps} value="Existing text" onValueChange={onValueChange} />)
+      const { container } = render(<EditableCell {...defaultProps} value="Existing text" onValueChange={onValueChange} />)
 
-      const cell = screen.getByText('Existing text').parentElement as HTMLElement
+      const cell = container.querySelector('[data-field="activity"]') as HTMLElement
 
       // Create very long paste content
       const longText = 'a'.repeat(10000)
@@ -179,10 +179,12 @@ describe('EditableCell', () => {
     })
 
     it('should handle empty curriculum field', () => {
-      render(<EditableCell {...defaultProps} field="curriculum" value="" />)
+      const { container } = render(<EditableCell {...defaultProps} field="curriculum" value="" />)
 
       // Should render without error
-      expect(screen.getByText('')).toBeInTheDocument()
+      const cell = container.querySelector('[data-field="curriculum"]')
+      expect(cell).toBeInTheDocument()
+      expect(cell).toHaveTextContent('')
     })
   })
 })

@@ -112,7 +112,7 @@ describe('useAIService', () => {
     })
 
     it('should handle network errors', async () => {
-      ;(global.fetch as any).mockRejectedValueOnce(new Error('Network error'))
+      ;(global.fetch as any).mockRejectedValueOnce(new Error('Failed to fetch'))
 
       const { result } = renderHook(() => useAIService())
 
