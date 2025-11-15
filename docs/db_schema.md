@@ -143,6 +143,7 @@ INSERT INTO major_curriculum_references (reference_code, full_text) VALUES
 
 **Relationships:**
 - N:1 with `major_curriculum_references` (many detailed refs belong to one major section)
+- N:M with `work_plan_entries` via `work_plan_entry_curriculum_refs` junction table
 
 **Sample Data:**
 ```sql
@@ -188,7 +189,6 @@ INSERT INTO curriculum_references (reference_code, full_text, major_reference_id
 **Indexes:**
 - PRIMARY KEY on `id` (automatic)
 - UNIQUE INDEX on `module_name` (prevent duplicate module names)
-- INDEX on `is_ai_suggested` (for filtering queries)
 
 **Constraints:**
 - `module_name` must be unique (case-sensitive or case-insensitive depending on DB)
@@ -218,7 +218,6 @@ INSERT INTO educational_modules (module_name, is_ai_suggested) VALUES
 
 **Query Patterns:**
 - Load all modules: `SELECT module_name FROM educational_modules ORDER BY module_name`
-- Filter by type: `SELECT module_name FROM educational_modules WHERE is_ai_suggested = FALSE`
 - Check if module exists: `SELECT id FROM educational_modules WHERE module_name = ?`
 
 ---
@@ -414,7 +413,6 @@ CREATE TABLE IF NOT EXISTS educational_modules (
 );
 
 CREATE INDEX idx_educational_modules_name ON educational_modules(module_name);
-CREATE INDEX idx_educational_modules_ai_suggested ON educational_modules(is_ai_suggested);
 
 -- Table: work_plans
 CREATE TABLE IF NOT EXISTS work_plans (
@@ -491,7 +489,6 @@ CREATE TABLE IF NOT EXISTS educational_modules (
 );
 
 CREATE INDEX idx_educational_modules_name ON educational_modules(module_name);
-CREATE INDEX idx_educational_modules_ai_suggested ON educational_modules(is_ai_suggested);
 
 -- Table: work_plans
 CREATE TABLE IF NOT EXISTS work_plans (
@@ -552,7 +549,6 @@ CREATE INDEX idx_wpe_curr_refs_curr_id ON work_plan_entry_curriculum_refs(curric
 | curriculum_references         | UNIQUE     | reference_code       | Fast lookup by detailed code     |
 | curriculum_references         | INDEX      | major_reference_id   | Fast joins with major sections   |
 | educational_modules           | UNIQUE     | module_name          | Fast lookup by name              |
-| educational_modules           | INDEX      | is_ai_suggested      | Filter predefined vs AI-suggested|
 | work_plans                    | INDEX      | created_at           | Chronological ordering           |
 | work_plan_entries             | INDEX      | work_plan_id         | Fast joins with work plans       |
 | work_plan_entries             | INDEX      | is_example           | Filter example entries for LLM   |
