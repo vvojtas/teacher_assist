@@ -95,6 +95,8 @@ Reduce time spent on lesson plan documentation by 60-70% through AI-assisted met
 
 
 ### Out of Scope (Future Phases)
+❌ Data persistence between sessions (database schema prepared, feature not implemented)
+
 ❌ User authentication
 
 ❌ Multiple teacher accounts
@@ -108,11 +110,6 @@ Reduce time spent on lesson plan documentation by 60-70% through AI-assisted met
 ❌ Mobile responsive design
 
 ❌ Print formatting
-
-### Phase 2 (In Progress)
-🔄 Data persistence between sessions (work plans can be saved and loaded)
-
-🔄 Example entry management (marking entries for LLM training)
 
 ---
 
@@ -448,26 +445,31 @@ Stores detailed curriculum paragraph references with their full Polish text. Exa
 **Table: `educational_modules`**
 Stores educational module categories (e.g., "MATEMATYKA", "JĘZYK"). Tracks both predefined and AI-suggested modules via `is_ai_suggested` boolean flag.
 
-#### Work Plan Persistence Tables (Phase 2)
+#### Work Plan Persistence Tables (Future)
+
+**Note:** Database schema is designed and documented for future persistence capability, but the save/load feature is NOT implemented in MVP.
 
 **Table: `work_plans`**
 Stores weekly lesson plans with themes. Each work plan represents a complete planning session.
 - Columns: id, theme (VARCHAR 200), created_at, updated_at
+- **Status:** Schema defined, not yet used in MVP
 
 **Table: `work_plan_entries`**
 Stores individual activity rows within a work plan (corresponds to UI table rows).
 - Columns: id, work_plan_id (FK), module, objectives, activity, is_example (boolean), created_at
 - Relationship: N:1 with work_plans
 - The `is_example` flag marks entries for use as LLM training examples
+- **Status:** Schema defined, not yet used in MVP
 
 **Table: `work_plan_entry_curriculum_refs`**
 Junction table implementing many-to-many relationship between work plan entries and curriculum references.
 - Columns: id, work_plan_entry_id (FK), curriculum_reference_id (FK), created_at
 - Unique constraint on (work_plan_entry_id, curriculum_reference_id)
+- **Status:** Schema defined, not yet used in MVP
 
 **Data Persistence:**
-- **Phase 1 (MVP):** Session data stored in browser memory only
-- **Phase 2 (Current):** Work plans can be saved to database and loaded later
+- **MVP:** Session data stored in browser memory only (no database persistence)
+- **Future:** Database schema prepared for save/load functionality
 - Reference data is pre-populated and read-only
 
 **Complete Schema Documentation:** See [db_schema.md](db_schema.md) for detailed table definitions, column types, indexes, constraints, and Django model examples.

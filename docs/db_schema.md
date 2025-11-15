@@ -20,11 +20,17 @@ This document defines the database schema for the Teacher Assist application. Th
 
 ### Schema Scope
 
-**Current Implementation:**
-- Reference data tables (curriculum, modules)
-- Lesson plan persistence (work plans, work plan entries)
-- Many-to-many relationships for curriculum references
-- Example tracking for LLM training data
+**Reference Data (Implemented):**
+- major_curriculum_references - Polish curriculum main sections
+- curriculum_references - Detailed curriculum paragraphs
+- educational_modules - Module categories
+
+**Work Plan Persistence (Schema Defined, Not Yet Implemented):**
+- work_plans - Weekly lesson plan themes
+- work_plan_entries - Individual activity rows
+- work_plan_entry_curriculum_refs - Many-to-many junction table
+
+**Note:** The work plan persistence tables are fully designed and documented in this schema, but the save/load feature is not part of MVP. Session data currently remains in browser memory only.
 
 ---
 
