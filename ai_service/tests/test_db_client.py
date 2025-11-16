@@ -23,9 +23,9 @@ def db_client():
     Fixture to create a database client instance.
     Uses the actual Django database created by migrations.
     """
-    # Path to Django database
+    # Path to Django database in project root
     project_root = Path(__file__).parent.parent.parent
-    db_path = project_root / "webserver" / "db.sqlite3"
+    db_path = project_root / "db.sqlite3"
 
     if not db_path.exists():
         pytest.skip("Django database not found. Run migrations first.")
@@ -200,7 +200,7 @@ class TestGetDBClientFunction:
     def test_get_db_client_default_path(self):
         """Test getting a database client with default path."""
         project_root = Path(__file__).parent.parent.parent
-        db_path = project_root / "webserver" / "db.sqlite3"
+        db_path = project_root / "db.sqlite3"
 
         if not db_path.exists():
             pytest.skip("Django database not found. Run migrations first.")
@@ -211,7 +211,7 @@ class TestGetDBClientFunction:
     def test_get_db_client_custom_path(self):
         """Test getting a database client with custom path."""
         project_root = Path(__file__).parent.parent.parent
-        db_path = project_root / "webserver" / "db.sqlite3"
+        db_path = project_root / "db.sqlite3"
 
         if not db_path.exists():
             pytest.skip("Django database not found. Run migrations first.")

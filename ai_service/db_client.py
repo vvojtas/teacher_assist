@@ -36,12 +36,12 @@ class DatabaseClient:
 
         Args:
             db_path: Path to SQLite database file.
-                    If None, defaults to webserver/db.sqlite3
+                    If None, defaults to db.sqlite3 in project root
         """
         if db_path is None:
-            # Default to Django database in webserver directory
+            # Default to Django database in project root
             project_root = Path(__file__).parent.parent
-            db_path = project_root / "webserver" / "db.sqlite3"
+            db_path = project_root / "db.sqlite3"
 
         self.db_path = str(db_path)
 
