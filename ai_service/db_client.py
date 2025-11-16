@@ -11,6 +11,7 @@ import sqlite3
 import os
 from typing import List, Optional
 from pathlib import Path
+from contextlib import contextmanager
 
 from ai_service.db_models import (
     EducationalModule,
@@ -60,6 +61,24 @@ class DatabaseClient:
         conn.row_factory = sqlite3.Row  # Enable dict-like access to rows
         return conn
 
+    @contextmanager
+    def _db_connection(self):
+        """
+        Context manager for database connections.
+
+        Automatically closes connection when exiting context.
+        Reduces code duplication across query methods.
+
+        Usage:
+            with self._db_connection() as conn:
+                cursor = conn.execute("SELECT ...")
+        """
+        conn = self._get_connection()
+        try:
+            yield conn
+        finally:
+            conn.close()
+
     def get_educational_modules(self) -> List[EducationalModule]:
         """
         Get all module names from educational_modules table.
@@ -73,8 +92,7 @@ class DatabaseClient:
             >>> [m.module_name for m in modules]
             ['EMOCJE', 'FORMY PLASTYCZNE', 'JĘZYK', 'MATEMATYKA', ...]
         """
-        conn = self._get_connection()
-        try:
+        with self._db_connection() as conn:
             cursor = conn.execute("""
                 SELECT module_name
                 FROM educational_modules
@@ -86,8 +104,6 @@ class DatabaseClient:
                 modules.append(EducationalModule(module_name=row['module_name']))
 
             return modules
-        finally:
-            conn.close()
 
     def get_curriculum_references(self) -> List[CurriculumReference]:
         """
@@ -95,6 +111,11 @@ class DatabaseClient:
 
         Returns:
             List of CurriculumReference objects
+
+        Note on sorting:
+            Uses lexicographic (string) sorting on reference_code.
+            Works correctly for current data (all codes are X.Y where Y is single digit).
+            If curriculum expands to include codes like "1.10", sorting may need adjustment.
 
         Example:
             >>> client = DatabaseClient()
@@ -106,8 +127,7 @@ class DatabaseClient:
             >>> refs[0].major_reference_id
             1
         """
-        conn = self._get_connection()
-        try:
+        with self._db_connection() as conn:
             cursor = conn.execute("""
                 SELECT reference_code, full_text, major_reference_id
                 FROM curriculum_references
@@ -123,8 +143,6 @@ class DatabaseClient:
                 ))
 
             return references
-        finally:
-            conn.close()
 
     def get_major_curriculum_references(self) -> List[MajorCurriculumReference]:
         """
@@ -143,8 +161,7 @@ class DatabaseClient:
             >>> major_refs[0].full_text
             'Fizyczny obszar rozwoju dziecka...'
         """
-        conn = self._get_connection()
-        try:
+        with self._db_connection() as conn:
             cursor = conn.execute("""
                 SELECT id, reference_code, full_text
                 FROM major_curriculum_references
@@ -160,8 +177,6 @@ class DatabaseClient:
                 ))
 
             return references
-        finally:
-            conn.close()
 
     def get_llm_examples(self) -> List[LLMExample]:
         """
@@ -196,8 +211,7 @@ class DatabaseClient:
             >>> examples[0].curriculum_references
             ['4.15', '4.18']
         """
-        conn = self._get_connection()
-        try:
+        with self._db_connection() as conn:
             # Single query with GROUP_CONCAT to get all data at once
             # This avoids N+1 query problem - executes only 1 query regardless of number of examples
             cursor = conn.execute("""
@@ -236,8 +250,6 @@ class DatabaseClient:
                 ))
 
             return examples
-        finally:
-            conn.close()
 
 
 def get_db_client(db_path: Optional[str] = None) -> DatabaseClient:
