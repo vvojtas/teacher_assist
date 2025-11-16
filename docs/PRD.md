@@ -95,7 +95,7 @@ Reduce time spent on lesson plan documentation by 60-70% through AI-assisted met
 
 
 ### Out of Scope (Future Phases)
-❌ Data persistence between sessions
+❌ Data persistence between sessions (database schema prepared, feature not implemented)
 
 ❌ User authentication
 
@@ -432,18 +432,31 @@ Content-Type: application/json
 
 ### 7.5 Database Schema
 
-The MVP uses three tables for reference data storage:
+The application uses six tables divided into two categories:
 
-#### Table: `major_curriculum_references`
+#### Reference Data Tables (Read-Only)
+
+**Table: `major_curriculum_references`**
 Stores major sections of Polish curriculum (Podstawa Programowa). Examples: "1", "2", "3", "4" representing top-level curriculum areas.
 
-#### Table: `curriculum_references`
+**Table: `curriculum_references`**
 Stores detailed curriculum paragraph references with their full Polish text. Examples: "4.15", "3.8", "2.5". Each reference belongs to a major curriculum section (1:N relationship).
 
-#### Table: `educational_modules`
+**Table: `educational_modules`**
 Stores educational module categories (e.g., "MATEMATYKA", "JĘZYK"). Tracks both predefined and AI-suggested modules via `is_ai_suggested` boolean flag.
 
-**Data Persistence:** Session data (themes, activities, generated metadata) is NOT persisted in MVP. Only reference data is stored.
+#### Work Plan Persistence Tables (Future - Schema Only)
+
+**Table: `work_plans`**
+Stores weekly lesson plans with themes.
+
+**Table: `work_plan_entries`**
+Stores individual activity rows within a work plan (corresponds to UI table rows). The `is_example` flag marks entries for use as LLM training examples.
+
+**Table: `work_plan_entry_curriculum_refs`**
+Junction table for many-to-many relationship between work plan entries and curriculum references.
+
+**Data Persistence:** Session data (themes, activities, generated metadata) is NOT persisted in MVP. Database schema is prepared for future save/load functionality.
 
 **Complete Schema Documentation:** See [db_schema.md](db_schema.md) for detailed table definitions, column types, indexes, constraints, and Django model examples.
 
