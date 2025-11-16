@@ -177,6 +177,8 @@ class DatabaseClient:
         - objectives: Educational objectives
         - curriculum_references: List of curriculum reference codes
 
+        Uses a single query with GROUP_CONCAT to avoid N+1 query problem.
+
         Returns:
             List of LLMExample objects
 
@@ -196,35 +198,34 @@ class DatabaseClient:
         """
         conn = self._get_connection()
         try:
-            # First, get all example entries with their work plan themes
+            # Single query with GROUP_CONCAT to get all data at once
+            # This avoids N+1 query problem - executes only 1 query regardless of number of examples
             cursor = conn.execute("""
                 SELECT
                     wpe.id,
                     wp.theme,
                     wpe.activity,
                     wpe.module,
-                    wpe.objectives
+                    wpe.objectives,
+                    GROUP_CONCAT(cr.reference_code, ',') as ref_codes
                 FROM work_plan_entries wpe
                 JOIN work_plans wp ON wpe.work_plan_id = wp.id
+                LEFT JOIN work_plan_entry_curriculum_refs wpcr ON wpe.id = wpcr.work_plan_entry_id
+                LEFT JOIN curriculum_references cr ON wpcr.curriculum_reference_id = cr.id
                 WHERE wpe.is_example = 1
+                GROUP BY wpe.id, wp.theme, wpe.activity, wpe.module, wpe.objectives, wpe.created_at
                 ORDER BY wpe.created_at
             """)
 
             examples = []
             for row in cursor.fetchall():
-                entry_id = row['id']
-
-                # Get curriculum references for this entry
-                ref_cursor = conn.execute("""
-                    SELECT cr.reference_code
-                    FROM curriculum_references cr
-                    JOIN work_plan_entry_curriculum_refs wpcr
-                        ON cr.id = wpcr.curriculum_reference_id
-                    WHERE wpcr.work_plan_entry_id = ?
-                    ORDER BY cr.reference_code
-                """, (entry_id,))
-
-                curriculum_refs = [ref_row['reference_code'] for ref_row in ref_cursor.fetchall()]
+                # Parse comma-separated curriculum reference codes
+                ref_codes_str = row['ref_codes']
+                if ref_codes_str:
+                    # Split and sort curriculum references
+                    curriculum_refs = sorted(ref_codes_str.split(','))
+                else:
+                    curriculum_refs = []
 
                 examples.append(LLMExample(
                     theme=row['theme'] or '',
