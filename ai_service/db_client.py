@@ -1,33 +1,34 @@
 """
 Simple SQLite database client for AI service.
 
-This module provides read-only access to the Django SQLite database
-for curriculum references and example work plan entries.
+Provides read-only access to curriculum references, educational modules,
+and example work plan entries for LLM context.
 
-Recommendation: Use Python's built-in sqlite3 module for simplicity.
-No additional dependencies required.
+Uses Python's built-in sqlite3 module - no external dependencies required.
 """
 
 import sqlite3
 import os
-from typing import List, Optional, Dict, Any
-from datetime import datetime
+from typing import List, Optional
 from pathlib import Path
 
 from ai_service.db_models import (
+    EducationalModule,
     CurriculumReference,
     MajorCurriculumReference,
-    EducationalModule,
-    WorkPlanEntryWithRefs
+    LLMExample
 )
 
 
 class DatabaseClient:
     """
-    Simple SQLite database client for read-only access.
+    Simple SQLite database client for read-only access to Django database.
 
-    This client provides methods to query curriculum references,
-    educational modules, and example work plan entries.
+    Provides four main query methods:
+    1. get_educational_modules() - Get all module names
+    2. get_curriculum_references() - Get all curriculum references with details
+    3. get_major_curriculum_references() - Get all major curriculum sections
+    4. get_llm_examples() - Get example work plan entries for LLM training
     """
 
     def __init__(self, db_path: Optional[str] = None):
@@ -59,127 +60,161 @@ class DatabaseClient:
         conn.row_factory = sqlite3.Row  # Enable dict-like access to rows
         return conn
 
-    def _row_to_dict(self, row: sqlite3.Row) -> Dict[str, Any]:
+    def get_educational_modules(self) -> List[EducationalModule]:
         """
-        Convert SQLite row to dictionary.
-
-        Args:
-            row: SQLite row object
+        Get all module names from educational_modules table.
 
         Returns:
-            dict: Row data as dictionary
-        """
-        return dict(row) if row else {}
+            List of EducationalModule objects containing module_name field
 
-    def get_all_curriculum_references(self) -> List[CurriculumReference]:
-        """
-        Get all curriculum references from database.
-
-        Returns:
-            List of CurriculumReference objects
+        Example:
+            >>> client = DatabaseClient()
+            >>> modules = client.get_educational_modules()
+            >>> [m.module_name for m in modules]
+            ['EMOCJE', 'FORMY PLASTYCZNE', 'JĘZYK', 'MATEMATYKA', ...]
         """
         conn = self._get_connection()
         try:
             cursor = conn.execute("""
-                SELECT id, reference_code, full_text, major_reference_id, created_at
-                FROM curriculum_references
-                ORDER BY reference_code
-            """)
-
-            references = []
-            for row in cursor.fetchall():
-                data = self._row_to_dict(row)
-                references.append(CurriculumReference(**data))
-
-            return references
-        finally:
-            conn.close()
-
-    def get_curriculum_reference_by_code(self, code: str) -> Optional[CurriculumReference]:
-        """
-        Get a specific curriculum reference by its code.
-
-        Args:
-            code: Reference code (e.g., "4.15")
-
-        Returns:
-            CurriculumReference object or None if not found
-        """
-        conn = self._get_connection()
-        try:
-            cursor = conn.execute("""
-                SELECT id, reference_code, full_text, major_reference_id, created_at
-                FROM curriculum_references
-                WHERE reference_code = ?
-            """, (code,))
-
-            row = cursor.fetchone()
-            if row:
-                return CurriculumReference(**self._row_to_dict(row))
-            return None
-        finally:
-            conn.close()
-
-    def get_all_educational_modules(self) -> List[EducationalModule]:
-        """
-        Get all educational modules from database.
-
-        Returns:
-            List of EducationalModule objects
-        """
-        conn = self._get_connection()
-        try:
-            cursor = conn.execute("""
-                SELECT id, module_name, is_ai_suggested, created_at
+                SELECT module_name
                 FROM educational_modules
                 ORDER BY module_name
             """)
 
             modules = []
             for row in cursor.fetchall():
-                data = self._row_to_dict(row)
-                # Convert SQLite boolean (0/1) to Python bool
-                data['is_ai_suggested'] = bool(data['is_ai_suggested'])
-                modules.append(EducationalModule(**data))
+                modules.append(EducationalModule(module_name=row['module_name']))
 
             return modules
         finally:
             conn.close()
 
-    def get_example_work_plan_entries(self) -> List[WorkPlanEntryWithRefs]:
+    def get_curriculum_references(self) -> List[CurriculumReference]:
         """
-        Get all work plan entries marked as examples for LLM training.
-        Includes curriculum references and work plan theme.
+        Get all curriculum references with reference_code, full_text, and major_reference_id.
 
         Returns:
-            List of WorkPlanEntryWithRefs objects with curriculum refs
+            List of CurriculumReference objects
+
+        Example:
+            >>> client = DatabaseClient()
+            >>> refs = client.get_curriculum_references()
+            >>> refs[0].reference_code
+            '1.1'
+            >>> refs[0].full_text
+            'zgłasza potrzeby fizjologiczne...'
+            >>> refs[0].major_reference_id
+            1
         """
         conn = self._get_connection()
         try:
-            # First, get all example entries
+            cursor = conn.execute("""
+                SELECT reference_code, full_text, major_reference_id
+                FROM curriculum_references
+                ORDER BY reference_code
+            """)
+
+            references = []
+            for row in cursor.fetchall():
+                references.append(CurriculumReference(
+                    reference_code=row['reference_code'],
+                    full_text=row['full_text'],
+                    major_reference_id=row['major_reference_id']
+                ))
+
+            return references
+        finally:
+            conn.close()
+
+    def get_major_curriculum_references(self) -> List[MajorCurriculumReference]:
+        """
+        Get all major curriculum references with id, reference_code, and full_text.
+
+        Returns:
+            List of MajorCurriculumReference objects
+
+        Example:
+            >>> client = DatabaseClient()
+            >>> major_refs = client.get_major_curriculum_references()
+            >>> major_refs[0].id
+            1
+            >>> major_refs[0].reference_code
+            '1'
+            >>> major_refs[0].full_text
+            'Fizyczny obszar rozwoju dziecka...'
+        """
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute("""
+                SELECT id, reference_code, full_text
+                FROM major_curriculum_references
+                ORDER BY reference_code
+            """)
+
+            references = []
+            for row in cursor.fetchall():
+                references.append(MajorCurriculumReference(
+                    id=row['id'],
+                    reference_code=row['reference_code'],
+                    full_text=row['full_text']
+                ))
+
+            return references
+        finally:
+            conn.close()
+
+    def get_llm_examples(self) -> List[LLMExample]:
+        """
+        Get example work plan entries for LLM training context.
+
+        Joins work_plans, work_plan_entries, and curriculum_references tables
+        to return complete examples where is_example = true.
+
+        Each example includes:
+        - theme: Weekly theme from work_plan
+        - activity: Activity description
+        - module: Educational module
+        - objectives: Educational objectives
+        - curriculum_references: List of curriculum reference codes
+
+        Returns:
+            List of LLMExample objects
+
+        Example:
+            >>> client = DatabaseClient()
+            >>> examples = client.get_llm_examples()
+            >>> examples[0].theme
+            'Jesień - zbiory'
+            >>> examples[0].activity
+            'Zabawa w sklep z owocami'
+            >>> examples[0].module
+            'MATEMATYKA'
+            >>> examples[0].objectives
+            'Dziecko potrafi przeliczać w zakresie 5\\nRozpoznaje poznane wcześniej cyfry'
+            >>> examples[0].curriculum_references
+            ['4.15', '4.18']
+        """
+        conn = self._get_connection()
+        try:
+            # First, get all example entries with their work plan themes
             cursor = conn.execute("""
                 SELECT
                     wpe.id,
-                    wpe.work_plan_id,
-                    wpe.module,
-                    wpe.objectives,
+                    wp.theme,
                     wpe.activity,
-                    wpe.is_example,
-                    wpe.created_at,
-                    wp.theme
+                    wpe.module,
+                    wpe.objectives
                 FROM work_plan_entries wpe
                 JOIN work_plans wp ON wpe.work_plan_id = wp.id
                 WHERE wpe.is_example = 1
                 ORDER BY wpe.created_at
             """)
 
-            entries = []
+            examples = []
             for row in cursor.fetchall():
-                data = self._row_to_dict(row)
-                data['is_example'] = bool(data['is_example'])
+                entry_id = row['id']
 
                 # Get curriculum references for this entry
-                entry_id = data['id']
                 ref_cursor = conn.execute("""
                     SELECT cr.reference_code
                     FROM curriculum_references cr
@@ -189,69 +224,21 @@ class DatabaseClient:
                     ORDER BY cr.reference_code
                 """, (entry_id,))
 
-                curriculum_refs = [row['reference_code'] for row in ref_cursor.fetchall()]
-                data['curriculum_refs'] = curriculum_refs
+                curriculum_refs = [ref_row['reference_code'] for ref_row in ref_cursor.fetchall()]
 
-                entries.append(WorkPlanEntryWithRefs(**data))
+                examples.append(LLMExample(
+                    theme=row['theme'] or '',
+                    activity=row['activity'],
+                    module=row['module'] or '',
+                    objectives=row['objectives'] or '',
+                    curriculum_references=curriculum_refs
+                ))
 
-            return entries
-        finally:
-            conn.close()
-
-    def get_major_curriculum_references(self) -> List[MajorCurriculumReference]:
-        """
-        Get all major curriculum references from database.
-
-        Returns:
-            List of MajorCurriculumReference objects
-        """
-        conn = self._get_connection()
-        try:
-            cursor = conn.execute("""
-                SELECT id, reference_code, full_text, created_at
-                FROM major_curriculum_references
-                ORDER BY reference_code
-            """)
-
-            references = []
-            for row in cursor.fetchall():
-                data = self._row_to_dict(row)
-                references.append(MajorCurriculumReference(**data))
-
-            return references
-        finally:
-            conn.close()
-
-    def search_curriculum_by_keyword(self, keyword: str) -> List[CurriculumReference]:
-        """
-        Search curriculum references by keyword in full_text.
-
-        Args:
-            keyword: Search keyword (case-insensitive)
-
-        Returns:
-            List of matching CurriculumReference objects
-        """
-        conn = self._get_connection()
-        try:
-            cursor = conn.execute("""
-                SELECT id, reference_code, full_text, major_reference_id, created_at
-                FROM curriculum_references
-                WHERE full_text LIKE ?
-                ORDER BY reference_code
-            """, (f'%{keyword}%',))
-
-            references = []
-            for row in cursor.fetchall():
-                data = self._row_to_dict(row)
-                references.append(CurriculumReference(**data))
-
-            return references
+            return examples
         finally:
             conn.close()
 
 
-# Convenience function to get a database client instance
 def get_db_client(db_path: Optional[str] = None) -> DatabaseClient:
     """
     Get a database client instance.
@@ -261,5 +248,9 @@ def get_db_client(db_path: Optional[str] = None) -> DatabaseClient:
 
     Returns:
         DatabaseClient instance
+
+    Example:
+        >>> client = get_db_client()
+        >>> modules = client.get_educational_modules()
     """
     return DatabaseClient(db_path)

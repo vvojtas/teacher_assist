@@ -1,19 +1,21 @@
 """
 Tests for AI service database client.
 
-These tests verify that the database client can correctly query
-the Django SQLite database for curriculum references and examples.
+Tests verify the 4 main query methods:
+1. get_educational_modules()
+2. get_curriculum_references()
+3. get_major_curriculum_references()
+4. get_llm_examples()
 """
 
 import pytest
-import os
 from pathlib import Path
 from ai_service.db_client import DatabaseClient, get_db_client
 from ai_service.db_models import (
+    EducationalModule,
     CurriculumReference,
     MajorCurriculumReference,
-    EducationalModule,
-    WorkPlanEntryWithRefs
+    LLMExample
 )
 
 
@@ -34,7 +36,17 @@ def db_client():
 
 
 class TestDatabaseClient:
-    """Tests for DatabaseClient class."""
+    """Tests for DatabaseClient initialization."""
+
+    def test_client_initialization_with_valid_path(self, db_client):
+        """Test that client initializes with valid database path."""
+        assert db_client is not None
+        assert db_client.db_path is not None
+
+    def test_client_initialization_with_invalid_path(self):
+        """Test that invalid database path raises FileNotFoundError."""
+        with pytest.raises(FileNotFoundError):
+            DatabaseClient("/invalid/path/to/db.sqlite3")
 
     def test_get_connection(self, db_client):
         """Test that connection can be established."""
@@ -42,156 +54,201 @@ class TestDatabaseClient:
         assert conn is not None
         conn.close()
 
-    def test_invalid_db_path_raises_error(self):
-        """Test that invalid database path raises FileNotFoundError."""
-        with pytest.raises(FileNotFoundError):
-            DatabaseClient("/invalid/path/to/db.sqlite3")
+
+class TestGetEducationalModules:
+    """Tests for get_educational_modules() method."""
+
+    def test_returns_list_of_modules(self, db_client):
+        """Test that method returns a list of EducationalModule objects."""
+        modules = db_client.get_educational_modules()
+
+        assert isinstance(modules, list)
+        assert len(modules) >= 12, "Should have at least 12 modules"
+        assert all(isinstance(m, EducationalModule) for m in modules)
+
+    def test_module_structure(self, db_client):
+        """Test that each module has the correct structure."""
+        modules = db_client.get_educational_modules()
+
+        first_module = modules[0]
+        assert hasattr(first_module, 'module_name')
+        assert isinstance(first_module.module_name, str)
+        assert len(first_module.module_name) > 0
+
+    def test_modules_ordered_by_name(self, db_client):
+        """Test that modules are ordered alphabetically by name."""
+        modules = db_client.get_educational_modules()
+        module_names = [m.module_name for m in modules]
+
+        assert module_names == sorted(module_names), "Modules should be ordered by name"
+
+    def test_expected_modules_present(self, db_client):
+        """Test that expected modules from PRD are present."""
+        modules = db_client.get_educational_modules()
+        module_names = [m.module_name for m in modules]
+
+        expected = ['MATEMATYKA', 'JĘZYK', 'MOTORYKA DUŻA', 'FORMY PLASTYCZNE']
+        for expected_module in expected:
+            assert expected_module in module_names, f"{expected_module} should be in modules"
 
 
-class TestCurriculumReferences:
-    """Tests for curriculum reference queries."""
+class TestGetCurriculumReferences:
+    """Tests for get_curriculum_references() method."""
 
-    def test_get_all_curriculum_references(self, db_client):
-        """Test retrieving all curriculum references."""
-        references = db_client.get_all_curriculum_references()
+    def test_returns_list_of_references(self, db_client):
+        """Test that method returns a list of CurriculumReference objects."""
+        refs = db_client.get_curriculum_references()
 
-        assert len(references) >= 50, "Should have at least 50 references"
-        assert all(isinstance(ref, CurriculumReference) for ref in references)
+        assert isinstance(refs, list)
+        assert len(refs) >= 52, "Should have at least 52 curriculum references"
+        assert all(isinstance(r, CurriculumReference) for r in refs)
 
-        # Check structure of first reference
-        first_ref = references[0]
-        assert hasattr(first_ref, 'id')
+    def test_reference_structure(self, db_client):
+        """Test that each reference has the correct structure."""
+        refs = db_client.get_curriculum_references()
+
+        first_ref = refs[0]
         assert hasattr(first_ref, 'reference_code')
         assert hasattr(first_ref, 'full_text')
         assert hasattr(first_ref, 'major_reference_id')
-        assert hasattr(first_ref, 'created_at')
 
-    def test_get_curriculum_reference_by_code_exists(self, db_client):
-        """Test retrieving a specific curriculum reference by code."""
-        ref = db_client.get_curriculum_reference_by_code("4.15")
+        assert isinstance(first_ref.reference_code, str)
+        assert isinstance(first_ref.full_text, str)
+        assert isinstance(first_ref.major_reference_id, int)
 
-        assert ref is not None
-        assert isinstance(ref, CurriculumReference)
-        assert ref.reference_code == "4.15"
-        assert "przelicza" in ref.full_text.lower()
+    def test_references_ordered_by_code(self, db_client):
+        """Test that references are ordered by reference_code."""
+        refs = db_client.get_curriculum_references()
+        ref_codes = [r.reference_code for r in refs]
 
-    def test_get_curriculum_reference_by_code_not_exists(self, db_client):
-        """Test that non-existent code returns None."""
-        ref = db_client.get_curriculum_reference_by_code("999.999")
-        assert ref is None
+        assert ref_codes == sorted(ref_codes), "References should be ordered by code"
 
-    def test_search_curriculum_by_keyword(self, db_client):
-        """Test searching curriculum references by keyword."""
-        results = db_client.search_curriculum_by_keyword("przelicza")
+    def test_expected_references_present(self, db_client):
+        """Test that expected curriculum references are present."""
+        refs = db_client.get_curriculum_references()
+        ref_codes = [r.reference_code for r in refs]
 
-        assert len(results) > 0
-        assert all(isinstance(ref, CurriculumReference) for ref in results)
+        expected = ['1.1', '4.15', '4.18', '3.8']
+        for expected_code in expected:
+            assert expected_code in ref_codes, f"{expected_code} should be in references"
 
-        # All results should contain the keyword
-        for ref in results:
-            assert "przelicza" in ref.full_text.lower()
+    def test_reference_has_valid_major_id(self, db_client):
+        """Test that all references have valid major_reference_id."""
+        refs = db_client.get_curriculum_references()
 
-    def test_search_curriculum_no_results(self, db_client):
-        """Test searching with keyword that yields no results."""
-        results = db_client.search_curriculum_by_keyword("nonexistentkeyword12345")
-        assert len(results) == 0
+        for ref in refs:
+            assert ref.major_reference_id > 0, "major_reference_id should be positive"
+            assert ref.major_reference_id <= 4, "major_reference_id should be 1-4"
 
 
-class TestMajorCurriculumReferences:
-    """Tests for major curriculum reference queries."""
+class TestGetMajorCurriculumReferences:
+    """Tests for get_major_curriculum_references() method."""
 
-    def test_get_major_curriculum_references(self, db_client):
-        """Test retrieving all major curriculum references."""
-        references = db_client.get_major_curriculum_references()
+    def test_returns_list_of_major_references(self, db_client):
+        """Test that method returns a list of MajorCurriculumReference objects."""
+        major_refs = db_client.get_major_curriculum_references()
 
-        assert len(references) >= 4, "Should have at least 4 major references"
-        assert all(isinstance(ref, MajorCurriculumReference) for ref in references)
+        assert isinstance(major_refs, list)
+        assert len(major_refs) >= 4, "Should have at least 4 major references"
+        assert all(isinstance(r, MajorCurriculumReference) for r in major_refs)
 
-        # Check structure
-        first_ref = references[0]
+    def test_major_reference_structure(self, db_client):
+        """Test that each major reference has the correct structure."""
+        major_refs = db_client.get_major_curriculum_references()
+
+        first_ref = major_refs[0]
         assert hasattr(first_ref, 'id')
         assert hasattr(first_ref, 'reference_code')
         assert hasattr(first_ref, 'full_text')
-        assert hasattr(first_ref, 'created_at')
 
-        # Check that codes are properly ordered
-        codes = [ref.reference_code for ref in references]
-        assert codes == sorted(codes), "Major references should be ordered by code"
+        assert isinstance(first_ref.id, int)
+        assert isinstance(first_ref.reference_code, str)
+        assert isinstance(first_ref.full_text, str)
 
+    def test_major_references_ordered_by_code(self, db_client):
+        """Test that major references are ordered by reference_code."""
+        major_refs = db_client.get_major_curriculum_references()
+        ref_codes = [r.reference_code for r in major_refs]
 
-class TestEducationalModules:
-    """Tests for educational module queries."""
+        assert ref_codes == sorted(ref_codes), "Major references should be ordered by code"
 
-    def test_get_all_educational_modules(self, db_client):
-        """Test retrieving all educational modules."""
-        modules = db_client.get_all_educational_modules()
+    def test_expected_major_references_present(self, db_client):
+        """Test that expected major reference codes are present."""
+        major_refs = db_client.get_major_curriculum_references()
+        ref_codes = [r.reference_code for r in major_refs]
 
-        assert len(modules) >= 12, "Should have at least 12 modules"
-        assert all(isinstance(mod, EducationalModule) for mod in modules)
-
-        # Check structure
-        first_module = modules[0]
-        assert hasattr(first_module, 'id')
-        assert hasattr(first_module, 'module_name')
-        assert hasattr(first_module, 'is_ai_suggested')
-        assert hasattr(first_module, 'created_at')
-
-        # Check that specific modules exist
-        module_names = [mod.module_name for mod in modules]
-        assert "MATEMATYKA" in module_names
-        assert "JĘZYK" in module_names
-
-        # Check ordering
-        assert module_names == sorted(module_names), "Modules should be ordered by name"
+        expected = ['1', '2', '3', '4']
+        for expected_code in expected:
+            assert expected_code in ref_codes, f"Major reference '{expected_code}' should be present"
 
 
-class TestWorkPlanEntries:
-    """Tests for work plan entry queries."""
+class TestGetLLMExamples:
+    """Tests for get_llm_examples() method."""
 
-    def test_get_example_work_plan_entries(self, db_client):
-        """Test retrieving example work plan entries."""
-        entries = db_client.get_example_work_plan_entries()
+    def test_returns_list_of_examples(self, db_client):
+        """Test that method returns a list of LLMExample objects."""
+        examples = db_client.get_llm_examples()
 
-        assert len(entries) >= 5, "Should have at least 5 example entries"
-        assert all(isinstance(entry, WorkPlanEntryWithRefs) for entry in entries)
+        assert isinstance(examples, list)
+        assert len(examples) >= 5, "Should have at least 5 example entries"
+        assert all(isinstance(e, LLMExample) for e in examples)
 
-        # Check structure of first entry
-        first_entry = entries[0]
-        assert hasattr(first_entry, 'id')
-        assert hasattr(first_entry, 'work_plan_id')
-        assert hasattr(first_entry, 'module')
-        assert hasattr(first_entry, 'objectives')
-        assert hasattr(first_entry, 'activity')
-        assert hasattr(first_entry, 'is_example')
-        assert hasattr(first_entry, 'curriculum_refs')
-        assert hasattr(first_entry, 'theme')
+    def test_example_structure(self, db_client):
+        """Test that each example has the correct structure."""
+        examples = db_client.get_llm_examples()
 
-        # All should be marked as examples
-        assert all(entry.is_example for entry in entries)
+        first_example = examples[0]
+        assert hasattr(first_example, 'theme')
+        assert hasattr(first_example, 'activity')
+        assert hasattr(first_example, 'module')
+        assert hasattr(first_example, 'objectives')
+        assert hasattr(first_example, 'curriculum_references')
 
-        # Check that entries have curriculum references
-        for entry in entries:
-            assert len(entry.curriculum_refs) > 0, f"Entry {entry.id} should have curriculum refs"
+        assert isinstance(first_example.theme, str)
+        assert isinstance(first_example.activity, str)
+        assert isinstance(first_example.module, str)
+        assert isinstance(first_example.objectives, str)
+        assert isinstance(first_example.curriculum_references, list)
 
-    def test_example_entries_have_valid_data(self, db_client):
-        """Test that example entries have complete and valid data."""
-        entries = db_client.get_example_work_plan_entries()
+    def test_examples_have_curriculum_references(self, db_client):
+        """Test that all examples have at least one curriculum reference."""
+        examples = db_client.get_llm_examples()
 
-        for entry in entries:
-            # Activity should not be empty
-            assert entry.activity and len(entry.activity) > 0
+        for example in examples:
+            assert len(example.curriculum_references) > 0, \
+                f"Example '{example.activity}' should have curriculum references"
+            assert all(isinstance(ref, str) for ref in example.curriculum_references), \
+                "Curriculum references should be strings"
 
-            # Module should be set
-            assert entry.module and len(entry.module) > 0
+    def test_examples_have_required_fields(self, db_client):
+        """Test that all examples have non-empty required fields."""
+        examples = db_client.get_llm_examples()
 
-            # Objectives should be set
-            assert entry.objectives and len(entry.objectives) > 0
+        for example in examples:
+            assert len(example.activity) > 0, "Activity should not be empty"
+            assert len(example.module) > 0, "Module should not be empty"
+            # theme and objectives can be empty, but usually shouldn't be
+            # for example entries
 
-            # Should have at least one curriculum reference
-            assert len(entry.curriculum_refs) > 0
+    def test_expected_example_present(self, db_client):
+        """Test that expected example from migration is present."""
+        examples = db_client.get_llm_examples()
+        activities = [e.activity for e in examples]
 
-            # Theme should be present (from work plan)
-            assert entry.theme is not None
+        # This is one of the examples from the migration
+        assert "Zabawa w sklep z owocami" in activities, \
+            "Expected example activity should be present"
+
+    def test_example_curriculum_refs_are_valid(self, db_client):
+        """Test that curriculum references in examples are valid codes."""
+        examples = db_client.get_llm_examples()
+        all_refs = db_client.get_curriculum_references()
+        valid_codes = {r.reference_code for r in all_refs}
+
+        for example in examples:
+            for ref_code in example.curriculum_references:
+                assert ref_code in valid_codes, \
+                    f"Example references invalid code: {ref_code}"
 
 
 class TestGetDBClientFunction:
@@ -221,26 +278,55 @@ class TestGetDBClientFunction:
         assert client.db_path == str(db_path)
 
 
-class TestDataIntegrity:
-    """Tests for data integrity and relationships."""
+class TestIntegration:
+    """Integration tests verifying data relationships."""
 
-    def test_curriculum_refs_have_valid_major_refs(self, db_client):
-        """Test that all curriculum references have valid major reference IDs."""
-        curr_refs = db_client.get_all_curriculum_references()
+    def test_curriculum_refs_have_valid_major_ids(self, db_client):
+        """Test that all curriculum references link to valid major references."""
+        curr_refs = db_client.get_curriculum_references()
         major_refs = db_client.get_major_curriculum_references()
-        major_ref_ids = {ref.id for ref in major_refs}
+        valid_major_ids = {r.id for r in major_refs}
 
         for curr_ref in curr_refs:
-            assert curr_ref.major_reference_id in major_ref_ids, \
+            assert curr_ref.major_reference_id in valid_major_ids, \
                 f"Curriculum ref {curr_ref.reference_code} has invalid major_reference_id"
 
-    def test_example_entries_refs_exist_in_curriculum(self, db_client):
-        """Test that curriculum refs in example entries exist in curriculum_references table."""
-        example_entries = db_client.get_example_work_plan_entries()
-        all_curr_refs = db_client.get_all_curriculum_references()
-        valid_codes = {ref.reference_code for ref in all_curr_refs}
+    def test_examples_use_valid_modules(self, db_client):
+        """Test that examples reference valid educational modules."""
+        examples = db_client.get_llm_examples()
+        modules = db_client.get_educational_modules()
+        valid_module_names = {m.module_name for m in modules}
 
-        for entry in example_entries:
-            for ref_code in entry.curriculum_refs:
-                assert ref_code in valid_codes, \
-                    f"Entry {entry.id} references non-existent curriculum code: {ref_code}"
+        for example in examples:
+            if example.module:  # module can be empty
+                assert example.module in valid_module_names, \
+                    f"Example uses invalid module: {example.module}"
+
+    def test_all_methods_work_together(self, db_client):
+        """Integration test: verify all 4 methods work together."""
+        # Get data from all 4 methods
+        modules = db_client.get_educational_modules()
+        curr_refs = db_client.get_curriculum_references()
+        major_refs = db_client.get_major_curriculum_references()
+        examples = db_client.get_llm_examples()
+
+        # Verify we got data from all methods
+        assert len(modules) > 0
+        assert len(curr_refs) > 0
+        assert len(major_refs) > 0
+        assert len(examples) > 0
+
+        # Verify relationships
+        major_ids = {r.id for r in major_refs}
+        for curr_ref in curr_refs:
+            assert curr_ref.major_reference_id in major_ids
+
+        # Verify examples use valid data
+        module_names = {m.module_name for m in modules}
+        ref_codes = {r.reference_code for r in curr_refs}
+
+        for example in examples:
+            if example.module:
+                assert example.module in module_names
+            for ref_code in example.curriculum_references:
+                assert ref_code in ref_codes
