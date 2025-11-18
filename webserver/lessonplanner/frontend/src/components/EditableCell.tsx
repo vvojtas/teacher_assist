@@ -129,7 +129,9 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
     />
   )
 
-  if (showTooltip && tooltipData && tooltipData.length > 0) {
+  // For curriculum field with tooltip data, wrap in HoverCard
+  // Always maintain same structure to prevent React from remounting the contentEditable div
+  if (isCurriculumField) {
     return (
       <HoverCard openDelay={300}>
         <HoverCardTrigger asChild>
@@ -137,14 +139,16 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
             {editableContent}
           </div>
         </HoverCardTrigger>
-        <HoverCardContent className="w-96 max-h-96 overflow-auto">
-          {tooltipData.map(({ code, text }, index) => (
-            <div key={code} className={index > 0 ? 'mt-3 pt-3 border-t' : ''}>
-              <strong className="text-primary">{code}:</strong>{' '}
-              <span className="text-sm">{text}</span>
-            </div>
-          ))}
-        </HoverCardContent>
+        {tooltipData && tooltipData.length > 0 && (
+          <HoverCardContent className="w-96 max-h-96 overflow-auto">
+            {tooltipData.map(({ code, text }, index) => (
+              <div key={code} className={index > 0 ? 'mt-3 pt-3 border-t' : ''}>
+                <strong className="text-primary">{code}:</strong>{' '}
+                <span className="text-sm">{text}</span>
+              </div>
+            ))}
+          </HoverCardContent>
+        )}
       </HoverCard>
     )
   }
