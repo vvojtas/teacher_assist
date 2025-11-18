@@ -459,3 +459,242 @@ class ModulesViewTests(TestCase):
             self.assertTrue(module['is_ai_suggested'])
 
 
+# ============================================================================
+# Model Tests
+# ============================================================================
+
+from lessonplanner.models import (
+    MajorCurriculumReference,
+    CurriculumReference,
+    EducationalModule,
+    WorkPlan,
+    WorkPlanEntry,
+    WorkPlanEntryCurriculumRef
+)
+from django.db import IntegrityError
+
+
+class MajorCurriculumReferenceModelTest(TestCase):
+    """Tests for MajorCurriculumReference model."""
+
+    def test_create_major_reference(self):
+        """Test creating a major curriculum reference."""
+        major_ref = MajorCurriculumReference.objects.create(
+            reference_code="99",
+            full_text="Fizyczny obszar rozwoju dziecka"
+        )
+        self.assertEqual(major_ref.reference_code, "99")
+        self.assertEqual(major_ref.full_text, "Fizyczny obszar rozwoju dziecka")
+        self.assertIsNotNone(major_ref.created_at)
+
+    def test_major_reference_str(self):
+        """Test string representation."""
+        major_ref = MajorCurriculumReference.objects.create(
+            reference_code="99",
+            full_text="Fizyczny obszar rozwoju dziecka"
+        )
+        self.assertIn("99:", str(major_ref))
+
+
+class CurriculumReferenceModelTest(TestCase):
+    """Tests for CurriculumReference model."""
+
+    def setUp(self):
+        """Set up test data."""
+        self.major_ref = MajorCurriculumReference.objects.create(
+            reference_code="99",
+            full_text="Poznawczy obszar rozwoju dziecka"
+        )
+
+    def test_create_curriculum_reference(self):
+        """Test creating a curriculum reference."""
+        curr_ref = CurriculumReference.objects.create(
+            reference_code="99.99",
+            full_text="przelicza elementy zbiorów",
+            major_reference=self.major_ref
+        )
+        self.assertEqual(curr_ref.reference_code, "99.99")
+        self.assertEqual(curr_ref.major_reference, self.major_ref)
+
+    def test_curriculum_reference_relationship(self):
+        """Test relationship with major reference."""
+        curr_ref1 = CurriculumReference.objects.create(
+            reference_code="99.15",
+            full_text="Test 1",
+            major_reference=self.major_ref
+        )
+        curr_ref2 = CurriculumReference.objects.create(
+            reference_code="99.18",
+            full_text="Test 2",
+            major_reference=self.major_ref
+        )
+
+        # Test reverse relationship
+        self.assertEqual(self.major_ref.curriculum_references.count(), 2)
+        self.assertIn(curr_ref1, self.major_ref.curriculum_references.all())
+        self.assertIn(curr_ref2, self.major_ref.curriculum_references.all())
+
+
+class EducationalModuleModelTest(TestCase):
+    """Tests for EducationalModule model."""
+
+    def test_create_educational_module(self):
+        """Test creating an educational module."""
+        module = EducationalModule.objects.create(
+            module_name="TEST_MODULE",
+            is_ai_suggested=False
+        )
+        self.assertEqual(module.module_name, "TEST_MODULE")
+        self.assertFalse(module.is_ai_suggested)
+
+    def test_module_ai_suggested_default(self):
+        """Test that is_ai_suggested defaults to False."""
+        module = EducationalModule.objects.create(
+            module_name="TEST_MODULE2"
+        )
+        self.assertFalse(module.is_ai_suggested)
+
+
+class WorkPlanModelTest(TestCase):
+    """Tests for WorkPlan model."""
+
+    def test_create_work_plan_with_theme(self):
+        """Test creating a work plan with a theme."""
+        plan = WorkPlan.objects.create(theme="Jesień - zbiory test")
+        self.assertEqual(plan.theme, "Jesień - zbiory test")
+        self.assertIsNotNone(plan.created_at)
+        self.assertIsNotNone(plan.updated_at)
+
+    def test_create_work_plan_without_theme(self):
+        """Test creating a work plan without a theme."""
+        plan = WorkPlan.objects.create()
+        self.assertIsNone(plan.theme)
+
+    def test_work_plan_str(self):
+        """Test string representation."""
+        plan = WorkPlan.objects.create(theme="Jesień - zbiory test")
+        self.assertIn("Jesień - zbiory test", str(plan))
+
+
+class WorkPlanEntryModelTest(TestCase):
+    """Tests for WorkPlanEntry model."""
+
+    def setUp(self):
+        """Set up test data."""
+        self.work_plan = WorkPlan.objects.create(theme="Test Theme")
+        self.module, _ = EducationalModule.objects.get_or_create(
+            module_name="MATEMATYKA",
+            defaults={'is_ai_suggested': False}
+        )
+        self.major_ref = MajorCurriculumReference.objects.create(
+            reference_code="99",
+            full_text="Poznawczy obszar"
+        )
+        self.curr_ref1 = CurriculumReference.objects.create(
+            reference_code="99.15",
+            full_text="przelicza elementy zbiorów",
+            major_reference=self.major_ref
+        )
+        self.curr_ref2 = CurriculumReference.objects.create(
+            reference_code="99.18",
+            full_text="rozpoznaje cyfry",
+            major_reference=self.major_ref
+        )
+
+    def test_create_work_plan_entry(self):
+        """Test creating a work plan entry."""
+        entry = WorkPlanEntry.objects.create(
+            work_plan=self.work_plan,
+            activity="Zabawa w sklep z owocami test",
+            module=self.module,
+            objectives="Dziecko potrafi przeliczać",
+            is_example=True
+        )
+        self.assertEqual(entry.activity, "Zabawa w sklep z owocami test")
+        self.assertEqual(entry.module, self.module)
+        self.assertTrue(entry.is_example)
+
+    def test_work_plan_entry_cascade_delete(self):
+        """Test that deleting work plan deletes entries."""
+        entry = WorkPlanEntry.objects.create(
+            work_plan=self.work_plan,
+            activity="Test activity"
+        )
+        entry_id = entry.id
+
+        # Delete work plan
+        self.work_plan.delete()
+
+        # Entry should be deleted
+        self.assertEqual(WorkPlanEntry.objects.filter(id=entry_id).count(), 0)
+
+    def test_work_plan_entry_curriculum_refs_relationship(self):
+        """Test many-to-many relationship with curriculum references."""
+        entry = WorkPlanEntry.objects.create(
+            work_plan=self.work_plan,
+            activity="Test activity",
+            module=self.module
+        )
+
+        # Add curriculum references
+        entry.curriculum_references.add(self.curr_ref1, self.curr_ref2)
+
+        # Test relationship
+        self.assertEqual(entry.curriculum_references.count(), 2)
+        self.assertIn(self.curr_ref1, entry.curriculum_references.all())
+        self.assertIn(self.curr_ref2, entry.curriculum_references.all())
+
+    def test_work_plan_entry_is_example_default(self):
+        """Test that is_example defaults to False."""
+        entry = WorkPlanEntry.objects.create(
+            work_plan=self.work_plan,
+            activity="Test activity"
+        )
+        self.assertFalse(entry.is_example)
+
+
+class DatabaseMigrationDataTest(TestCase):
+    """Tests to verify that migration data was populated correctly."""
+
+    def test_major_curriculum_references_populated(self):
+        """Test that major curriculum references were created."""
+        count = MajorCurriculumReference.objects.count()
+        self.assertGreaterEqual(count, 4, "Should have at least 4 major references")
+
+    def test_curriculum_references_populated(self):
+        """Test that curriculum references were created."""
+        count = CurriculumReference.objects.count()
+        self.assertGreaterEqual(count, 50, "Should have at least 50 curriculum references")
+
+    def test_educational_modules_populated(self):
+        """Test that educational modules were created."""
+        count = EducationalModule.objects.count()
+        self.assertGreaterEqual(count, 12, "Should have at least 12 modules")
+
+        # Check specific modules from PRD
+        self.assertTrue(
+            EducationalModule.objects.filter(module_name="MATEMATYKA").exists()
+        )
+        self.assertTrue(
+            EducationalModule.objects.filter(module_name="JĘZYK").exists()
+        )
+
+    def test_example_work_plans_populated(self):
+        """Test that example work plans were created."""
+        count = WorkPlan.objects.count()
+        self.assertGreaterEqual(count, 2, "Should have at least 2 example work plans")
+
+    def test_example_work_plan_entries_populated(self):
+        """Test that example work plan entries were created."""
+        count = WorkPlanEntry.objects.filter(is_example=True).count()
+        self.assertGreaterEqual(count, 5, "Should have at least 5 example entries")
+
+        # Check that example entries have curriculum references
+        example_entry = WorkPlanEntry.objects.filter(is_example=True).first()
+        self.assertIsNotNone(example_entry)
+        self.assertGreater(
+            example_entry.curriculum_references.count(),
+            0,
+            "Example entries should have curriculum references"
+        )
+

@@ -111,7 +111,12 @@ python manage.py runserver
 
 ## Database
 
-**SQLite is intentionally used** and the database file (`webserver/db.sqlite3`) **is committed to git** for portability. This allows pre-populated curriculum data to work across different systems without setup.
+**SQLite is intentionally used** and the database file (`db.sqlite3` in project root) **is committed to git** for portability. This allows pre-populated curriculum data to work across different systems without setup.
+
+**Location:** `db.sqlite3` (project root)
+- Shared between Django webserver and AI service
+- Pre-populated with Polish kindergarten curriculum references
+- Contains example work plan entries for LLM training
 
 **See [docs/db_schema.md](docs/db_schema.md) for database schema details.**
 
