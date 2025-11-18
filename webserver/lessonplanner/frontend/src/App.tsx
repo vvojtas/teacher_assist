@@ -16,7 +16,7 @@ const PROGRESS_HIDE_DELAY_MS = 2000
 
 function App() {
   const [theme, setTheme] = useState('')
-  const [selectedRows, setSelectedRows] = useState(new Set())
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
   const [bulkGenerating, setBulkGenerating] = useState(false)
   const [progress, setProgress] = useState({ visible: false, value: 0, text: '' })
 
@@ -113,7 +113,9 @@ function App() {
     setProgress({ visible: true, value: 0, text: `Przetwarzanie... (0/${rowsToProcess.length})` })
 
     // Set all rows to loading state
-    rowsToProcess.forEach(row => setRowLoading(row.id, true))
+    for (const row of rowsToProcess) {
+      setRowLoading(row.id, true)
+    }
 
     try {
       const results = await generateBulk(rowsToProcess, theme, (result) => {
@@ -124,7 +126,7 @@ function App() {
           text: `Przetwarzanie... (${result.completed}/${result.total})`
         })
 
-        if (result.success) {
+        if (result.success && result.data) {
           updateRow(result.rowId, result.data)
         }
 
@@ -164,7 +166,9 @@ function App() {
       await showError((error as Error).message)
     } finally {
       setBulkGenerating(false)
-      rowsToProcess.forEach(row => setRowLoading(row.id, false))
+      for (const row of rowsToProcess) {
+        setRowLoading(row.id, false)
+      }
     }
   }
 
@@ -236,7 +240,7 @@ function App() {
         setSelectedRows(new Set())
       }
     } catch (error) {
-      await showError(error.message)
+      await showError((error as Error).message)
     }
   }
 
