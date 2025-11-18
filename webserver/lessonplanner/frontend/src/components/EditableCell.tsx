@@ -22,9 +22,10 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
   const lastValueRef = useRef(value)
 
   // Update contenteditable only when value changes externally (not from our own onValueChange)
-  // This handles AI-generated content and programmatic updates while preserving cursor during typing
+  // This handles AI-generated content, programmatic updates, and initial mount
+  // Compare with DOM content to handle initial values correctly
   useEffect(() => {
-    if (value !== lastValueRef.current && contentRef.current) {
+    if (contentRef.current && contentRef.current.textContent !== value) {
       contentRef.current.textContent = value
       lastValueRef.current = value
     }
