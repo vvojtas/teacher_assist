@@ -45,9 +45,9 @@ export function useAIService() {
     let cookieValue: string | null = null
     if (document.cookie && document.cookie !== '') {
       const cookies = document.cookie.split(';')
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim()
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+      for (const rawCookie of cookies) {
+        const cookie = rawCookie.trim()
+        if (cookie.startsWith(name + '=')) {
           cookieValue = decodeURIComponent(cookie.substring(name.length + 1))
           break
         }
@@ -114,7 +114,7 @@ export function useAIService() {
 
       // Check if response is JSON before parsing
       const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
+      if (!contentType?.includes('application/json')) {
         // Django returned HTML error page (likely CSRF failure)
         const text = await response.text()
         console.error('Non-JSON response:', text.substring(0, 500))
