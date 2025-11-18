@@ -74,16 +74,14 @@ class DatabaseClient:
             return modules
 
     def get_curriculum_references(self) -> List[CurriculumReference]:
-        """
-        Get all curriculum references with code, text, and major_reference_id.
-
-        Note: String sorting works for current data (X.Y format, Y ≤ 9).
-        """
+        """Get all curriculum references with code, text, and major_reference_id."""
         with self._db_connection() as conn:
             cursor = conn.execute("""
                 SELECT reference_code, full_text, major_reference_id
                 FROM curriculum_references
-                ORDER BY reference_code
+                ORDER BY
+                    CAST(SUBSTR(reference_code, 1, INSTR(reference_code, '.') - 1) AS INTEGER),
+                    CAST(SUBSTR(reference_code, INSTR(reference_code, '.') + 1) AS INTEGER)
             """)
 
             references = []
@@ -102,7 +100,7 @@ class DatabaseClient:
             cursor = conn.execute("""
                 SELECT id, reference_code, full_text
                 FROM major_curriculum_references
-                ORDER BY reference_code
+                ORDER BY CAST(reference_code AS INTEGER)
             """)
 
             references = []

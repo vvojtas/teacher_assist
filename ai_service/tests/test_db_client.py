@@ -117,11 +117,27 @@ class TestGetCurriculumReferences:
         assert isinstance(first_ref.major_reference_id, int)
 
     def test_references_ordered_by_code(self, db_client):
-        """Test that references are ordered by reference_code."""
+        """Test that references are ordered numerically (not lexicographically)."""
         refs = db_client.get_curriculum_references()
         ref_codes = [r.reference_code for r in refs]
 
-        assert ref_codes == sorted(ref_codes), "References should be ordered by code"
+        # Parse codes into (major, minor) tuples for numeric comparison
+        def parse_code(code):
+            major, minor = code.split('.')
+            return (int(major), int(minor))
+
+        parsed_codes = [parse_code(code) for code in ref_codes]
+
+        # Verify numeric ordering
+        for i in range(len(parsed_codes) - 1):
+            assert parsed_codes[i] <= parsed_codes[i + 1], \
+                f"Codes not in numeric order: {ref_codes[i]} should come before {ref_codes[i + 1]}"
+
+        # Verify that 2.10 and 2.11 come after 2.9 (not between 2.1 and 2.2)
+        if '2.9' in ref_codes and '2.10' in ref_codes:
+            idx_2_9 = ref_codes.index('2.9')
+            idx_2_10 = ref_codes.index('2.10')
+            assert idx_2_10 > idx_2_9, "2.10 should come after 2.9 (numeric sort, not lexicographic)"
 
     def test_expected_references_present(self, db_client):
         """Test that expected curriculum references are present."""
@@ -166,11 +182,15 @@ class TestGetMajorCurriculumReferences:
         assert isinstance(first_ref.full_text, str)
 
     def test_major_references_ordered_by_code(self, db_client):
-        """Test that major references are ordered by reference_code."""
+        """Test that major references are ordered numerically."""
         major_refs = db_client.get_major_curriculum_references()
         ref_codes = [r.reference_code for r in major_refs]
 
-        assert ref_codes == sorted(ref_codes), "Major references should be ordered by code"
+        # Convert to integers for numeric comparison
+        numeric_codes = [int(code) for code in ref_codes]
+
+        # Verify numeric ordering
+        assert numeric_codes == sorted(numeric_codes), "Major references should be ordered numerically"
 
     def test_expected_major_references_present(self, db_client):
         """Test that expected major reference codes are present."""
