@@ -53,8 +53,8 @@ This document defines the database schema for the Teacher Assist application. Th
                                                    │ N:1
                                                    ▼
 ┌──────────────────────────────┐       ┌──────────────────────────────┐
-│   educational_modules        │       │   work_plan_entries          │
-│  (Module categories)         │       │  (Individual activities)     │
+│   educational_modules        │──────►│   work_plan_entries          │
+│  (Module categories)         │ 1:N   │  (Individual activities)     │
 └──────────────────────────────┘       └──────────┬───────────────────┘
                                                    │
                                                    │ N:1
@@ -195,6 +195,9 @@ INSERT INTO curriculum_references (reference_code, full_text, major_reference_id
 - `is_ai_suggested` defaults to FALSE
 - `created_at` defaults to current timestamp
 
+**Relationships:**
+- 1:N with `work_plan_entries` (one module can be used by many entries, optional)
+
 **Sample Data:**
 ```sql
 INSERT INTO educational_modules (module_name, is_ai_suggested) VALUES
@@ -273,7 +276,7 @@ INSERT INTO work_plans (theme) VALUES
 | `id`             | INTEGER      | PRIMARY KEY, AUTO_INCREMENT    | Unique identifier                                |
 | `work_plan_id`   | INTEGER      | NOT NULL, FOREIGN KEY, INDEX   | References `work_plans.id`                       |
 | `module_id`      | INTEGER      | NULL, FOREIGN KEY, INDEX       | References `educational_modules.id`              |
-| `objectives`     | TEXT         | NULL                           | Educational objectives (typically 2-3 items)     |
+| `objectives`     | TEXT         | NULL                           | Educational objectives (typically 2-3 items, separated by newlines) |
 | `activity`       | VARCHAR(500) | NOT NULL                       | Activity description (required)                  |
 | `is_example`     | BOOLEAN      | NOT NULL, DEFAULT FALSE        | TRUE if should be used as LLM training example   |
 | `created_at`     | TIMESTAMP    | NOT NULL, DEFAULT CURRENT_TS   | Timestamp when entry was created                 |
