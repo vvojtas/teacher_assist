@@ -18,11 +18,16 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
   const contentRef = useRef<HTMLDivElement>(null)
   const { parseCurriculumCodes, fetchMultipleCodes } = useCurriculumTooltip()
   const [tooltipData, setTooltipData] = useState<Array<{ code: string; text: string }> | null>(null)
+  // Track the last value we sent to parent to distinguish external updates from our own
+  const lastValueRef = useRef(value)
 
-  // Update contenteditable when value changes externally
+  // Update contenteditable only when value changes externally (not from our own onValueChange)
+  // This handles AI-generated content, programmatic updates, and initial mount
+  // Compare with DOM content to handle initial values correctly
   useEffect(() => {
     if (contentRef.current && contentRef.current.textContent !== value) {
       contentRef.current.textContent = value
+      lastValueRef.current = value
     }
   }, [value])
 
@@ -35,10 +40,13 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
       if (contentRef.current) {
         contentRef.current.textContent = truncated
       }
+      lastValueRef.current = truncated
       onValueChange(truncated)
       return
     }
 
+    // Update our tracking ref before calling parent to prevent echo
+    lastValueRef.current = newValue
     onValueChange(newValue)
   }
 
@@ -51,6 +59,7 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
   // Handle paste to strip formatting using modern Selection API
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault()
+
     let text = e.clipboardData.getData('text/plain')
 
     // Calculate remaining space for XSS/DoS protection
@@ -83,8 +92,9 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
 
     // Trigger state update
     if (contentRef.current) {
-      const newValue = contentRef.current.textContent
-      onValueChange(newValue || '')
+      const newValue = contentRef.current.textContent || ''
+      lastValueRef.current = newValue
+      onValueChange(newValue)
     }
   }
 
@@ -117,12 +127,12 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
         className
       )}
       data-field={field}
-    >
-      {value}
-    </div>
+    />
   )
 
-  if (showTooltip && tooltipData && tooltipData.length > 0) {
+  // For curriculum field with tooltip data, wrap in HoverCard
+  // Always maintain same structure to prevent React from remounting the contentEditable div
+  if (isCurriculumField) {
     return (
       <HoverCard openDelay={300}>
         <HoverCardTrigger asChild>
@@ -130,14 +140,16 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
             {editableContent}
           </div>
         </HoverCardTrigger>
-        <HoverCardContent className="w-96 max-h-96 overflow-auto">
-          {tooltipData.map(({ code, text }, index) => (
-            <div key={code} className={index > 0 ? 'mt-3 pt-3 border-t' : ''}>
-              <strong className="text-primary">{code}:</strong>{' '}
-              <span className="text-sm">{text}</span>
-            </div>
-          ))}
-        </HoverCardContent>
+        {tooltipData && tooltipData.length > 0 && (
+          <HoverCardContent className="w-96 max-h-96 overflow-auto">
+            {tooltipData.map(({ code, text }, index) => (
+              <div key={code} className={index > 0 ? 'mt-3 pt-3 border-t' : ''}>
+                <strong className="text-primary">{code}:</strong>{' '}
+                <span className="text-sm">{text}</span>
+              </div>
+            ))}
+          </HoverCardContent>
+        )}
       </HoverCard>
     )
   }
