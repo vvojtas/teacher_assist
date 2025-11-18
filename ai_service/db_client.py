@@ -1,10 +1,8 @@
 """
-Simple SQLite database client for AI service.
+SQLite database client for AI service.
 
-Provides read-only access to curriculum references, educational modules,
-and example work plan entries for LLM context.
-
-Uses Python's built-in sqlite3 module - no external dependencies required.
+Read-only access to curriculum data and LLM training examples.
+Uses Python's built-in sqlite3 module.
 """
 
 import sqlite3
@@ -23,13 +21,10 @@ from ai_service.db_models import (
 
 class DatabaseClient:
     """
-    Simple SQLite database client for read-only access to Django database.
+    Read-only SQLite client for Django database.
 
-    Provides four main query methods:
-    1. get_educational_modules() - Get all module names
-    2. get_curriculum_references() - Get all curriculum references with details
-    3. get_major_curriculum_references() - Get all major curriculum sections
-    4. get_llm_examples() - Get example work plan entries for LLM training
+    Methods: get_educational_modules(), get_curriculum_references(),
+             get_major_curriculum_references(), get_llm_examples()
     """
 
     def __init__(self, db_path: Optional[str] = None):
@@ -37,11 +32,9 @@ class DatabaseClient:
         Initialize database client.
 
         Args:
-            db_path: Path to SQLite database file.
-                    If None, defaults to db.sqlite3 in project root
+            db_path: Path to SQLite file (defaults to project_root/db.sqlite3)
         """
         if db_path is None:
-            # Default to Django database in project root
             project_root = Path(__file__).parent.parent
             db_path = project_root / "db.sqlite3"
 
@@ -51,28 +44,14 @@ class DatabaseClient:
             raise FileNotFoundError(f"Database file not found: {self.db_path}")
 
     def _get_connection(self) -> sqlite3.Connection:
-        """
-        Get a database connection with row factory configured.
-
-        Returns:
-            sqlite3.Connection: Database connection
-        """
+        """Get database connection with row factory."""
         conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row  # Enable dict-like access to rows
+        conn.row_factory = sqlite3.Row
         return conn
 
     @contextmanager
     def _db_connection(self):
-        """
-        Context manager for database connections.
-
-        Automatically closes connection when exiting context.
-        Reduces code duplication across query methods.
-
-        Usage:
-            with self._db_connection() as conn:
-                cursor = conn.execute("SELECT ...")
-        """
+        """Context manager for auto-closing database connections."""
         conn = self._get_connection()
         try:
             yield conn
@@ -80,18 +59,7 @@ class DatabaseClient:
             conn.close()
 
     def get_educational_modules(self) -> List[EducationalModule]:
-        """
-        Get all module names from educational_modules table.
-
-        Returns:
-            List of EducationalModule objects containing module_name field
-
-        Example:
-            >>> client = DatabaseClient()
-            >>> modules = client.get_educational_modules()
-            >>> [m.module_name for m in modules]
-            ['EMOCJE', 'FORMY PLASTYCZNE', 'JĘZYK', 'MATEMATYKA', ...]
-        """
+        """Get all module names, ordered alphabetically."""
         with self._db_connection() as conn:
             cursor = conn.execute("""
                 SELECT module_name
@@ -107,25 +75,9 @@ class DatabaseClient:
 
     def get_curriculum_references(self) -> List[CurriculumReference]:
         """
-        Get all curriculum references with reference_code, full_text, and major_reference_id.
+        Get all curriculum references with code, text, and major_reference_id.
 
-        Returns:
-            List of CurriculumReference objects
-
-        Note on sorting:
-            Uses lexicographic (string) sorting on reference_code.
-            Works correctly for current data (all codes are X.Y where Y is single digit).
-            If curriculum expands to include codes like "1.10", sorting may need adjustment.
-
-        Example:
-            >>> client = DatabaseClient()
-            >>> refs = client.get_curriculum_references()
-            >>> refs[0].reference_code
-            '1.1'
-            >>> refs[0].full_text
-            'zgłasza potrzeby fizjologiczne...'
-            >>> refs[0].major_reference_id
-            1
+        Note: String sorting works for current data (X.Y format, Y ≤ 9).
         """
         with self._db_connection() as conn:
             cursor = conn.execute("""
@@ -145,22 +97,7 @@ class DatabaseClient:
             return references
 
     def get_major_curriculum_references(self) -> List[MajorCurriculumReference]:
-        """
-        Get all major curriculum references with id, reference_code, and full_text.
-
-        Returns:
-            List of MajorCurriculumReference objects
-
-        Example:
-            >>> client = DatabaseClient()
-            >>> major_refs = client.get_major_curriculum_references()
-            >>> major_refs[0].id
-            1
-            >>> major_refs[0].reference_code
-            '1'
-            >>> major_refs[0].full_text
-            'Fizyczny obszar rozwoju dziecka...'
-        """
+        """Get all major curriculum sections with id, code, and text."""
         with self._db_connection() as conn:
             cursor = conn.execute("""
                 SELECT id, reference_code, full_text
@@ -180,40 +117,12 @@ class DatabaseClient:
 
     def get_llm_examples(self) -> List[LLMExample]:
         """
-        Get example work plan entries for LLM training context.
+        Get example work plan entries for LLM training (where is_example=true).
 
-        Joins work_plans, work_plan_entries, and curriculum_references tables
-        to return complete examples where is_example = true.
-
-        Each example includes:
-        - theme: Weekly theme from work_plan
-        - activity: Activity description
-        - module: Educational module
-        - objectives: Educational objectives
-        - curriculum_references: List of curriculum reference codes
-
-        Uses a single query with GROUP_CONCAT to avoid N+1 query problem.
-
-        Returns:
-            List of LLMExample objects
-
-        Example:
-            >>> client = DatabaseClient()
-            >>> examples = client.get_llm_examples()
-            >>> examples[0].theme
-            'Jesień - zbiory'
-            >>> examples[0].activity
-            'Zabawa w sklep z owocami'
-            >>> examples[0].module
-            'MATEMATYKA'
-            >>> examples[0].objectives
-            'Dziecko potrafi przeliczać w zakresie 5\\nRozpoznaje poznane wcześniej cyfry'
-            >>> examples[0].curriculum_references
-            ['4.15', '4.18']
+        Returns theme, activity, module, objectives, and curriculum_references.
+        Uses GROUP_CONCAT to avoid N+1 queries (single query for all data).
         """
         with self._db_connection() as conn:
-            # Single query with GROUP_CONCAT to get all data at once
-            # This avoids N+1 query problem - executes only 1 query regardless of number of examples
             cursor = conn.execute("""
                 SELECT
                     wpe.id,
@@ -233,13 +142,8 @@ class DatabaseClient:
 
             examples = []
             for row in cursor.fetchall():
-                # Parse comma-separated curriculum reference codes
                 ref_codes_str = row['ref_codes']
-                if ref_codes_str:
-                    # Split and sort curriculum references
-                    curriculum_refs = sorted(ref_codes_str.split(','))
-                else:
-                    curriculum_refs = []
+                curriculum_refs = sorted(ref_codes_str.split(',')) if ref_codes_str else []
 
                 examples.append(LLMExample(
                     theme=row['theme'] or '',
@@ -253,17 +157,5 @@ class DatabaseClient:
 
 
 def get_db_client(db_path: Optional[str] = None) -> DatabaseClient:
-    """
-    Get a database client instance.
-
-    Args:
-        db_path: Optional path to database file
-
-    Returns:
-        DatabaseClient instance
-
-    Example:
-        >>> client = get_db_client()
-        >>> modules = client.get_educational_modules()
-    """
+    """Get database client instance (defaults to project_root/db.sqlite3)."""
     return DatabaseClient(db_path)
