@@ -582,6 +582,10 @@ class WorkPlanEntryModelTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.work_plan = WorkPlan.objects.create(theme="Test Theme")
+        self.module, _ = EducationalModule.objects.get_or_create(
+            module_name="MATEMATYKA",
+            defaults={'is_ai_suggested': False}
+        )
         self.major_ref = MajorCurriculumReference.objects.create(
             reference_code="99",
             full_text="Poznawczy obszar"
@@ -602,12 +606,12 @@ class WorkPlanEntryModelTest(TestCase):
         entry = WorkPlanEntry.objects.create(
             work_plan=self.work_plan,
             activity="Zabawa w sklep z owocami test",
-            module="MATEMATYKA",
+            module=self.module,
             objectives="Dziecko potrafi przeliczać",
             is_example=True
         )
         self.assertEqual(entry.activity, "Zabawa w sklep z owocami test")
-        self.assertEqual(entry.module, "MATEMATYKA")
+        self.assertEqual(entry.module, self.module)
         self.assertTrue(entry.is_example)
 
     def test_work_plan_entry_cascade_delete(self):
@@ -629,7 +633,7 @@ class WorkPlanEntryModelTest(TestCase):
         entry = WorkPlanEntry.objects.create(
             work_plan=self.work_plan,
             activity="Test activity",
-            module="MATEMATYKA"
+            module=self.module
         )
 
         # Add curriculum references
