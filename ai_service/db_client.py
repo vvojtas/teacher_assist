@@ -126,15 +126,16 @@ class DatabaseClient:
                     wpe.id,
                     wp.theme,
                     wpe.activity,
-                    wpe.module,
+                    em.module_name,
                     wpe.objectives,
                     GROUP_CONCAT(cr.reference_code, ',') as ref_codes
                 FROM work_plan_entries wpe
                 JOIN work_plans wp ON wpe.work_plan_id = wp.id
+                LEFT JOIN educational_modules em ON wpe.module_id = em.id
                 LEFT JOIN work_plan_entry_curriculum_refs wpcr ON wpe.id = wpcr.work_plan_entry_id
                 LEFT JOIN curriculum_references cr ON wpcr.curriculum_reference_id = cr.id
                 WHERE wpe.is_example = 1
-                GROUP BY wpe.id, wp.theme, wpe.activity, wpe.module, wpe.objectives, wpe.created_at
+                GROUP BY wpe.id, wp.theme, wpe.activity, em.module_name, wpe.objectives, wpe.created_at
                 ORDER BY wpe.created_at
             """)
 
@@ -146,7 +147,7 @@ class DatabaseClient:
                 examples.append(LLMExample(
                     theme=row['theme'] or '',
                     activity=row['activity'],
-                    module=row['module'] or '',
+                    module=row['module_name'] or '',
                     objectives=row['objectives'] or '',
                     curriculum_references=curriculum_refs
                 ))

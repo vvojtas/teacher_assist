@@ -41,7 +41,7 @@ python manage.py createsuperuser
 
 **Step 4: Verify tables were created**
 ```bash
-# SQLite
+# SQLite (from project root)
 sqlite3 db.sqlite3 ".tables"
 
 # PostgreSQL
@@ -58,7 +58,7 @@ If not using Django ORM, you can run the SQL schema directly.
 
 **SQLite:**
 ```bash
-cd webserver
+# From project root
 sqlite3 db.sqlite3 < schema.sql
 ```
 
@@ -644,8 +644,8 @@ for e in wp_with_entries.entries.all():
 
 **Direct SQL:**
 ```bash
-# SQLite
-sqlite3 webserver/db.sqlite3
+# SQLite (from project root)
+sqlite3 db.sqlite3
 
 # Check counts
 SELECT COUNT(*) FROM major_curriculum_references;
@@ -701,16 +701,16 @@ curl http://localhost:8000/api/modules
 
 ### 6.1 SQLite Backup (MVP)
 
-**Database File Location:** `webserver/db.sqlite3`
+**Database File Location:** `db.sqlite3` (project root)
 
 **Simple File Copy:**
 ```bash
-cp webserver/db.sqlite3 webserver/db.sqlite3.backup
+cp db.sqlite3 db.sqlite3.backup
 ```
 
 **SQLite Backup Command (safer - handles locks):**
 ```bash
-sqlite3 webserver/db.sqlite3 ".backup 'backup/db-$(date +%Y%m%d).sqlite3'"
+sqlite3 db.sqlite3 ".backup 'backup/db-$(date +%Y%m%d).sqlite3'"
 ```
 
 **Django Dumpdata (portable, can restore to any DB):**

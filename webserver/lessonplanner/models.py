@@ -124,11 +124,14 @@ class WorkPlanEntry(models.Model):
         db_index=True,
         help_text="Parent work plan"
     )
-    module = models.CharField(
-        max_length=200,
+    module = models.ForeignKey(
+        EducationalModule,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
-        help_text="Educational module name (e.g., 'MATEMATYKA')"
+        related_name='work_plan_entries',
+        db_index=True,
+        help_text="Educational module (AI can suggest new modules)"
     )
     objectives = models.TextField(
         null=True,
@@ -159,7 +162,8 @@ class WorkPlanEntry(models.Model):
         ordering = ['created_at']
 
     def __str__(self):
-        return f"{self.activity[:50]}... ({self.module or 'No module'})"
+        module_name = self.module.module_name if self.module else 'No module'
+        return f"{self.activity[:50]}... ({module_name})"
 
 
 class WorkPlanEntryCurriculumRef(models.Model):

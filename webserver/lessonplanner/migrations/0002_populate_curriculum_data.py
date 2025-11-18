@@ -216,6 +216,9 @@ def load_curriculum_data(apps, schema_editor):
     plans_created_count = 0
     entries_created_count = 0
 
+    # Create modules map for quick lookup
+    modules_map = {mod.module_name: mod for mod in EducationalModule.objects.all()}
+
     # Create work plans and entries
     for example in examples:
         # Use get_or_create to avoid duplicates if migration re-runs
@@ -229,11 +232,20 @@ def load_curriculum_data(apps, schema_editor):
             # Only create entries if the work plan is new
             # (avoids duplicating entries if plan already exists)
             for entry_data in example['entries']:
+                # Look up module ForeignKey
+                module_name = entry_data['module']
+                module = modules_map.get(module_name)
+                if not module:
+                    integrity_errors.append(
+                        f"Module '{module_name}' not found for activity '{entry_data['activity']}'"
+                    )
+                    continue
+
                 # Create the entry
                 entry = WorkPlanEntry.objects.create(
                     work_plan=work_plan,
                     activity=entry_data['activity'],
-                    module=entry_data['module'],
+                    module=module,
                     objectives=entry_data['objectives'],
                     is_example=entry_data['is_example']
                 )
