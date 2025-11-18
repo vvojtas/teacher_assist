@@ -10,38 +10,10 @@ import time
 from typing import List
 
 from common.models import FillWorkPlanResponse
+from ai_service.db_client import get_db_client
 
 
-# Mock data for educational modules (Polish curriculum)
-EDUCATIONAL_MODULES = [
-    "JĘZYK",
-    "MATEMATYKA",
-    "MOTORYKA MAŁA",
-    "MOTORYKA DUŻA",
-    "FORMY PLASTYCZNE",
-    "MUZYKA",
-    "POZNAWCZE",
-    "WSPÓŁPRACA",
-    "EMOCJE",
-    "SPOŁECZNE",
-    "SENSORYKA",
-    "ZDROWIE",
-]
-
-# Mock curriculum reference codes
-CURRICULUM_REFS = [
-    "1.1", "1.2", "1.3",
-    "2.1", "2.2", "2.3", "2.7",
-    "3.1", 
-    "4.15", "4.18",
-    "5.2",
-    "6.1",
-    "7.3",
-    "8.1",
-    "9.1",
-]
-
-# Mock learning objectives (Polish)
+# Mock learning objectives (Polish) - still hardcoded as per requirements
 SAMPLE_OBJECTIVES = [
     "Dziecko potrafi przeliczać w zakresie 5",
     "Rozpoznaje poznane wcześniej cyfry",
@@ -65,7 +37,8 @@ class MockAIService:
     Mock AI service for generating educational metadata.
 
     This class simulates the behavior of a real LangGraph-based AI service
-    by returning random selections from predefined Polish educational data.
+    by returning random selections from database data for modules and curriculum refs,
+    and predefined Polish educational data for objectives.
     """
 
     def __init__(self, simulate_delay: bool = True):
@@ -76,6 +49,26 @@ class MockAIService:
             simulate_delay: If True, adds 1-2 second delay to simulate API calls
         """
         self.simulate_delay = simulate_delay
+
+        # Initialize database client
+        self.db_client = get_db_client()
+
+        # Cache module names and curriculum ref codes from database
+        self._load_db_data()
+
+    def _load_db_data(self):
+        """
+        Load module names and curriculum reference codes from database.
+
+        This data is cached in memory for performance, as it changes infrequently.
+        """
+        # Get all educational modules from database
+        modules = self.db_client.get_educational_modules()
+        self.module_names = [module.module_name for module in modules]
+
+        # Get all curriculum reference codes from database
+        curriculum_refs = self.db_client.get_curriculum_references()
+        self.curriculum_ref_codes = [ref.reference_code for ref in curriculum_refs]
 
     def generate_metadata(self, activity: str, theme: str = "") -> FillWorkPlanResponse:
         """
@@ -91,19 +84,26 @@ class MockAIService:
         Note:
             Input validation is handled by FillWorkPlanRequest Pydantic model,
             so we trust that activity is already validated and non-empty.
+
+            Module and curriculum refs are selected from database.
+            Objectives are still hardcoded as per requirements.
         """
         # Simulate API processing delay (1-2 seconds)
         if self.simulate_delay:
             time.sleep(random.uniform(1.0, 2.0))
 
-        # Generate mock response with random selections
-        module = random.choice(EDUCATIONAL_MODULES)
+        # Generate mock response with random selections from database
+        # Select random module from database
+        module = random.choice(self.module_names) if self.module_names else "UNKNOWN"
 
-        # Select 2-3 random curriculum references
+        # Select 2-3 random curriculum references from database
         num_refs = random.randint(2, 3)
-        curriculum_refs = random.sample(CURRICULUM_REFS, num_refs)
+        curriculum_refs = random.sample(
+            self.curriculum_ref_codes,
+            min(num_refs, len(self.curriculum_ref_codes))
+        ) if self.curriculum_ref_codes else []
 
-        # Select 2-3 random objectives
+        # Select 2-3 random objectives (still hardcoded as per requirements)
         num_objectives = random.randint(2, 3)
         objectives = random.sample(SAMPLE_OBJECTIVES, num_objectives)
 

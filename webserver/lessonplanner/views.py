@@ -11,9 +11,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from django.utils.html import escape
 
-from .services import ai_client
+from .services import ai_client, db_service
 from .forms import FillWorkPlanForm
-from .services.mock_data import CURRICULUM_REFERENCES, EDUCATIONAL_MODULES
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -125,8 +124,6 @@ def get_all_curriculum_refs_view(request):
     """
     Get all curriculum references (for tooltips and caching).
 
-    MOCK IMPLEMENTATION: Returns sample curriculum reference data.
-
     Returns:
     {
         "references": {
@@ -141,9 +138,12 @@ def get_all_curriculum_refs_view(request):
     - 500 DATABASE_ERROR - Database query failure
     """
     try:
+        # Get all curriculum references from database
+        references = db_service.get_all_curriculum_refs()
+
         return JsonResponse({
-            'references': CURRICULUM_REFERENCES,
-            'count': len(CURRICULUM_REFERENCES)
+            'references': references,
+            'count': len(references)
         }, status=200)
 
     except Exception as e:
@@ -162,8 +162,6 @@ def get_all_curriculum_refs_view(request):
 def get_curriculum_ref_by_code_view(request, code):
     """
     Lookup curriculum reference by code.
-
-    MOCK IMPLEMENTATION: Returns sample curriculum reference data.
 
     URL parameter: code (e.g., "3.8", "4.15")
 
@@ -186,17 +184,19 @@ def get_curriculum_ref_by_code_view(request, code):
                 'error_code': 'INVALID_CODE_FORMAT'
             }, status=400)
 
-        # Lookup curriculum reference
-        if code not in CURRICULUM_REFERENCES:
+        # Lookup curriculum reference from database
+        ref = db_service.get_curriculum_ref_by_code(code)
+
+        if ref is None:
             return JsonResponse({
                 'error': f'Nie znaleziono odniesienia dla kodu: {escape(code)}',
                 'error_code': 'REFERENCE_NOT_FOUND'
             }, status=404)
 
         return JsonResponse({
-            'reference_code': code,
-                'full_text': CURRICULUM_REFERENCES[code],
-            'created_at': '2025-10-28T10:30:00Z'
+            'reference_code': ref.reference_code,
+            'full_text': ref.full_text,
+            'created_at': ref.created_at.isoformat()
         }, status=200)
 
     except Exception as e:
@@ -215,8 +215,6 @@ def get_curriculum_ref_by_code_view(request, code):
 def get_modules_view(request):
     """
     Get all educational modules with optional filtering.
-
-    MOCK IMPLEMENTATION: Returns sample educational module data.
 
     Query Parameters:
     - ai_suggested (optional): Filter by AI-suggested flag (true/false)
@@ -242,13 +240,13 @@ def get_modules_view(request):
         # Get optional filter parameter
         ai_suggested_param = request.GET.get('ai_suggested', None)
 
-        # Apply filtering if requested
+        # Convert string to boolean if filter provided
+        ai_suggested = None
         if ai_suggested_param is not None:
-            # Convert string to boolean
             ai_suggested = ai_suggested_param.lower() in ('true', '1', 'yes')
-            modules_data = [m for m in EDUCATIONAL_MODULES if m['is_ai_suggested'] == ai_suggested]
-        else:
-            modules_data = EDUCATIONAL_MODULES
+
+        # Get modules from database with optional filter
+        modules_data = db_service.get_all_modules(ai_suggested=ai_suggested)
 
         return JsonResponse({
             'modules': modules_data,
