@@ -1,11 +1,4 @@
-"""
-Database service for lesson planner application.
-
-This module provides clean separation of concerns by handling all database queries
-for curriculum references and educational modules.
-"""
-
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from ..models import CurriculumReference, EducationalModule
 
 
@@ -46,7 +39,7 @@ def get_curriculum_ref_by_code(code: str) -> Optional[CurriculumReference]:
         return None
 
 
-def get_all_modules(ai_suggested: Optional[bool] = None) -> List[Dict[str, any]]:
+def get_all_modules(ai_suggested: Optional[bool] = None) -> List[Dict[str, Any]]:
     """
     Retrieve all educational modules from database.
 
