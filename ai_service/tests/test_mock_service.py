@@ -68,21 +68,31 @@ class TestMockAIService:
         assert result.activity == "Test"
 
     def test_generate_metadata_returns_valid_curriculum_refs(self, service):
-        """Test that returned curriculum refs are from valid set"""
-        from ai_service.mock_service import CURRICULUM_REFS
+        """Test that returned curriculum refs are from database"""
+        from ai_service.db_client import get_db_client
+
+        # Get valid refs from database
+        db_client = get_db_client()
+        valid_refs = [ref.reference_code for ref in db_client.get_curriculum_references()]
 
         result = service.generate_metadata(activity="Test activity")
 
+        # Verify all returned refs are valid database refs
         for ref in result.curriculum_refs:
-            assert ref in CURRICULUM_REFS
+            assert ref in valid_refs
 
     def test_generate_metadata_returns_valid_module(self, service):
-        """Test that returned module is from valid set"""
-        from ai_service.mock_service import EDUCATIONAL_MODULES
+        """Test that returned module is from database"""
+        from ai_service.db_client import get_db_client
+
+        # Get valid modules from database
+        db_client = get_db_client()
+        valid_modules = [mod.module_name for mod in db_client.get_educational_modules()]
 
         result = service.generate_metadata(activity="Test activity")
 
-        assert result.module in EDUCATIONAL_MODULES
+        # Verify returned module is valid database module
+        assert result.module in valid_modules
 
     def test_generate_metadata_returns_2_to_3_refs(self, service):
         """Test that 2-3 curriculum refs are returned"""

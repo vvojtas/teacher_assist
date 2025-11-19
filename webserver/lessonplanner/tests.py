@@ -360,8 +360,8 @@ class CurriculumRefsViewTests(TestCase):
 
         self.assertIn('references', data)
         self.assertIn('count', data)
-        # Mock data has 17 references
-        self.assertEqual(data['count'], 17)
+        # Database has 52 references from migration
+        self.assertEqual(data['count'], 52)
         self.assertIn('1.1', data['references'])
         self.assertIn('2.5', data['references'])
         self.assertIn('3.8', data['references'])
@@ -376,7 +376,7 @@ class CurriculumRefByCodeViewTests(TestCase):
         self.client = Client()
 
     def test_get_curriculum_ref_by_code_success(self):
-        """Test successful retrieval of curriculum reference by code (mock data)"""
+        """Test successful retrieval of curriculum reference by code (database)"""
         url = reverse('lessonplanner:curriculum_ref_by_code', args=['3.8'])
         response = self.client.get(url)
 
@@ -384,7 +384,7 @@ class CurriculumRefByCodeViewTests(TestCase):
         data = response.json()
 
         self.assertEqual(data['reference_code'], '3.8')
-        self.assertEqual(data['full_text'], 'obdarza uwagą inne dzieci i osoby dorosłe;')
+        self.assertEqual(data['full_text'], 'obdarza uwagą inne dzieci i osoby dorosłe')
         self.assertIn('created_at', data)
 
     def test_get_curriculum_ref_not_found(self):
@@ -441,8 +441,8 @@ class ModulesViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
-        # Mock data has 7 non-AI-suggested modules
-        self.assertEqual(data['count'], 7)
+        # Database has 12 non-AI-suggested modules (all predefined)
+        self.assertEqual(data['count'], 12)
         for module in data['modules']:
             self.assertFalse(module['is_ai_suggested'])
 
@@ -453,8 +453,8 @@ class ModulesViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
-        # Mock data has 5 AI-suggested modules
-        self.assertEqual(data['count'], 5)
+        # Database has 0 AI-suggested modules initially (none created yet)
+        self.assertEqual(data['count'], 0)
         for module in data['modules']:
             self.assertTrue(module['is_ai_suggested'])
 
