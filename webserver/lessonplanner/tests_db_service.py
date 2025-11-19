@@ -223,124 +223,6 @@ class GetAllModulesTests(TestCase):
         self.assertIn(':', created_at)
 
 
-class GetAllModuleNamesTests(TestCase):
-    """Tests for get_all_module_names() function"""
-
-    def setUp(self):
-        """Create test data with unique names"""
-        EducationalModule.objects.create(module_name='TEST_MOD_ZDROWIE', is_ai_suggested=False)
-        EducationalModule.objects.create(module_name='TEST_MOD_JĘZYK', is_ai_suggested=False)
-        EducationalModule.objects.create(module_name='TEST_MOD_MATEMATYKA', is_ai_suggested=True)
-
-    def test_returns_list(self):
-        """Test that function returns a list"""
-        result = db_service.get_all_module_names()
-        self.assertIsInstance(result, list)
-
-    def test_returns_all_module_names(self):
-        """Test that all module names are returned"""
-        result = db_service.get_all_module_names()
-        # Migration creates 12 modules, plus our 3 test modules = 15
-        self.assertEqual(len(result), 15)
-
-    def test_returns_only_strings(self):
-        """Test that only module name strings are returned"""
-        result = db_service.get_all_module_names()
-        for name in result:
-            self.assertIsInstance(name, str)
-
-    def test_contains_expected_names(self):
-        """Test that result contains expected module names"""
-        result = db_service.get_all_module_names()
-        self.assertIn('TEST_MOD_JĘZYK', result)
-        self.assertIn('TEST_MOD_MATEMATYKA', result)
-        self.assertIn('TEST_MOD_ZDROWIE', result)
-
-    def test_names_ordered_alphabetically(self):
-        """Test that names are ordered alphabetically"""
-        result = db_service.get_all_module_names()
-        self.assertEqual(result, sorted(result))
-
-    def test_returns_empty_list_when_no_modules(self):
-        """Test that empty list is returned when no modules exist"""
-        # Delete work plans first to avoid foreign key constraints
-        from lessonplanner.models import WorkPlan
-        WorkPlan.objects.all().delete()
-        EducationalModule.objects.all().delete()
-        result = db_service.get_all_module_names()
-        self.assertEqual(result, [])
-
-
-class GetAllCurriculumRefCodesTests(TestCase):
-    """Tests for get_all_curriculum_ref_codes() function"""
-
-    def setUp(self):
-        """Create test data"""
-        major_ref = MajorCurriculumReference.objects.create(
-            reference_code='97',
-            full_text='Major reference 97'
-        )
-
-        CurriculumReference.objects.create(
-            reference_code='97.5',
-            full_text='Ref 97.5',
-            major_reference=major_ref
-        )
-        CurriculumReference.objects.create(
-            reference_code='97.1',
-            full_text='Ref 97.1',
-            major_reference=major_ref
-        )
-        CurriculumReference.objects.create(
-            reference_code='97.3',
-            full_text='Ref 97.3',
-            major_reference=major_ref
-        )
-
-    def test_returns_list(self):
-        """Test that function returns a list"""
-        result = db_service.get_all_curriculum_ref_codes()
-        self.assertIsInstance(result, list)
-
-    def test_returns_all_codes(self):
-        """Test that all curriculum reference codes are returned"""
-        result = db_service.get_all_curriculum_ref_codes()
-        # Migration creates 52 refs, plus our 3 test refs = 55
-        self.assertEqual(len(result), 55)
-
-    def test_returns_only_strings(self):
-        """Test that only code strings are returned"""
-        result = db_service.get_all_curriculum_ref_codes()
-        for code in result:
-            self.assertIsInstance(code, str)
-
-    def test_contains_expected_codes(self):
-        """Test that result contains expected codes"""
-        result = db_service.get_all_curriculum_ref_codes()
-        self.assertIn('97.1', result)
-        self.assertIn('97.3', result)
-        self.assertIn('97.5', result)
-
-    def test_codes_ordered_by_reference_code(self):
-        """Test that codes are ordered by reference_code"""
-        result = db_service.get_all_curriculum_ref_codes()
-        # Verify our test codes are in order
-        idx_971 = result.index('97.1')
-        idx_973 = result.index('97.3')
-        idx_975 = result.index('97.5')
-        self.assertLess(idx_971, idx_973)
-        self.assertLess(idx_973, idx_975)
-
-    def test_returns_empty_list_when_no_refs(self):
-        """Test that empty list is returned when no refs exist"""
-        # Delete work plans first to avoid foreign key constraints
-        from lessonplanner.models import WorkPlan
-        WorkPlan.objects.all().delete()
-        CurriculumReference.objects.all().delete()
-        result = db_service.get_all_curriculum_ref_codes()
-        self.assertEqual(result, [])
-
-
 class IntegrationTests(TestCase):
     """Integration tests for db_service functions"""
 
@@ -378,28 +260,27 @@ class IntegrationTests(TestCase):
 
         self.assertEqual(all_refs['96.15'], ref_by_code.full_text)
 
-    def test_get_all_modules_and_get_module_names_consistency(self):
-        """Test that get_all_modules and get_module_names return consistent data"""
+    def test_get_all_modules_returns_consistent_data(self):
+        """Test that get_all_modules returns consistent data"""
         all_modules = db_service.get_all_modules()
-        module_names = db_service.get_all_module_names()
 
-        # Names from both functions should match
-        names_from_modules = [m['name'] for m in all_modules]
-        self.assertEqual(sorted(names_from_modules), sorted(module_names))
-
-    def test_get_all_refs_and_get_ref_codes_consistency(self):
-        """Test that get_all_refs and get_ref_codes return consistent data"""
-        all_refs = db_service.get_all_curriculum_refs()
-        ref_codes = db_service.get_all_curriculum_ref_codes()
-
-        # Codes from both functions should match
-        self.assertEqual(sorted(all_refs.keys()), sorted(ref_codes))
+        # Verify at least our test modules are present
+        module_names = [m['name'] for m in all_modules]
+        self.assertIn('TEST_INT_MATEMATYKA', module_names)
+        self.assertIn('TEST_INT_JĘZYK', module_names)
 
     def test_multiple_queries_return_same_data(self):
         """Test that multiple calls return consistent data"""
-        result1 = db_service.get_all_module_names()
-        result2 = db_service.get_all_module_names()
-        self.assertEqual(result1, result2)
+        result1 = db_service.get_all_modules()
+        result2 = db_service.get_all_modules()
+
+        # Both calls should return same number of modules
+        self.assertEqual(len(result1), len(result2))
+
+        # Module names should be the same
+        names1 = [m['name'] for m in result1]
+        names2 = [m['name'] for m in result2]
+        self.assertEqual(names1, names2)
 
     def test_database_transaction_isolation(self):
         """Test that functions work correctly with database transactions"""

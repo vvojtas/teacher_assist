@@ -76,37 +76,3 @@ def get_all_modules(ai_suggested: Optional[bool] = None) -> List[Dict[str, Any]]
         }
         for module in query
     ]
-
-
-def get_all_module_names() -> List[str]:
-    """
-    Retrieve just the module names from database (for AI service).
-
-    Returns:
-        List[str]: List of module names (e.g., ["JĘZYK", "MATEMATYKA", ...])
-
-    Raises:
-        Exception: Database query errors propagate to caller
-    """
-    return list(
-        EducationalModule.objects.all()
-        .order_by('module_name')
-        .values_list('module_name', flat=True)
-    )
-
-
-def get_all_curriculum_ref_codes() -> List[str]:
-    """
-    Retrieve just the curriculum reference codes from database (for AI service).
-
-    Returns:
-        List[str]: List of reference codes (e.g., ["1.1", "2.5", "4.15", ...])
-
-    Raises:
-        Exception: Database query errors propagate to caller
-    """
-    return list(
-        CurriculumReference.objects.all()
-        .order_by('reference_code')
-        .values_list('reference_code', flat=True)
-    )
