@@ -1,203 +1,59 @@
-# UI Reference - Visual Design and User Experience
+# UI Interaction Reference
 ## Teacher Assist - Lesson Planner
 
-**Version:** 2.0
-**Date:** 2025-11-21
-**Purpose:** Visual and interaction reference for the lesson planning interface
+**Version:** 1.1
+**Date:** 2025-11-09
+**Purpose:** Quick reference for UI behavior and interaction scenarios
 
 ---
 
 ## Table of Contents
 
-1. [Visual Layout](#visual-layout)
-2. [Table Interface](#table-interface)
-3. [User Actions](#user-actions)
-4. [AI Generation](#ai-generation)
-5. [Feedback and Messages](#feedback-and-messages)
+1. [Page Structure](#page-structure)
+2. [User Interactions](#user-interactions)
+3. [AI Generation](#ai-generation)
+4. [Row Management](#row-management)
+5. [Table Copying](#table-copying)
+6. [Tooltips](#tooltips)
+7. [State Management](#state-management)
+8. [Error Handling](#error-handling)
 
 ---
 
-## Visual Layout
+## Page Structure
 
-### Application Header
-- **Color:** Green gradient header bar (primary green to lighter green)
-- **Title:** "🍎 Teacher Assist - Planowanie Lekcji"
-- **Subtitle:** "Asystent planowania zajęć przedszkolnych z AI"
-- **Background:** Light green gradient background (green-50 via white to green-50)
+### Initial Load
+- **Automatic setup:** 5 empty rows created
+- **Components visible:**
+  - Theme input field (200 char max)
+  - Table with 4 columns: Moduł, Podstawa Programowa, Cele, Aktywność
+  - Action buttons: Wypełnij wszystko AI, Dodaj wiersz, Wyczyść wszystko, Skopiuj tabelę
+  - 3 modals (hidden): Confirmation, Alert, Error
 
-### Main Content Area
-**Container:** Centered, maximum width 1280px with padding
-
-**Top Section - Theme Input:**
-- Large text input field
-- Label: "Motyw tygodnia (opcjonalnie)"
-- Placeholder: "np. Jesień - zbiory, Zwierzęta domowe"
-- Maximum 200 characters
-- Full width, rounded corners
-- Light border, focus highlight
-
-**Action Bar:**
-Row of buttons aligned to the right:
-1. **"Wypełnij wszystko AI"** - Primary action button (green)
-2. **"Dodaj wiersz"** - Secondary button
-3. **"Wyczyść wszystko"** - Danger button (red)
-4. **"Skopiuj tabelę"** - Secondary button
-   - Changes to **"Skopiuj zaznaczone (N)"** when rows are selected
-
-**Progress Bar** (shown during bulk AI generation):
-- Full width bar beneath action buttons
-- Green fill showing percentage (0-100%)
-- Text: "Przetwarzanie... (X/Y)" centered on bar
-- Animated progress fill
-- Auto-hides 2 seconds after completion
+### Table Columns
+| Column | Width | Editable | Purpose |
+|--------|-------|----------|---------|
+| Moduł | 20% | Yes | Educational module name |
+| Podstawa Programowa | 20% | Yes | Curriculum reference codes |
+| Cele | 30% | Yes | Educational objectives (multi-line) |
+| Aktywność | 30% | Yes | Activity description |
 
 ---
 
-## Table Interface
-
-### Table Structure
-
-**Full-width table with 5 columns:**
-
-| Column | Width | Content |
-|--------|-------|---------|
-| ☐ | 40px | Checkbox for selection |
-| **Moduł** | 20% | Educational module name |
-| **Podstawa Programowa** | 20% | Curriculum reference codes |
-| **Cele** | 30% | Educational objectives |
-| **Aktywność** | 30% | Activity description |
-
-### Visual Styling
-
-**Table Appearance:**
-- White background
-- Light gray borders between cells
-- Rounded corners on table container
-- Shadow for depth
-
-**Table Header:**
-- Bold text
-- Gray background (lighter than borders)
-- Sticky header (stays visible when scrolling)
-
-**Table Rows:**
-- Alternating white and very light gray backgrounds (zebra striping)
-- Hover effect: Light green highlight on row hover
-- Minimum height: ~60px per row
-
-### Cell Editing
-
-**Editable Cells (all except checkbox column):**
-- **Visual Cue:** Dashed border appears on focus
-- **Cursor:** Text cursor changes on hover
-- **Behavior:** Click anywhere in cell to edit
-- **Multi-line:** Cells expand vertically as content grows (especially "Cele" and "Aktywność")
-- **Save:** Auto-saves when clicking outside cell (on blur)
-
-**Cell States:**
-- **Empty:** Light gray placeholder text
-- **Filled (manual):** Black text on white background
-- **Filled (AI-generated):** Slightly green-tinted background
-- **Edited after AI:** Returns to white background with subtle indicator
-
-### Row Actions
-
-**Right side of each row shows action buttons:**
-
-**When row is empty or manually filled:**
-- **"Wypełnij AI"** button (magic wand icon ✨)
-  - Green button
-  - Tooltip: "Wygeneruj metadane AI"
-
-**After AI generation:**
-- **"Generuj ponownie"** button (circular arrow icon 🔄)
-  - Blue button
-  - Tooltip: "Generuj ponownie"
-
-**Always visible:**
-- **Delete button** (X icon)
-  - Small, red, on far right
-  - Tooltip: "Usuń wiersz"
-
-**Loading State:**
-- Semi-transparent white overlay on entire row
-- Spinning loader icon in center
-- All buttons disabled
-- Duration: Up to 120 seconds
-
----
-
-## User Actions
+## User Interactions
 
 ### Theme Input
-**What user sees:**
-- Text input at top of page
-- Optional field for weekly theme context
-- Helps AI understand the educational context
-- Cleared only when clicking "Wyczyść wszystko"
-
-**Example themes:**
-- "Jesień - zbiory"
-- "Zwierzęta domowe"
-- "Kolory i kształty"
+- **Location:** Top of page
+- **Optional:** Can be empty
+- **Usage:** Provides context to AI generation
+- **Cleared by:** "Wyczyść wszystko" button only
 
 ### Manual Data Entry
-
-**Direct Editing:**
-1. Click any cell (except checkbox)
-2. Cell border changes to dashed line
-3. Type or paste content
-4. Click outside cell or press Tab to save
-5. Content persists until changed or cleared
-
-**Copy-Paste Friendly:**
-- Can paste multi-line text into "Cele" and "Aktywność"
-- Text wraps naturally
-- Cell height adjusts automatically
-
-### Row Selection
-
-**Checkbox Column:**
-- Checkbox at the start of each row
-- **Unchecked:** Default state
-- **Checked:** Row marked for selective copying
-- **Visual:** Selected rows have light blue background tint
-- **Counter:** Copy button updates to show "Skopiuj zaznaczone (3)"
-
-**Selection Behavior:**
-- Can select any number of rows
-- Selection persists across page (until copy or clear)
-- Auto-uncheck after successful copy
-
-### Bulk Actions
-
-**"Wypełnij wszystko AI":**
-- Finds all rows with:
-  - Activity text entered
-  - No AI-generated metadata yet
-  - No manual edits to metadata
-- Shows progress bar during processing
-- Processes rows sequentially
-- Shows summary when complete
-
-**"Dodaj wiersz":**
-- Adds one blank row at bottom of table
-- No limit on row count
-- Row appears immediately
-
-**"Wyczyść wszystko":**
-- Shows confirmation dialog (see Modals below)
-- If confirmed: Removes all rows, adds 5 empty rows, clears theme
-- Cannot be undone
-
-**"Skopiuj tabelę" / "Skopiuj zaznaczone (N)":**
-- Copies table to clipboard in two formats:
-  - HTML (for pasting into Google Docs with formatting)
-  - TSV (for pasting into Excel/Sheets)
-- If no selection: Copies entire table with headers
-- If rows selected: Copies only selected rows without headers
-- Shows success message
-- Auto-uncheck selected rows after copy
+All table cells are editable (React EditableCell components):
+1. Click any cell to edit
+2. Type content directly
+3. Content auto-saves on blur
+4. Editing AI-generated metadata sets `userEdited=true` flag
 
 ---
 
@@ -205,236 +61,248 @@ Row of buttons aligned to the right:
 
 ### Single Row Generation
 
-**Visual Flow:**
-1. User clicks **"Wypełnij AI"** button on a row
-2. If manual data exists → Confirmation modal appears
-3. Row shows loading overlay (white semi-transparent with spinner)
-4. AI fills three columns:
-   - **Moduł:** e.g., "MATEMATYKA"
-   - **Podstawa Programowa:** e.g., "4.15, 4.18"
-   - **Cele:** Multi-line objectives (2-3 items)
-5. Loading overlay disappears
-6. Button changes to **"Generuj ponownie"**
-7. Filled cells show subtle green tint
+**Trigger:** Click "Wypełnij AI" button (magic wand icon) on row
 
-**Time:** Usually 2-5 seconds per row, maximum 120 seconds
+**Process:**
+1. Validates activity field not empty
+2. Checks for existing manual data entries → confirmation if present
+3. Makes POST request to `/api/fill-work-plan/`
+4. Shows loading overlay on row (120s timeout)
+5. Populates: module, curriculum_refs, objectives
+6. Switches button to "Generuj ponownie"
 
-### Bulk Generation
+**API Request:**
+```json
+{
+  "activity": "Zabawa w sklep z owocami",
+  "theme": "Jesień - zbiory"  // optional
+}
+```
 
-**Visual Flow:**
-1. User clicks **"Wypełnij wszystko AI"**
-2. If no eligible rows → Alert: "Brak nowych aktywności do przetworzenia..."
-3. Progress bar appears: "Przetwarzanie... (0/5)"
-4. Each eligible row gets loading overlay
-5. Progress bar updates: "Przetwarzanie... (1/5)", "Przetwarzanie... (2/5)"
-6. Loading overlay disappears from each row as completed
-7. Final progress: "Ukończono: 5/5"
-8. Progress bar auto-hides after 2 seconds
-9. If any failures → Error modal with summary
-
-**Eligible Rows:**
-- Has activity text
-- No AI-generated metadata yet
-- No manual edits to metadata fields
+**API Response:**
+```json
+{
+  "module": "MATEMATYKA",
+  "curriculum_refs": ["4.15", "4.18"],
+  "objectives": ["Dziecko potrafi przeliczać...", "Rozpoznaje cyfry..."]
+}
+```
 
 ### Regeneration
 
-**Visual Flow:**
-1. User clicks **"Generuj ponownie"**
-2. If user edited the row → Confirmation modal
-3. Same loading and generation process as initial generation
-4. New AI content replaces old content
+**Trigger:** Click "Generuj ponownie" button (circular arrow icon)
 
-**Use Case:** When user wants different AI suggestions
+**Behavior:**
+- If `userEdited=true` → confirmation modal: "Wiersz był zmodyfikowany. Nadpisać dane wprowadzone przez użytkownika?"
+- If `userEdited=false` → regenerate immediately
+- Resets `userEdited` flag to false after regeneration
+
+### Bulk Generation
+
+**Trigger:** Click "Wypełnij wszystko AI" button
+
+**Row Selection Criteria (ALL must be true):**
+- ✅ Has activity text
+- ✅ `aiGenerated = false`
+- ✅ `userEdited = false`
+- ✅ All metadata fields empty
+
+**Process:**
+1. Filters eligible rows
+2. If none → alert: "Brak nowych aktywności do przetworzenia..."
+3. Shows progress bar: "Przetwarzanie... (X/Y)"
+4. Processes rows sequentially
+5. Updates progress in real-time
+6. Shows summary on completion
+
+**Error Handling:**
+- Continues on individual failures
+- Displays summary modal with failed rows
+- Format: "Przetworzono pomyślnie: X/Y\n\nNieudane wiersze (Z): ..."
 
 ---
 
-## Feedback and Messages
+## Row Management
 
-### Tooltips
+### Add Row
+- **Button:** "Dodaj wiersz"
+- **Action:** Appends 1 empty row to table bottom
+- **No limit** on row count
 
-**Curriculum Reference Tooltips:**
-- **Trigger:** Hover mouse over "Podstawa Programowa" cell for 300ms
-- **Appearance:**
-  - Floating box above or below cell
-  - Dark background, white text
-  - Rounded corners, subtle shadow
-  - Maximum width 400px
-- **Content:** Full Polish text for each curriculum code
-  - Example: "4.15: przelicza elementy zbiorów w czasie zabawy..."
-  - Multiple codes shown in one tooltip with line breaks
-- **Hide:** Mouse leaves cell (immediate)
+### Delete Row
+- **Button:** X icon on each row
+- **Action:** Immediate deletion (no confirmation)
+- **Warning:** Cannot be undone
 
-**Button Tooltips:**
-- **Trigger:** Hover mouse over button for 500ms
-- **Appearance:** Small dark tooltip below button
-- **Examples:**
-  - "Wygeneruj metadane AI"
-  - "Generuj ponownie"
-  - "Usuń wiersz"
+### Clear All
+- **Button:** "Wyczyść wszystko"
+- **Action:** Confirmation → removes all rows, resets to 5 empty rows, clears theme
+- **Confirmation:** "Czy na pewno chcesz wyczyść wszystkie wiersze?"
 
-### Modals (Dialog Boxes)
+---
 
-**Visual Style:**
-- Centered on screen
-- White background
-- Rounded corners
-- Semi-transparent dark overlay behind
-- Cannot click outside to close (must use buttons)
+## Table Copying
 
-**Confirmation Modal:**
-- **Icon:** ⚠️ (warning triangle)
-- **Title:** "Potwierdzenie"
-- **Message:** Specific to action (see messages below)
-- **Buttons:**
-  - "Anuluj" (gray, left)
-  - "Potwierdź" (blue, right)
+### Copy Entire Table
+**Trigger:** Click "Skopiuj tabelę" with no rows selected
 
-**Alert/Info Modal:**
-- **Icon:** ℹ️ (info circle)
-- **Title:** "Informacja"
-- **Message:** Success or informational message
-- **Button:** "OK" (blue, centered)
+**Format:**
+- **HTML:** Styled table with borders (for Google Docs)
+- **TSV:** Tab-separated values (for Excel/Sheets)
+- **Includes:** Column headers + all rows
 
-**Error Modal:**
-- **Icon:** ❌ (red X)
-- **Title:** "Błąd"
-- **Message:** Error description in Polish
-- **Button:** "OK" (blue, centered)
-- **Content:** Can be multi-line for bulk error summaries
+**Message:** "Skopiowano całą tabelę (N wierszy) do schowka."
 
-### Modal Messages
+### Copy Selected Rows
+**Trigger:** Check row checkboxes → button shows "Skopiuj zaznaczone (N)"
 
-**Confirmation Messages:**
+**Format:**
+- **HTML + TSV:** Both formats
+- **Excludes:** Headers (for pasting into existing tables)
+
+**Post-copy:** All checkboxes automatically unchecked
+
+### Checkbox Behavior
+- **Location:** Next to each row's buttons
+- **Effect:** Updates copy button label dynamically
+- **Count:** "Skopiuj zaznaczone (N)" or "Skopiuj tabelę"
+
+---
+
+## Tooltips
+
+### Curriculum Reference Tooltips
+**Trigger:** Hover over Podstawa Programowa cell
+
+**Pattern Match:** `\d+\.\d+` (e.g., "4.15", "12.3")
+
+**Behavior:**
+1. 300ms hover delay before showing
+2. Fetches from `/api/curriculum-refs/{code}/`
+3. Caches result (per session)
+4. Displays above/below cell (auto-positioned)
+5. Hides on mouse leave (immediate)
+
+**Multiple Codes:**
+- Extracts all codes from cell (e.g., "4.15, 4.18")
+- Fetches all in parallel
+- Displays all in one tooltip:
+  ```
+  4.15: Dziecko potrafi przeliczać...
+
+  4.18: Dziecko rozpoznaje cyfry...
+  ```
+
+**Timeout:** 10 seconds per fetch
+**Fallback:** "Nie znaleziono opisu dla kodu: X"
+
+---
+
+## State Management
+
+### Row State (per row)
+Managed by React hooks (useTableManager):
+```javascript
+{
+  module: '',
+  curriculum: '',
+  objectives: '',
+  activity: '',
+  aiGenerated: false,    // Controls button visibility
+  userEdited: false      // Controls regenerate confirmation
+}
+```
+
+### State Transitions
+| Initial | After AI Gen | After User Edit (Post AI gen) | After Regenerate |
+|---------|--------------|-------------------------------|------------------|
+| `ai=false, edit=false` | `ai=true, edit=false` | `ai=true, edit=true` | `ai=true, edit=false` |
+
+### Button Display Logic
+| State | Generate Button | Regenerate Button |
+|-------|----------------|-------------------|
+| `aiGenerated=false` | ✅ Shown | ❌ Hidden |
+| `aiGenerated=true` | ❌ Hidden | ✅ Shown |
+
+### Session Persistence
+**MVP Limitation:** No persistence
+- All data lost on page reload
+- No localStorage or backend save
+- Theme, rows, and states all in memory only
+
+---
+
+## Error Handling
+
+### Error Types & Messages
+
+| Error Type | User Message (Polish) |
+|------------|----------------------|
+| Network error | "Nie można połączyć z usługą AI. Sprawdź połączenie internetowe." |
+| Timeout (120s) | "Żądanie przekroczyło limit czasu (120s). Spróbuj ponownie." |
+| Server error (500) | Server's error message from JSON response |
+| Empty activity | "Pole 'Aktywność' nie może być puste." |
+| Clipboard failure | "Nie udało się skopiować do schowka. Spróbuj ponownie." |
+
+### Loading States
+
+**Single Row:**
+- Row overlay + spinner
+- All row buttons disabled
+- Max duration: 120s
+
+**Bulk Operation:**
+- Progress bar (0-100%)
+- Progress text: "Przetwarzanie... (X/Y)"
+- Bulk button disabled + spinner
+- Individual row overlays
+
+### Confirmation Dialogs
+
 | Situation | Message |
 |-----------|---------|
 | Clear all | "Czy na pewno chcesz wyczyść wszystkie wiersze?" |
-| Overwrite manual data | "Wiersz zawiera dane wprowadzone ręcznie. Nadpisać dane AI?" |
+| Generate over manual data | "Wiersz zawiera dane wprowadzone ręcznie. Nadpisać dane AI?" |
 | Regenerate edited row | "Wiersz był zmodyfikowany. Nadpisać dane wprowadzone przez użytkownika?" |
 
-**Success Messages:**
-| Situation | Message |
-|-----------|---------|
-| Copied all rows | "Skopiowano całą tabelę (5 wierszy) do schowka." |
-| Copied selected rows | "Skopiowano 3 zaznaczone wiersze do schowka." |
-| No rows to process | "Brak nowych aktywności do przetworzenia. Wszystkie wiersze są już wypełnione lub puste." |
+---
 
-**Error Messages:**
-| Error Type | Message |
-|------------|---------|
-| Empty activity field | "Pole 'Aktywność' nie może być puste." |
-| Network error | "Nie można połączyć z usługą AI. Sprawdź połączenie internetowe." |
-| Timeout | "Żądanie przekroczyło limit czasu (120s). Spróbuj ponownie." |
-| Clipboard error | "Nie udało się skopiować do schowka. Spróbuj ponownie." |
+## Quick Reference: API Endpoints
 
-**Bulk Error Summary:**
-```
-Przetworzono pomyślnie: 3/5
-
-Nieudane wiersze (2):
-
-• Zabawa w sklep z owocami...
-  Błąd: Nie można połączyć z usługą AI
-
-• Malowanie jesiennych liści...
-  Błąd: Żądanie przekroczyło limit czasu
-```
-
-### Progress Indicators
-
-**Single Row Loading:**
-- White semi-transparent overlay over entire row
-- Spinning loader icon in center of row
-- All row buttons disabled
-- Row height maintained
-
-**Bulk Loading:**
-- Green progress bar below action buttons
-- Percentage fill (0-100%)
-- Text centered: "Przetwarzanie... (3/7)"
-- Each row also shows individual loading overlay
-
-**Loading Animation:**
-- Smooth, continuous spinning
-- Color: Green to match theme
-- Size: Medium (32px icon)
+| Endpoint | Method | Purpose | Timeout |
+|----------|--------|---------|---------|
+| `/api/fill-work-plan/` | POST | Generate metadata for activity | 120s |
+| `/api/curriculum-refs/{code}/` | GET | Get curriculum full text | 10s |
 
 ---
 
-## Color Palette Reference
+## Quick Reference: All User Actions
 
-**Primary Colors:**
-- **Header gradient:** Green (#059669) to light green (#10b981)
-- **Background:** Very light green (#f0fdf4) with white
-- **Primary buttons:** Green (#16a34a)
-- **Hover state:** Darker green (#15803d)
-
-**Secondary Colors:**
-- **Secondary buttons:** Gray (#6b7280)
-- **Danger button:** Red (#dc2626)
-- **Info/blue:** Blue (#3b82f6)
-
-**Table Colors:**
-- **Border:** Light gray (#e5e7eb)
-- **Zebra striping:** White / very light gray (#f9fafb)
-- **Hover:** Very light green (#f0fdf4)
-- **AI-generated background:** Light green tint (#ecfdf5)
-
-**Text Colors:**
-- **Primary:** Black (#0f172a)
-- **Secondary:** Gray (#64748b)
-- **Placeholder:** Light gray (#94a3b8)
+| Action | Trigger | Result |
+|--------|---------|--------|
+| Enter theme | Type in theme input | Context for AI |
+| Edit cell | Click + type | Content saved |
+| Generate AI | Click "Wypełnij AI" | Metadata populated |
+| Regenerate | Click "Generuj ponownie" | Fresh AI metadata |
+| Bulk generate | Click "Wypełnij wszystko AI" | Process all eligible rows |
+| Add row | Click "Dodaj wiersz" | New empty row |
+| Delete row | Click X icon | Row removed |
+| Clear all | Click "Wyczyść wszystko" | Reset to 5 empty rows |
+| Copy table | Click "Skopiuj tabelę" | Table → clipboard |
+| Select rows | Check checkboxes | Mark for selective copy |
+| View tooltip | Hover curriculum cell 300ms | Show curriculum text |
 
 ---
 
-## Responsive Behavior
+## Browser Requirements
 
-**Desktop (1280px+):**
-- Full table visible
-- All columns comfortable width
-- Action buttons spread out
+- **React 18:** Single-page application framework
+- **Clipboard API:** `navigator.clipboard.write()`
+- **Fetch API:** AJAX requests
+- **ContentEditable:** Editable cells
+- **Modern JS:** ES6+ (const, let, async/await)
 
-**Tablet (768px - 1279px):**
-- Table takes full width
-- Slightly narrower columns
-- Action buttons closer together
-
-**Mobile (< 768px):**
-- Table scrolls horizontally
-- Fixed action buttons at top
-- One row at a time visible (vertical scrolling)
-
----
-
-## Keyboard Navigation
-
-**Tab Order:**
-1. Theme input
-2. Action buttons (left to right)
-3. Table cells (left to right, top to bottom)
-4. Checkboxes and action buttons per row
-
-**Shortcuts:**
-- **Tab:** Move to next cell
-- **Shift+Tab:** Move to previous cell
-- **Enter:** Same as Tab when in cell
-- **Escape:** Cancel cell edit (restore original value)
-
----
-
-## Initial State
-
-**On Page Load:**
-- 5 empty rows displayed
-- Theme input empty
-- No checkboxes selected
-- All cells empty with light gray placeholders:
-  - Moduł: "np. MATEMATYKA"
-  - Podstawa Programowa: "np. 4.15, 4.18"
-  - Cele: "np. Dziecko potrafi..."
-  - Aktywność: "Wprowadź opis aktywności"
-- Copy button shows "Skopiuj tabelę"
-- All "Wypełnij AI" buttons visible
+**Supported:** Chrome/Edge 90+, Firefox 90+, Safari 14+
 
 ---
 
@@ -444,7 +312,7 @@ Nieudane wiersze (2):
 |---------|------|---------|
 | 1.0 | 2025-11-09 | Initial comprehensive documentation |
 | 1.1 | 2025-11-09 | Condensed to quick reference format |
-| 2.0 | 2025-11-21 | Refocused on visual design and user experience |
+| 1.2 | 2025-11-21 | Updated to reflect React implementation |
 
 ---
 
