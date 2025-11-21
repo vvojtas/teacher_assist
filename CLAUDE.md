@@ -169,7 +169,6 @@ start.bat
 ### Quick Reference
 
 - **AI Endpoint:** `POST http://localhost:8001/api/fill-work-plan`
-- **Implementation:** MockAIService (returns random data from database)
 - **LLM Gateway:** OpenRouter (for model flexibility)
 - **Budget:** ~$1/month (use cost-effective models)
 - **Timeout:** 120 seconds
@@ -252,7 +251,7 @@ This is a **training project** for learning:
 - Django web framework
 - React + TypeScript frontend development
 - LangGraph AI integration
-- 
+
 Keep implementations educational and well-commented where appropriate.
 
 ## Settings Notes
