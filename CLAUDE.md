@@ -9,8 +9,7 @@ Teacher Assist is a Django-based web application designed to help Polish kinderg
 **Key characteristics:**
 - Interface and AI responses are in Polish
 - MVP focused on local deployment (no user authentication)
-- Single-page application with React + TypeScript frontend
-- Django REST API backend
+- Single-page application with tabular data display
 - Designed for easy copying to Google Docs
 - **Training project:** This project serves as a learning opportunity for Claude Code, Django, React, and LangGraph
 
@@ -19,7 +18,7 @@ Teacher Assist is a Django-based web application designed to help Polish kinderg
 - **Web Framework**: Django 5.2.7
 - **Frontend**: React 18 + TypeScript 5 + Vite + Tailwind CSS
 - **Database**: SQLite (development)
-- **AI Backend**: Python + MockAIService (LangGraph planned for future)
+- **AI Backend**: Python + LangGraph
 - **Language**: Python 3.12+
 
 ## Project Structure
@@ -35,22 +34,11 @@ teacher_assist/
 │   └── ui.md                  # UI interaction reference (React)
 ├── common/                     # Shared Pydantic models
 │   └── models.py              # Request/response models for API
-├── ai_service/                 # FastAPI AI service (mock implementation)
-│   ├── main.py                # FastAPI application entry point
-│   ├── mock_service.py        # Mock AI metadata generator
-│   └── db_client.py           # Database client for AI service
+├── ai_service/                 # FastAPI AI service
 ├── webserver/                  # Django project root
 │   ├── manage.py              # Django management script
 │   ├── teachertools/          # Main Django project configuration
-│   │   ├── settings.py        # Project settings
-│   │   ├── urls.py            # Root URL configuration
-│   │   └── wsgi.py/asgi.py    # WSGI/ASGI application
 │   └── lessonplanner/         # Main Django app
-│       ├── models.py          # Django database models
-│       ├── views.py           # API endpoints
-│       ├── urls.py            # URL routing
-│       ├── services/          # Business logic
-│       ├── fixtures/          # Mock data (mock_data.py)
 │       ├── frontend/          # React + TypeScript frontend
 │       │   ├── src/           # React source files
 │       │   ├── dist/          # Vite build output
@@ -128,7 +116,7 @@ npm run test:coverage # With coverage report
 
 ### AI Service
 
-**Start AI service (mock implementation):**
+**Start AI service:**
 ```bash
 python ai_service/main.py
 # Runs on http://localhost:8001
@@ -138,16 +126,11 @@ python ai_service/main.py
 
 **See [docs/PRD.md](docs/PRD.md) for detailed product requirements, user stories, and functional specifications.**
 
-Quick summary: Single-page React application for lesson planning with AI-powered autofill of educational metadata (modules, curriculum references, objectives) based on teacher-entered activities. Interface in Polish, designed for easy copying to Google Docs.
+Quick summary: Single-page table interface for lesson planning with AI-powered autofill of educational metadata (modules, curriculum references, objectives) based on teacher-entered activities. Interface in Polish, designed for easy copying to Google Docs.
 
 ## AI Integration Architecture
 
-**Two-Process Design:** Django web server (port 8000) + AI service (port 8001) communicating via REST API.
-
-**Current Status:**
-- ✅ FastAPI AI service implemented (mock)
-- ❌ LangGraph integration (planned for future)
-- ❌ OpenRouter LLM gateway (planned for future)
+**Two-Process Design:** Django web server (port 8000) + LangGraph AI service (port 8001) communicating via REST API.
 
 **See API Documentation:**
 - [docs/ai_api.md](docs/ai_api.md) - AI Service REST API specification
@@ -156,7 +139,7 @@ Quick summary: Single-page React application for lesson planning with AI-powered
 
 ### Starting Both Services
 
-**Terminal 1 - AI Service (Mock):**
+**Terminal 1 - LangGraph Service:**
 ```bash
 python ai_service/main.py
 # Runs on http://localhost:8001
@@ -182,8 +165,8 @@ start.bat
 
 - **AI Endpoint:** `POST http://localhost:8001/api/fill-work-plan`
 - **Implementation:** MockAIService (returns random data from database)
-- **LLM Gateway:** OpenRouter (planned - not yet implemented)
-- **Budget:** ~$1/month (use cost-effective models when implemented)
+- **LLM Gateway:** OpenRouter (for model flexibility)
+- **Budget:** ~$1/month (use cost-effective models)
 - **Timeout:** 120 seconds
 - **Language:** Polish (UI and AI responses)
 
@@ -198,7 +181,7 @@ start.bat
 
 **See [docs/db_schema.md](docs/db_schema.md) for database schema details.**
 
-**Note:** MVP has no data persistence for lesson plans (session-only in React state). Future phases will add save/load functionality using existing WorkPlan and WorkPlanEntry models.
+**Note:** MVP has no data persistence for lesson plans (session-only). Future phases will add save/load functionality using existing WorkPlan and WorkPlanEntry models.
 
 ## Git Workflow
 
@@ -263,8 +246,8 @@ This is a **training project** for learning:
 - Claude Code capabilities and workflows
 - Django web framework
 - React + TypeScript frontend development
-- LangGraph AI integration (planned)
-
+- LangGraph AI integration
+- 
 Keep implementations educational and well-commented where appropriate.
 
 ## Settings Notes
