@@ -122,6 +122,11 @@ python ai_service/main.py
 # Runs on http://localhost:8001
 ```
 
+**Run tests:**
+```bash
+pytest ai_service/tests/
+```
+
 ## Application Requirements
 
 **See [docs/PRD.md](docs/PRD.md) for detailed product requirements, user stories, and functional specifications.**
