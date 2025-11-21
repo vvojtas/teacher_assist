@@ -49,7 +49,7 @@
 - **Cleared by:** "Wyczyść wszystko" button only
 
 ### Manual Data Entry
-All table cells are contenteditable:
+All table cells are editable (React EditableCell components):
 1. Click any cell to edit
 2. Type content directly
 3. Content auto-saves on blur
@@ -201,6 +201,7 @@ All table cells are contenteditable:
 ## State Management
 
 ### Row State (per row)
+Managed by React hooks (useTableManager):
 ```javascript
 {
   module: '',
@@ -295,12 +296,11 @@ All table cells are contenteditable:
 
 ## Browser Requirements
 
+- **React 18:** Single-page application framework
 - **Clipboard API:** `navigator.clipboard.write()`
 - **Fetch API:** AJAX requests
 - **ContentEditable:** Editable cells
-- **Template Element:** Row cloning
-- **Modern JS:** ES6+ (const, let, async/await, Maps)
-- **Bootstrap 5:** Modals and styling
+- **Modern JS:** ES6+ (const, let, async/await)
 
 **Supported:** Chrome/Edge 90+, Firefox 90+, Safari 14+
 
@@ -312,6 +312,7 @@ All table cells are contenteditable:
 |---------|------|---------|
 | 1.0 | 2025-11-09 | Initial comprehensive documentation |
 | 1.1 | 2025-11-09 | Condensed to quick reference format |
+| 1.2 | 2025-11-21 | Updated to reflect React implementation |
 
 ---
 
