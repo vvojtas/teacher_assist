@@ -1,6 +1,6 @@
 # Teacher Assist - Django Web Server
 
-Django web application serving as the frontend and main interface for Teacher Assist.
+Django web application serving as the backend and hosting the React frontend for Teacher Assist.
 
 ## Quick Setup
 
@@ -21,22 +21,30 @@ webserver/
 │   ├── settings.py
 │   ├── urls.py
 │   └── wsgi.py/asgi.py
-├── lessonplanner/              # Lesson planning app (main app)
-│   ├── models.py               # Database models
-│   ├── views.py                # View functions & API endpoints
-│   ├── urls.py                 # App URL configuration
-│   ├── migrations/             # Database migrations
-│   ├── package.json            # JavaScript dependencies (Jest)
-│   ├── static/lessonplanner/   # Static assets
-│   │   ├── css/                # Stylesheets
-│   │   └── js/                 # JavaScript modules & tests
-│   └── templates/              # Django templates
-└── hello/                      # Example Django app (placeholder)
+└── lessonplanner/              # Lesson planning app (main app)
+    ├── models.py               # Database models
+    ├── views.py                # View functions & API endpoints
+    ├── urls.py                 # App URL configuration
+    ├── migrations/             # Database migrations
+    ├── fixtures/               # Mock data (mock_data.py)
+    ├── services/               # Business logic layer
+    │   ├── ai_client.py        # HTTP client for AI service
+    │   └── db_service.py       # Database query service
+    ├── frontend/               # React + TypeScript frontend
+    │   ├── src/                # React source files
+    │   ├── dist/               # Vite build output (git-ignored)
+    │   ├── package.json        # JavaScript dependencies (Vitest)
+    │   ├── vite.config.ts      # Vite configuration
+    │   └── README.md           # Frontend documentation
+    ├── templates/              # Django templates
+    │   └── lessonplanner/
+    │       └── index.html      # Main template (loads React build)
+    └── tests.py                # Python tests
 ```
 
 ## Django Apps
 
-**lessonplanner:** Monthly lesson planning interface for Polish kindergarten teachers. Single-page table UI with AI-powered metadata generation. Uses vanilla JavaScript with modular architecture (TableManager, AIService). Includes Jest-based tests for both Python and JavaScript.
+**lessonplanner:** Monthly lesson planning interface for Polish kindergarten teachers. Single-page React application with AI-powered metadata generation. Backend provides REST API endpoints. Frontend built with React + TypeScript + Tailwind CSS + Vite. Includes Vitest-based frontend tests and pytest-based backend tests.
 
 
 ## Essential Commands
@@ -85,7 +93,7 @@ csrf_token = session.cookies['csrftoken']
 
 # 2. Make API request with CSRF token
 response = session.post(
-    'http://localhost:8000/api/fill-work-plan',
+    'http://localhost:8000/api/fill-work-plan/',
     json={
         'activity': 'Test activity',
         'theme': 'Test theme'
@@ -107,7 +115,7 @@ curl -c cookies.txt http://localhost:8000/
 CSRF_TOKEN=$(grep csrftoken cookies.txt | cut -f7)
 
 # 3. Make API request
-curl -X POST http://localhost:8000/api/fill-work-plan \
+curl -X POST http://localhost:8000/api/fill-work-plan/ \
   -H "Content-Type: application/json" \
   -H "X-CSRFToken: $CSRF_TOKEN" \
   -b cookies.txt \
@@ -119,26 +127,49 @@ rm cookies.txt
 
 #### Available Endpoints
 
-- `POST /api/fill-work-plan` - Generate metadata for single activity
-- `GET /api/curriculum-refs/<code>` - Get curriculum text for tooltip (no CSRF needed)
-- `GET /api/curriculum-refs` - Get all curriculum references (no CSRF needed)
-- `GET /api/modules` - Get educational modules (no CSRF needed)
+- `POST /api/fill-work-plan/` - Generate metadata for single activity
+- `GET /api/curriculum-refs/<code>/` - Get curriculum text for tooltip (no CSRF needed)
+- `GET /api/curriculum-refs/` - Get all curriculum references (no CSRF needed)
+- `GET /api/modules/` - Get educational modules (no CSRF needed)
 
 **Note:** GET endpoints do not require CSRF tokens, only POST endpoints do.
-**Note:** Bulk operations are handled by the frontend making sequential calls to `/api/fill-work-plan`.
+**Note:** Bulk operations are handled by the frontend making sequential calls to `/api/fill-work-plan/`.
 
-### JavaScript Tests
+### Frontend Development
 
-The `lessonplanner` app includes JavaScript functionality with Jest-based tests.
+The `lessonplanner` app includes a React + TypeScript frontend built with Vite.
 
+**Development:**
 ```bash
-cd lessonplanner                        # Navigate to lessonplanner app
-npm install                             # Install JS dependencies (first time only)
-npm test                                # Run JavaScript tests
-npm run test:coverage                   # Run with coverage report
+cd lessonplanner/frontend           # Navigate to frontend directory
+npm install                          # Install JS dependencies (first time only)
+npm run dev                          # Start Vite dev server (port 5173)
 ```
 
-**Details:** See [lessonplanner/static/lessonplanner/js/__tests__/README.md](lessonplanner/static/lessonplanner/js/__tests__/README.md)
+**Production Build:**
+```bash
+cd lessonplanner/frontend
+npm run build                        # Build to frontend/dist/
+./build-and-update.sh                # Build and copy assets to Django static
+```
+
+**Testing:**
+```bash
+cd lessonplanner/frontend
+npm test                             # Run Vitest tests in watch mode
+npm run test:run                     # Run tests once
+npm run test:coverage                # Run with coverage report
+npm run test:ui                      # Open Vitest UI
+```
+
+**Frontend Details:** See [lessonplanner/frontend/README.md](lessonplanner/frontend/README.md)
+
+**Technology Stack:**
+- React 18 with TypeScript
+- Vite for build tooling
+- Tailwind CSS for styling
+- shadcn/ui for components
+- Vitest for testing
 
 ## Configuration
 
@@ -158,7 +189,37 @@ DEBUG=True
 
 The SQLite database (`db.sqlite3`) is **intentionally committed to git** for portability with pre-populated curriculum data.
 
-**Schema details:** See [../docs/PRD.md](../docs/PRD.md) Section 7.5
+**Schema details:** See [../docs/db_schema.md](../docs/db_schema.md)
+**Database initialization:** See [../docs/db_init.md](../docs/db_init.md)
+
+## Static Files
+
+### Django Static Files System
+
+**Static files location:**
+- Frontend build output: `lessonplanner/frontend/dist/` (git-ignored)
+- Django serves from: Copied to Django's `collectstatic` or referenced directly
+
+**Django template:**
+- `templates/lessonplanner/index.html` loads React build assets
+
+**Build process:**
+```bash
+cd lessonplanner/frontend
+npm run build                    # Build React app → dist/
+./build-and-update.sh            # Update Django template with new hashes
+```
+
+The build script updates the Django template with correct asset hashes from Vite's build manifest.
+
+### Static Files in Development
+
+Django's development server automatically serves static files from app directories when `DEBUG=True`.
+
+For production deployment, run:
+```bash
+python manage.py collectstatic
+```
 
 ## Creating Django Apps
 
@@ -176,7 +237,7 @@ python manage.py startapp app_name
 ## Templates and Static Files
 
 **Templates:** `app_name/templates/app_name/template.html`
-**Static files:** `app_name/static/app_name/file.css`
+**Static files:** `app_name/static/app_name/file.css` (or use frontend/ for React apps)
 
 Load in templates:
 ```html
@@ -207,9 +268,18 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
+**Frontend build errors:**
+```bash
+cd lessonplanner/frontend
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+```
+
 ## Resources
 
 - [Django Documentation](https://docs.djangoproject.com/)
 - [Django Tutorial](https://docs.djangoproject.com/en/5.2/intro/tutorial01/)
 - Project PRD: [../docs/PRD.md](../docs/PRD.md)
 - Main README: [../README.md](../README.md)
+- Frontend README: [lessonplanner/frontend/README.md](lessonplanner/frontend/README.md)

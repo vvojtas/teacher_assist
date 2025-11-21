@@ -9,15 +9,17 @@ Teacher Assist is a Django-based web application designed to help Polish kinderg
 **Key characteristics:**
 - Interface and AI responses are in Polish
 - MVP focused on local deployment (no user authentication)
-- Single-page application with tabular data display
+- Single-page application with React + TypeScript frontend
+- Django REST API backend
 - Designed for easy copying to Google Docs
-- **Training project:** This project serves as a learning opportunity for Claude Code, Django, and LangGraph
+- **Training project:** This project serves as a learning opportunity for Claude Code, Django, React, and LangGraph
 
 ## Technology Stack
 
 - **Web Framework**: Django 5.2.7
+- **Frontend**: React 18 + TypeScript 5 + Vite + Tailwind CSS
 - **Database**: SQLite (development)
-- **AI Backend**: Python + LangGraph (planned integration)
+- **AI Backend**: Python + MockAIService (LangGraph planned for future)
 - **Language**: Python 3.12+
 
 ## Project Structure
@@ -25,18 +27,43 @@ Teacher Assist is a Django-based web application designed to help Polish kinderg
 ```
 teacher_assist/
 ├── docs/
-│   └── PRD.md                 # Product Requirements Document
+│   ├── PRD.md                 # Product Requirements Document
+│   ├── ai_api.md              # AI Service REST API specification
+│   ├── django_api.md          # Django Backend API specification
+│   ├── db_schema.md           # Database schema documentation
+│   ├── db_init.md             # Database initialization guide
+│   └── ui.md                  # UI interaction reference (React)
+├── common/                     # Shared Pydantic models
+│   └── models.py              # Request/response models for API
+├── ai_service/                 # FastAPI AI service (mock implementation)
+│   ├── main.py                # FastAPI application entry point
+│   ├── mock_service.py        # Mock AI metadata generator
+│   └── db_client.py           # Database client for AI service
 ├── webserver/                  # Django project root
 │   ├── manage.py              # Django management script
 │   ├── teachertools/          # Main Django project configuration
 │   │   ├── settings.py        # Project settings
 │   │   ├── urls.py            # Root URL configuration
-│   │   ├── wsgi.py/asgi.py    # WSGI/ASGI application
-│   └── hello/                 # Example Django app (placeholder)
+│   │   └── wsgi.py/asgi.py    # WSGI/ASGI application
+│   └── lessonplanner/         # Main Django app
+│       ├── models.py          # Django database models
+│       ├── views.py           # API endpoints
+│       ├── urls.py            # URL routing
+│       ├── services/          # Business logic
+│       ├── fixtures/          # Mock data (mock_data.py)
+│       ├── frontend/          # React + TypeScript frontend
+│       │   ├── src/           # React source files
+│       │   ├── dist/          # Vite build output
+│       │   └── package.json   # JavaScript dependencies
+│       └── templates/         # Django templates
+│           └── lessonplanner/
+│               └── index.html # Loads React build
 └── CLAUDE.md                  # This file
 ```
 
 ## Development Commands
+
+### Django Backend
 
 All Django commands should be run from the `webserver/` directory.
 
@@ -71,15 +98,56 @@ cd webserver
 python manage.py shell
 ```
 
+### React Frontend
+
+Frontend development commands from `webserver/lessonplanner/frontend/`:
+
+**Install dependencies:**
+```bash
+cd webserver/lessonplanner/frontend
+npm install
+```
+
+**Development server (with hot reload):**
+```bash
+npm run dev  # Runs on http://localhost:5173
+```
+
+**Production build:**
+```bash
+npm run build  # Outputs to frontend/dist/
+./build-and-update.sh  # Build and update Django template
+```
+
+**Run tests:**
+```bash
+npm test              # Vitest in watch mode
+npm run test:run      # Run tests once
+npm run test:coverage # With coverage report
+```
+
+### AI Service
+
+**Start AI service (mock implementation):**
+```bash
+python ai_service/main.py
+# Runs on http://localhost:8001
+```
+
 ## Application Requirements
 
 **See [docs/PRD.md](docs/PRD.md) for detailed product requirements, user stories, and functional specifications.**
 
-Quick summary: Single-page table interface for lesson planning with AI-powered autofill of educational metadata (modules, curriculum references, objectives) based on teacher-entered activities. Interface in Polish, designed for easy copying to Google Docs.
+Quick summary: Single-page React application for lesson planning with AI-powered autofill of educational metadata (modules, curriculum references, objectives) based on teacher-entered activities. Interface in Polish, designed for easy copying to Google Docs.
 
 ## AI Integration Architecture
 
-**Two-Process Design:** Django web server (port 8000) + LangGraph AI service (port 8001) communicating via REST API.
+**Two-Process Design:** Django web server (port 8000) + AI service (port 8001) communicating via REST API.
+
+**Current Status:**
+- ✅ FastAPI AI service implemented (mock)
+- ❌ LangGraph integration (planned for future)
+- ❌ OpenRouter LLM gateway (planned for future)
 
 **See API Documentation:**
 - [docs/ai_api.md](docs/ai_api.md) - AI Service REST API specification
@@ -88,7 +156,7 @@ Quick summary: Single-page table interface for lesson planning with AI-powered a
 
 ### Starting Both Services
 
-**Terminal 1 - LangGraph Service:**
+**Terminal 1 - AI Service (Mock):**
 ```bash
 python ai_service/main.py
 # Runs on http://localhost:8001
@@ -101,11 +169,21 @@ python manage.py runserver
 # Runs on http://localhost:8000
 ```
 
+**Alternative - Use startup scripts:**
+```bash
+# Linux/Mac
+./start.sh
+
+# Windows
+start.bat
+```
+
 ### Quick Reference
 
 - **AI Endpoint:** `POST http://localhost:8001/api/fill-work-plan`
-- **LLM Gateway:** OpenRouter (for model flexibility)
-- **Budget:** ~$1/month (use cost-effective models)
+- **Implementation:** MockAIService (returns random data from database)
+- **LLM Gateway:** OpenRouter (planned - not yet implemented)
+- **Budget:** ~$1/month (use cost-effective models when implemented)
 - **Timeout:** 120 seconds
 - **Language:** Polish (UI and AI responses)
 
@@ -120,7 +198,7 @@ python manage.py runserver
 
 **See [docs/db_schema.md](docs/db_schema.md) for database schema details.**
 
-**Note:** MVP has no data persistence for lesson plans (session-only). Future phases will add save/load functionality.
+**Note:** MVP has no data persistence for lesson plans (session-only in React state). Future phases will add save/load functionality using existing WorkPlan and WorkPlanEntry models.
 
 ## Git Workflow
 
@@ -156,19 +234,36 @@ git checkout -b feature/c_ai_integration
 
 ### Package Management
 
-**ALWAYS ask before installing new packages via pip.**
+**ALWAYS ask before installing new packages via pip or npm.**
 
 The developer wants to maintain control over project dependencies. When a new package is needed:
 1. Suggest the package and explain why it's needed
 2. Wait for explicit approval before installing
-3. After approval, install and document in requirements.txt
+3. After approval, install and document in requirements.txt (Python) or package.json (JavaScript)
+
+### Frontend Development
+
+**React + TypeScript frontend:**
+- Located in `webserver/lessonplanner/frontend/`
+- Uses Vite for build tooling
+- Tailwind CSS for styling
+- shadcn/ui for component primitives
+- Vitest for testing
+
+**Build process:**
+1. Development: `npm run dev` (hot reload on port 5173)
+2. Production: `npm run build` → outputs to `dist/`
+3. Django integration: `./build-and-update.sh` updates template with new asset hashes
+
+**See [webserver/lessonplanner/frontend/README.md](webserver/lessonplanner/frontend/README.md) for frontend details.**
 
 ### Project Purpose
 
 This is a **training project** for learning:
 - Claude Code capabilities and workflows
 - Django web framework
-- LangGraph AI integration
+- React + TypeScript frontend development
+- LangGraph AI integration (planned)
 
 Keep implementations educational and well-commented where appropriate.
 
@@ -177,4 +272,4 @@ Keep implementations educational and well-commented where appropriate.
 - `DEBUG = True` for local development
 - `LANGUAGE_CODE = 'en-us'` in settings but application content is Polish
 - `SECRET_KEY` is development-only (insecure placeholder)
-- Database: SQLite at `webserver/db.sqlite3` (committed to git)
+- Database: SQLite at `db.sqlite3` (committed to git)
