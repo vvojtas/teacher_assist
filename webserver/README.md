@@ -139,37 +139,21 @@ rm cookies.txt
 
 The `lessonplanner` app includes a React + TypeScript frontend built with Vite.
 
-**Development:**
-```bash
-cd lessonplanner/frontend           # Navigate to frontend directory
-npm install                          # Install JS dependencies (first time only)
-npm run dev                          # Start Vite dev server (port 5173)
-```
-
-**Production Build:**
+**Quick Start:**
 ```bash
 cd lessonplanner/frontend
-npm run build                        # Build to frontend/dist/
-./build-and-update.sh                # Build and copy assets to Django static
+npm install                    # Install dependencies (first time only)
+npm run dev                    # Start dev server (port 5173)
 ```
 
-**Testing:**
-```bash
-cd lessonplanner/frontend
-npm test                             # Run Vitest tests in watch mode
-npm run test:run                     # Run tests once
-npm run test:coverage                # Run with coverage report
-npm run test:ui                      # Open Vitest UI
-```
+**For complete frontend documentation, commands, project structure, and features, see:**
+**[lessonplanner/frontend/README.md](lessonplanner/frontend/README.md)**
 
-**Frontend Details:** See [lessonplanner/frontend/README.md](lessonplanner/frontend/README.md)
-
-**Technology Stack:**
-- React 18 with TypeScript
-- Vite for build tooling
-- Tailwind CSS for styling
-- shadcn/ui for components
-- Vitest for testing
+This includes:
+- Complete technology stack details (React, TypeScript, Vite, Tailwind, shadcn/ui, Vitest)
+- All development, build, and testing commands
+- Project structure and component architecture
+- Build scripts documentation
 
 ## Configuration
 
