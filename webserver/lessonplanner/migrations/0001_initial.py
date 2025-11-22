@@ -196,17 +196,6 @@ class Migration(migrations.Migration):
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
-                    "module",
-                    models.ForeignKey(
-                        blank=True,
-                        help_text="Educational module (AI can suggest new modules)",
-                        null=True,
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="work_plan_entries",
-                        to="lessonplanner.educationalmodule",
-                    ),
-                ),
-                (
                     "work_plan",
                     models.ForeignKey(
                         help_text="Parent work plan",
@@ -258,6 +247,43 @@ class Migration(migrations.Migration):
                 "unique_together": {("work_plan_entry", "curriculum_reference")},
             },
         ),
+        migrations.CreateModel(
+            name="WorkPlanEntryModule",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "module",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.RESTRICT,
+                        to="lessonplanner.educationalmodule",
+                        db_index=True,
+                    ),
+                ),
+                (
+                    "work_plan_entry",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="lessonplanner.workplanentry",
+                        db_index=True,
+                    ),
+                ),
+            ],
+            options={
+                "verbose_name": "Work Plan Entry Module",
+                "verbose_name_plural": "Work Plan Entry Modules",
+                "db_table": "work_plan_entry_modules",
+                "unique_together": {("work_plan_entry", "module")},
+            },
+        ),
         migrations.AddField(
             model_name="workplanentry",
             name="curriculum_references",
@@ -266,6 +292,16 @@ class Migration(migrations.Migration):
                 related_name="work_plan_entries",
                 through="lessonplanner.WorkPlanEntryCurriculumRef",
                 to="lessonplanner.curriculumreference",
+            ),
+        ),
+        migrations.AddField(
+            model_name="workplanentry",
+            name="modules",
+            field=models.ManyToManyField(
+                help_text="Educational modules (AI can suggest new modules)",
+                related_name="work_plan_entries",
+                through="lessonplanner.WorkPlanEntryModule",
+                to="lessonplanner.educationalmodule",
             ),
         ),
     ]
