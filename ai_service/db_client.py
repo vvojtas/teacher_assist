@@ -117,8 +117,8 @@ class DatabaseClient:
         """
         Get example work plan entries for LLM training (where is_example=true).
 
-        Returns theme, activity, module, objectives, and curriculum_references.
-        Uses GROUP_CONCAT to avoid N+1 queries (single query for all data).
+        Returns theme, activity, modules, objectives, and curriculum_references.
+        Uses subqueries to avoid Cartesian product (better performance than JOIN + GROUP_CONCAT).
         """
         with self._db_connection() as conn:
             cursor = conn.execute("""
@@ -126,28 +126,34 @@ class DatabaseClient:
                     wpe.id,
                     wp.theme,
                     wpe.activity,
-                    em.module_name,
                     wpe.objectives,
-                    GROUP_CONCAT(cr.reference_code, ',') as ref_codes
+                    (SELECT GROUP_CONCAT(em.module_name, ',')
+                     FROM work_plan_entry_modules wpem
+                     JOIN educational_modules em ON wpem.module_id = em.id
+                     WHERE wpem.work_plan_entry_id = wpe.id) as module_names,
+                    (SELECT GROUP_CONCAT(cr.reference_code, ',')
+                     FROM work_plan_entry_curriculum_refs wpcr
+                     JOIN curriculum_references cr ON wpcr.curriculum_reference_id = cr.id
+                     WHERE wpcr.work_plan_entry_id = wpe.id) as ref_codes
                 FROM work_plan_entries wpe
                 JOIN work_plans wp ON wpe.work_plan_id = wp.id
-                LEFT JOIN educational_modules em ON wpe.module_id = em.id
-                LEFT JOIN work_plan_entry_curriculum_refs wpcr ON wpe.id = wpcr.work_plan_entry_id
-                LEFT JOIN curriculum_references cr ON wpcr.curriculum_reference_id = cr.id
                 WHERE wpe.is_example = 1
-                GROUP BY wpe.id, wp.theme, wpe.activity, em.module_name, wpe.objectives, wpe.created_at
                 ORDER BY wpe.created_at
             """)
 
             examples = []
             for row in cursor.fetchall():
+                module_names_str = row['module_names']
+                # Parse comma-separated module names into sorted list
+                modules = sorted(module_names_str.split(',')) if module_names_str else []
+
                 ref_codes_str = row['ref_codes']
                 curriculum_refs = sorted(ref_codes_str.split(',')) if ref_codes_str else []
 
                 examples.append(LLMExample(
                     theme=row['theme'] or '',
                     activity=row['activity'],
-                    module=row['module_name'] or '',
+                    modules=modules,
                     objectives=row['objectives'] or '',
                     curriculum_references=curriculum_refs
                 ))

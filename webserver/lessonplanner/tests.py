@@ -606,12 +606,14 @@ class WorkPlanEntryModelTest(TestCase):
         entry = WorkPlanEntry.objects.create(
             work_plan=self.work_plan,
             activity="Zabawa w sklep z owocami test",
-            module=self.module,
             objectives="Dziecko potrafi przeliczać",
             is_example=True
         )
+        entry.modules.add(self.module)
+
         self.assertEqual(entry.activity, "Zabawa w sklep z owocami test")
-        self.assertEqual(entry.module, self.module)
+        self.assertEqual(entry.modules.count(), 1)
+        self.assertIn(self.module, entry.modules.all())
         self.assertTrue(entry.is_example)
 
     def test_work_plan_entry_cascade_delete(self):
@@ -632,9 +634,9 @@ class WorkPlanEntryModelTest(TestCase):
         """Test many-to-many relationship with curriculum references."""
         entry = WorkPlanEntry.objects.create(
             work_plan=self.work_plan,
-            activity="Test activity",
-            module=self.module
+            activity="Test activity"
         )
+        entry.modules.add(self.module)
 
         # Add curriculum references
         entry.curriculum_references.add(self.curr_ref1, self.curr_ref2)
@@ -687,7 +689,7 @@ class DatabaseMigrationDataTest(TestCase):
     def test_example_work_plan_entries_populated(self):
         """Test that example work plan entries were created."""
         count = WorkPlanEntry.objects.filter(is_example=True).count()
-        self.assertGreaterEqual(count, 5, "Should have at least 5 example entries")
+        self.assertGreaterEqual(count, 4, "Should have at least 4 example entries")
 
         # Check that example entries have curriculum references
         example_entry = WorkPlanEntry.objects.filter(is_example=True).first()

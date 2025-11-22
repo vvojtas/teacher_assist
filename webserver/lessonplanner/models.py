@@ -46,7 +46,6 @@ class CurriculumReference(models.Model):
         MajorCurriculumReference,
         on_delete=models.RESTRICT,
         related_name='curriculum_references',
-        db_index=True,
         help_text="Parent major curriculum section"
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -124,14 +123,11 @@ class WorkPlanEntry(models.Model):
         db_index=True,
         help_text="Parent work plan"
     )
-    module = models.ForeignKey(
+    modules = models.ManyToManyField(
         EducationalModule,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
+        through='WorkPlanEntryModule',
         related_name='work_plan_entries',
-        db_index=True,
-        help_text="Educational module (AI can suggest new modules)"
+        help_text="Educational modules (AI can suggest new modules)"
     )
     objectives = models.TextField(
         null=True,
@@ -162,8 +158,10 @@ class WorkPlanEntry(models.Model):
         ordering = ['created_at']
 
     def __str__(self):
-        module_name = self.module.module_name if self.module else 'No module'
-        return f"{self.activity[:50]}... ({module_name})"
+        module_names = ', '.join([m.module_name for m in self.modules.all()[:3]])
+        if self.modules.count() > 3:
+            module_names += '...'
+        return f"{self.activity[:50]}... ({module_names or 'No modules'})"
 
 
 class WorkPlanEntryCurriculumRef(models.Model):
@@ -173,13 +171,11 @@ class WorkPlanEntryCurriculumRef(models.Model):
     """
     work_plan_entry = models.ForeignKey(
         WorkPlanEntry,
-        on_delete=models.CASCADE,
-        db_index=True
+        on_delete=models.CASCADE
     )
     curriculum_reference = models.ForeignKey(
         CurriculumReference,
-        on_delete=models.RESTRICT,
-        db_index=True
+        on_delete=models.RESTRICT
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -191,3 +187,28 @@ class WorkPlanEntryCurriculumRef(models.Model):
 
     def __str__(self):
         return f"{self.work_plan_entry.activity[:30]}... -> {self.curriculum_reference.reference_code}"
+
+
+class WorkPlanEntryModule(models.Model):
+    """
+    Junction table implementing many-to-many relationship between
+    work plan entries and educational modules.
+    """
+    work_plan_entry = models.ForeignKey(
+        WorkPlanEntry,
+        on_delete=models.CASCADE
+    )
+    module = models.ForeignKey(
+        EducationalModule,
+        on_delete=models.RESTRICT
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'work_plan_entry_modules'
+        verbose_name = 'Work Plan Entry Module'
+        verbose_name_plural = 'Work Plan Entry Modules'
+        unique_together = [['work_plan_entry', 'module']]
+
+    def __str__(self):
+        return f"{self.work_plan_entry.activity[:30]}... -> {self.module.module_name}"

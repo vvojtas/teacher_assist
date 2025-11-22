@@ -35,7 +35,10 @@ class LLMExample(BaseModel):
     """
     theme: str = Field(..., description="Weekly theme (e.g., 'Jesień - zbiory')")
     activity: str = Field(..., description="Activity description")
-    module: str = Field(..., description="Educational module (e.g., 'MATEMATYKA')")
+    modules: List[str] = Field(
+        default_factory=list,
+        description="List of educational modules (e.g., ['MATEMATYKA', 'JĘZYK'])"
+    )
     objectives: str = Field(..., description="Educational objectives")
     curriculum_references: List[str] = Field(
         default_factory=list,

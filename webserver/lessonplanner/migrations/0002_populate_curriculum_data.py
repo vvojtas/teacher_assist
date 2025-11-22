@@ -165,46 +165,47 @@ def load_curriculum_data(apps, schema_editor):
     # =========================================================================
     examples = [
         {
-            'theme': 'Jesień - zbiory',
+            'theme': """JA W PRZEDSZKOLU
+W pierwszym tygodniu odbywają się zajęcia wprowadzające w tematykę projektu. Mają one na celu pobudzenie zainteresowania tematem oraz pokazanie nauczycielowi stanu wiedzy i doświadczeń oraz zasobu słownictwa dzieci.""",
             'entries': [
                 {
-                    'activity': 'Zabawa w sklep z owocami',
-                    'module': 'MATEMATYKA',
-                    'objectives': 'Dziecko potrafi przeliczać w zakresie 5\nRozpoznaje poznane wcześniej cyfry',
-                    'curriculum_refs': ['4.15', '4.18'],
+                    'activity': 'Wprowadzenie do tematu projektu z użyciem wiersza “mam trzy latka", oraz książki "Tosia i Julek idą do przedszkola”',
+                    'modules': ['JĘZYK'],
+                    'objectives': 'Dziecko zapoznaje się z literaturą dziecięcą, słucha uważnie wiersza i odpowiada na pytania dotyczące treści.',
+                    'curriculum_refs': ['3.8', '4.2'],
                     'is_example': True
                 },
                 {
-                    'activity': 'Malowanie liści farbami',
-                    'module': 'FORMY PLASTYCZNE',
-                    'objectives': 'Rozwija koordynację wzrokowo-ruchową\nPosługuje się farbami i pędzlem',
-                    'curriculum_refs': ['4.8'],
-                    'is_example': True
-                },
-                {
-                    'activity': 'Sortowanie kasztanów według wielkości',
-                    'module': 'MATEMATYKA',
-                    'objectives': 'Sortuje obiekty według jednej cechy\nRozróżnia wielkości: duży, mały, średni',
-                    'curriculum_refs': ['4.12', '4.13'],
+                    'activity': 'Praca plastyczna - wspólne tworzenie logo grupy “Promyczki” z użyciem kolorowego papieru, kleju i farby',
+                    'modules': ['WSPÓŁPRACA', 'FORMY PLASTYCZNE', 'MOTORYKA MAŁA'],
+                    'objectives': """Dziecko potrafi współpracować z innymi podczas tworzenia wspólnej pracy.
+Dziecko odczuwa przynależność do grupy przedszkolnej.
+Rozbudzanie wrażliwości estetycznej i wyobraźni.""",
+                    'curriculum_refs': ['3.1', '3.2'],
                     'is_example': True
                 },
             ]
         },
         {
-            'theme': 'Zima i święta',
+            'theme': """JA W PRZEDSZKOLU
+W drugim tygodniu dzieci poznają zasady bezpiecznego zachowania się w przedszkolu. Odbywa się to przy użyciu materiałów edukacyjnych, gier i zabaw.""",
             'entries': [
                 {
-                    'activity': 'Tworzenie ozdób choinkowych z papieru',
-                    'module': 'FORMY PLASTYCZNE',
-                    'objectives': 'Dziecko rozwija umiejętności manualne\nWykorzystuje różne materiały plastyczne',
-                    'curriculum_refs': ['1.7', '4.8'],
+                    'activity': 'Historyjki obrazkowe - wspólne układanie historyjek obrazkowych. Dzieci określają kto znajduje się na poszczególnych obrazkach oraz co robi, a następnie wybierają kolejność zdarzeń. Na końcu opowiadają całą historię.',
+                    'modules': ['POZNAWCZE', 'JĘZYK'],
+                    'objectives': """Rozwijanie myślenia przyczynowo–skutkowego.
+Rozwijanie spostrzegawczości i umiejętności analizy oraz syntezy wzrokowej.
+Dziecko potrafi nazwać przestawione.""",
+                    'curriculum_refs': ['4.2', '4.5'],
                     'is_example': True
                 },
                 {
-                    'activity': 'Zabawa ruchowa przy piosence "Biegnę do przedszkola"',
-                    'module': 'MOTORYKA DUŻA',
-                    'objectives': 'Wykonuje różne formy ruchu: bieżne, skoczne\nUczestniczy w zabawach ruchowych i muzycznych',
-                    'curriculum_refs': ['1.5', '4.7'],
+                    'activity': 'Gasimy pożar - tor przeszkód, dzieci pokonują tor zakończony trafianiem do celu tj. “ugaszenia pożaru”.',
+                    'modules': ['MOTORYKA DUŻA'],
+                    'objectives': """Dziecko odczuwa satysfakcję z wysiłku fizycznego i osiągniętego celu.
+Stymulacja zmysłu dotyku.
+Kształtowanie orientacji w przestrzeni i świadomości własnego ciała.""",
+                    'curriculum_refs': ['1.5', '1.7', '1.9'],
                     'is_example': True
                 },
             ]
@@ -232,20 +233,11 @@ def load_curriculum_data(apps, schema_editor):
             # Only create entries if the work plan is new
             # (avoids duplicating entries if plan already exists)
             for entry_data in example['entries']:
-                # Look up module ForeignKey
-                module_name = entry_data['module']
-                module = modules_map.get(module_name)
-                if not module:
-                    integrity_errors.append(
-                        f"Module '{module_name}' not found for activity '{entry_data['activity']}'"
-                    )
-                    continue
 
-                # Create the entry
+                # Create the entry (without modules - will be added after creation)
                 entry = WorkPlanEntry.objects.create(
                     work_plan=work_plan,
                     activity=entry_data['activity'],
-                    module=module,
                     objectives=entry_data['objectives'],
                     is_example=entry_data['is_example']
                 )
@@ -260,6 +252,17 @@ def load_curriculum_data(apps, schema_editor):
                         )
                     else:
                         entry.curriculum_references.add(curriculum_refs_map[ref_code])
+
+                # Link modules (many-to-many relationship)
+                for module_name in entry_data['modules']:
+
+                    if module_name not in modules_map:
+                        integrity_errors.append(
+                            f"Module '{module_name}' not found for activity '{entry_data['activity']}'"
+                        )
+                    else:
+                        entry.modules.add(modules_map[module_name])
+
 
     # If there were any data integrity errors, raise them
     if integrity_errors:
