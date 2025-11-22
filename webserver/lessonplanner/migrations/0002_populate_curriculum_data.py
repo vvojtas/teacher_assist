@@ -192,7 +192,7 @@ W drugim tygodniu dzieci poznają zasady bezpiecznego zachowania się w przedszk
             'entries': [
                 {
                     'activity': 'Historyjki obrazkowe - wspólne układanie historyjek obrazkowych. Dzieci określają kto znajduje się na poszczególnych obrazkach oraz co robi, a następnie wybierają kolejność zdarzeń. Na końcu opowiadają całą historię.',
-                    'modules': ['POZNAWCZE', 'JĘZYKOWE'],
+                    'modules': ['POZNAWCZE', 'JĘZYK'],
                     'objectives': """Rozwijanie myślenia przyczynowo–skutkowego.
 Rozwijanie spostrzegawczości i umiejętności analizy oraz syntezy wzrokowej.
 Dziecko potrafi nazwać przestawione.""",
@@ -255,9 +255,6 @@ Kształtowanie orientacji w przestrzeni i świadomości własnego ciała.""",
 
                 # Link modules (many-to-many relationship)
                 for module_name in entry_data['modules']:
-                    # Handle case where 'JĘZYKOWE' should be 'JĘZYK'
-                    if module_name == 'JĘZYKOWE':
-                        module_name = 'JĘZYK'
 
                     if module_name not in modules_map:
                         integrity_errors.append(
