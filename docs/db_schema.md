@@ -53,23 +53,27 @@ This document defines the database schema for the Teacher Assist application. Th
                                                    │ N:1
                                                    ▼
 ┌──────────────────────────────┐       ┌──────────────────────────────┐
-│   educational_modules        │──────►│   work_plan_entries          │
-│  (Module categories)         │ 1:N   │  (Individual activities)     │
-└──────────────────────────────┘       └──────────┬───────────────────┘
-                                                   │
-                                                   │ N:1
-                                                   ▼
-                                        ┌──────────────────────────────┐
-                                        │      work_plans              │
-                                        │  (Weekly lesson plans)       │
-                                        └──────────────────────────────┘
+│   educational_modules        │◄──────│   work_plan_entries          │
+│  (Module categories)         │  N:M  │  (Individual activities)     │
+└──────────┬───────────────────┘       └──────────┬───────────────────┘
+           │                                      │
+           │                                      │ N:1
+           │                                      ▼
+           │                           ┌──────────────────────────────┐
+           │                           │      work_plans              │
+           │ N:M                       │  (Weekly lesson plans)       │
+           ▼                           └──────────────────────────────┘
+┌──────────────────────────────┐
+│ work_plan_entry_modules      │
+│   (Junction table)           │
+└──────────────────────────────┘
 ```
 
 **Relationships:**
 - `major_curriculum_references` → `curriculum_references` (1:N)
 - `work_plans` → `work_plan_entries` (1:N)
-- `work_plan_entries` ↔ `curriculum_references` (N:M via junction table)
-- `educational_modules` → `work_plan_entries` (1:N, optional)
+- `work_plan_entries` ↔ `curriculum_references` (N:M via junction table `work_plan_entry_curriculum_refs`)
+- `work_plan_entries` ↔ `educational_modules` (N:M via junction table `work_plan_entry_modules`)
 
 ---
 
@@ -196,7 +200,7 @@ INSERT INTO curriculum_references (reference_code, full_text, major_reference_id
 - `created_at` defaults to current timestamp
 
 **Relationships:**
-- 1:N with `work_plan_entries` (one module can be used by many entries, optional)
+- N:M with `work_plan_entries` via `work_plan_entry_modules` junction table (one module can be used by many entries, one entry can have multiple modules)
 
 **Sample Data:**
 ```sql
@@ -275,7 +279,6 @@ INSERT INTO work_plans (theme) VALUES
 |------------------|--------------|--------------------------------|--------------------------------------------------|
 | `id`             | INTEGER      | PRIMARY KEY, AUTO_INCREMENT    | Unique identifier                                |
 | `work_plan_id`   | INTEGER      | NOT NULL, FOREIGN KEY, INDEX   | References `work_plans.id`                       |
-| `module_id`      | INTEGER      | NULL, FOREIGN KEY, INDEX       | References `educational_modules.id`              |
 | `objectives`     | TEXT         | NULL                           | Educational objectives (typically 2-3 items, separated by newlines) |
 | `activity`       | VARCHAR(500) | NOT NULL                       | Activity description (required)                  |
 | `is_example`     | BOOLEAN      | NOT NULL, DEFAULT FALSE        | TRUE if should be used as LLM training example   |
@@ -284,28 +287,29 @@ INSERT INTO work_plans (theme) VALUES
 **Indexes:**
 - PRIMARY KEY on `id` (automatic)
 - FOREIGN KEY INDEX on `work_plan_id` (for joining with work_plans)
-- FOREIGN KEY INDEX on `module_id` (for joining with educational_modules)
 - INDEX on `is_example` (for filtering example entries)
 
 **Constraints:**
 - `work_plan_id` references `work_plans.id` with CASCADE on delete (if work plan deleted, entries deleted)
-- `module_id` references `educational_modules.id` with PROTECT on delete (prevents deletion of modules in use)
 - `activity` cannot be NULL (required field)
-- `module_id` and `objectives` can be NULL (may be filled by AI or manually later)
+- `objectives` can be NULL (may be filled by AI or manually later)
 - `is_example` defaults to FALSE
 
 **Relationships:**
 - N:1 with `work_plans` (many entries belong to one work plan)
-- N:1 with `educational_modules` (many entries can reference one module, optional)
-- N:M with `curriculum_references` via junction table
+- N:M with `educational_modules` via `work_plan_entry_modules` junction table
+- N:M with `curriculum_references` via `work_plan_entry_curriculum_refs` junction table
 
 **Sample Data:**
 ```sql
--- Assuming work_plan_id=1 exists and module_id=2 is 'MATEMATYKA', module_id=5 is 'FORMY PLASTYCZNE'
-INSERT INTO work_plan_entries (work_plan_id, module_id, objectives, activity, is_example) VALUES
-(1, 2, 'Dziecko potrafi przeliczać w zakresie 5\nRozpoznaje poznane wcześniej cyfry', 'Zabawa w sklep z owocami', TRUE),
-(1, 5, 'Rozwija koordynację wzrokowo-ruchową\nPosługuje się farbami i pędzlem', 'Malowanie liści farbami', FALSE),
-(1, 2, 'Sortuje obiekty według jednej cechy\nRozróżnia wielkości: duży, mały, średni', 'Sortowanie kasztanów według wielkości', FALSE);
+-- Assuming work_plan_id=1 exists
+INSERT INTO work_plan_entries (work_plan_id, objectives, activity, is_example) VALUES
+(1, 'Dziecko potrafi przeliczać w zakresie 5\nRozpoznaje poznane wcześniej cyfry', 'Zabawa w sklep z owocami', TRUE),
+(1, 'Rozwija koordynację wzrokowo-ruchową\nPosługuje się farbami i pędzlem', 'Malowanie liści farbami', FALSE),
+(1, 'Sortuje obiekty według jednej cechy\nRozróżnia wielkości: duży, mały, średni', 'Sortowanie kasztanów według wielkości', FALSE);
+
+-- Link entries to modules via work_plan_entry_modules junction table
+-- (See section 3.7 for work_plan_entry_modules table definition)
 ```
 
 **Expected Data Volume:**
@@ -381,6 +385,62 @@ INSERT INTO work_plan_entry_curriculum_refs (work_plan_entry_id, curriculum_refe
 
 ---
 
+### 3.7 work_plan_entry_modules
+
+**Purpose:** Junction table implementing many-to-many relationship between work plan entries and educational modules. A single activity can be associated with multiple educational modules (e.g., an activity might involve both MATEMATYKA and JĘZYK), and a module can be used by multiple activities.
+
+**Table Name:** `work_plan_entry_modules`
+
+| Column Name          | Type         | Constraints                    | Description                                      |
+|----------------------|--------------|--------------------------------|--------------------------------------------------|
+| `id`                 | INTEGER      | PRIMARY KEY, AUTO_INCREMENT    | Unique identifier                                |
+| `work_plan_entry_id` | INTEGER      | NOT NULL, FOREIGN KEY, INDEX   | References `work_plan_entries.id`                |
+| `module_id`          | INTEGER      | NOT NULL, FOREIGN KEY, INDEX   | References `educational_modules.id`              |
+| `created_at`         | TIMESTAMP    | NOT NULL, DEFAULT CURRENT_TS   | Timestamp when association was created           |
+
+**Indexes:**
+- PRIMARY KEY on `id` (automatic)
+- UNIQUE INDEX on `(work_plan_entry_id, module_id)` (prevent duplicate associations)
+- INDEX on `work_plan_entry_id` (for joining from entries)
+- INDEX on `module_id` (for reverse lookups)
+
+**Constraints:**
+- `work_plan_entry_id` references `work_plan_entries.id` with CASCADE on delete
+- `module_id` references `educational_modules.id` with RESTRICT on delete
+- Composite UNIQUE constraint on `(work_plan_entry_id, module_id)`
+
+**Sample Data:**
+```sql
+-- Assuming work_plan_entry_id=1 exists and module ids 2, 5 exist for 'MATEMATYKA', 'FORMY PLASTYCZNE'
+INSERT INTO work_plan_entry_modules (work_plan_entry_id, module_id) VALUES
+(1, 2),  -- Links entry 1 to module "MATEMATYKA"
+(2, 5),  -- Links entry 2 to module "FORMY PLASTYCZNE"
+(2, 8),  -- Links entry 2 to module "WSPÓŁPRACA" (entry can have multiple modules)
+(3, 2);  -- Links entry 3 to module "MATEMATYKA"
+```
+
+**Expected Data Volume:**
+- Per work plan entry: 1-5 modules
+- Growth: Proportional to work_plan_entries table
+
+**Query Patterns:**
+- Get modules for an entry:
+  ```sql
+  SELECT em.module_name
+  FROM educational_modules em
+  JOIN work_plan_entry_modules wpem ON em.id = wpem.module_id
+  WHERE wpem.work_plan_entry_id = ?
+  ```
+- Reverse lookup (which entries use a module):
+  ```sql
+  SELECT wpe.*
+  FROM work_plan_entries wpe
+  JOIN work_plan_entry_modules wpem ON wpe.id = wpem.work_plan_entry_id
+  WHERE wpem.module_id = ?
+  ```
+
+---
+
 ## 4. SQL Schema Definitions
 
 ### 4.1 SQLite Schema (MVP)
@@ -431,17 +491,14 @@ CREATE TABLE IF NOT EXISTS work_plans (
 CREATE TABLE IF NOT EXISTS work_plan_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     work_plan_id INTEGER NOT NULL,
-    module_id INTEGER,
     objectives TEXT,
     activity VARCHAR(500) NOT NULL,
     is_example BOOLEAN NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (work_plan_id) REFERENCES work_plans(id) ON DELETE CASCADE,
-    FOREIGN KEY (module_id) REFERENCES educational_modules(id) ON DELETE PROTECT
+    FOREIGN KEY (work_plan_id) REFERENCES work_plans(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_work_plan_entries_work_plan_id ON work_plan_entries(work_plan_id);
-CREATE INDEX idx_work_plan_entries_module_id ON work_plan_entries(module_id);
 CREATE INDEX idx_work_plan_entries_is_example ON work_plan_entries(is_example);
 
 -- Table: work_plan_entry_curriculum_refs (junction table)
@@ -457,6 +514,20 @@ CREATE TABLE IF NOT EXISTS work_plan_entry_curriculum_refs (
 
 CREATE INDEX idx_wpe_curr_refs_entry_id ON work_plan_entry_curriculum_refs(work_plan_entry_id);
 CREATE INDEX idx_wpe_curr_refs_curr_id ON work_plan_entry_curriculum_refs(curriculum_reference_id);
+
+-- Table: work_plan_entry_modules (junction table)
+CREATE TABLE IF NOT EXISTS work_plan_entry_modules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    work_plan_entry_id INTEGER NOT NULL,
+    module_id INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (work_plan_entry_id) REFERENCES work_plan_entries(id) ON DELETE CASCADE,
+    FOREIGN KEY (module_id) REFERENCES educational_modules(id) ON DELETE RESTRICT,
+    UNIQUE(work_plan_entry_id, module_id)
+);
+
+CREATE INDEX idx_wpe_modules_entry_id ON work_plan_entry_modules(work_plan_entry_id);
+CREATE INDEX idx_wpe_modules_module_id ON work_plan_entry_modules(module_id);
 ```
 
 ### 4.2 PostgreSQL Schema (Production)
@@ -507,17 +578,14 @@ CREATE TABLE IF NOT EXISTS work_plans (
 CREATE TABLE IF NOT EXISTS work_plan_entries (
     id SERIAL PRIMARY KEY,
     work_plan_id INTEGER NOT NULL,
-    module_id INTEGER,
     objectives TEXT,
     activity VARCHAR(500) NOT NULL,
     is_example BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (work_plan_id) REFERENCES work_plans(id) ON DELETE CASCADE,
-    FOREIGN KEY (module_id) REFERENCES educational_modules(id) ON DELETE RESTRICT
+    FOREIGN KEY (work_plan_id) REFERENCES work_plans(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_work_plan_entries_work_plan_id ON work_plan_entries(work_plan_id);
-CREATE INDEX idx_work_plan_entries_module_id ON work_plan_entries(module_id);
 CREATE INDEX idx_work_plan_entries_is_example ON work_plan_entries(is_example);
 
 -- Table: work_plan_entry_curriculum_refs (junction table)
@@ -533,6 +601,20 @@ CREATE TABLE IF NOT EXISTS work_plan_entry_curriculum_refs (
 
 CREATE INDEX idx_wpe_curr_refs_entry_id ON work_plan_entry_curriculum_refs(work_plan_entry_id);
 CREATE INDEX idx_wpe_curr_refs_curr_id ON work_plan_entry_curriculum_refs(curriculum_reference_id);
+
+-- Table: work_plan_entry_modules (junction table)
+CREATE TABLE IF NOT EXISTS work_plan_entry_modules (
+    id SERIAL PRIMARY KEY,
+    work_plan_entry_id INTEGER NOT NULL,
+    module_id INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (work_plan_entry_id) REFERENCES work_plan_entries(id) ON DELETE CASCADE,
+    FOREIGN KEY (module_id) REFERENCES educational_modules(id) ON DELETE RESTRICT,
+    UNIQUE(work_plan_entry_id, module_id)
+);
+
+CREATE INDEX idx_wpe_modules_entry_id ON work_plan_entry_modules(work_plan_entry_id);
+CREATE INDEX idx_wpe_modules_module_id ON work_plan_entry_modules(module_id);
 ```
 
 **Key Differences:**
@@ -555,11 +637,13 @@ CREATE INDEX idx_wpe_curr_refs_curr_id ON work_plan_entry_curriculum_refs(curric
 | curriculum_references         | INDEX      | major_reference_id   | Fast joins with major sections   |
 | educational_modules           | UNIQUE     | module_name          | Fast lookup by name              |
 | work_plan_entries             | INDEX      | work_plan_id         | Fast joins with work plans       |
-| work_plan_entries             | INDEX      | module_id            | Fast joins with educational modules |
 | work_plan_entries             | INDEX      | is_example           | Filter example entries for LLM   |
 | work_plan_entry_curriculum_refs | UNIQUE   | (entry_id, curr_id)  | Prevent duplicate associations   |
 | work_plan_entry_curriculum_refs | INDEX    | work_plan_entry_id   | Fast lookup from entries         |
 | work_plan_entry_curriculum_refs | INDEX    | curriculum_reference_id | Reverse lookups              |
+| work_plan_entry_modules       | UNIQUE     | (entry_id, module_id)| Prevent duplicate associations   |
+| work_plan_entry_modules       | INDEX      | work_plan_entry_id   | Fast lookup from entries         |
+| work_plan_entry_modules       | INDEX      | module_id            | Reverse lookups                  |
 
 ### 5.2 Query Optimization
 
@@ -598,42 +682,47 @@ for ref in refs:
     print(ref.major_reference.reference_code)  # Additional query per ref!
 ```
 
-**Loading Work Plans with Entries and Curriculum Refs:**
+**Loading Work Plans with Entries, Modules, and Curriculum Refs:**
 ```python
 # Good: Use prefetch_related() for many-to-many
 from django.db.models import Prefetch
 
 work_plan = WorkPlan.objects.prefetch_related(
-    Prefetch('entries', queryset=WorkPlanEntry.objects.prefetch_related('curriculum_references'))
+    Prefetch('entries', queryset=WorkPlanEntry.objects.prefetch_related('modules', 'curriculum_references'))
 ).get(id=1)
 
 # Access all data without additional queries
 for entry in work_plan.entries.all():
     print(entry.activity)
+    for module in entry.modules.all():
+        print(f"  Module: {module.module_name}")
     for curr_ref in entry.curriculum_references.all():
-        print(f"  - {curr_ref.reference_code}")
+        print(f"  Curriculum: {curr_ref.reference_code}")
 
 # Bad: N+1 queries
 work_plan = WorkPlan.objects.get(id=1)
 for entry in work_plan.entries.all():  # Query 1
+    for module in entry.modules.all():  # Query per entry!
+        print(module.module_name)
     for curr_ref in entry.curriculum_references.all():  # Query per entry!
         print(curr_ref.reference_code)
 ```
 
 **Efficient Example Entry Retrieval:**
 ```sql
--- Load all example entries with their curriculum refs (for LLM prompts)
+-- Load all example entries with their modules and curriculum refs (for LLM prompts)
 SELECT
     wpe.activity,
-    em.module_name,
     wpe.objectives,
-    GROUP_CONCAT(cr.reference_code, ', ') as curriculum_codes
+    GROUP_CONCAT(DISTINCT em.module_name, ', ') as modules,
+    GROUP_CONCAT(DISTINCT cr.reference_code, ', ') as curriculum_codes
 FROM work_plan_entries wpe
-LEFT JOIN educational_modules em ON wpe.module_id = em.id
+LEFT JOIN work_plan_entry_modules wpem ON wpe.id = wpem.work_plan_entry_id
+LEFT JOIN educational_modules em ON wpem.module_id = em.id
 LEFT JOIN work_plan_entry_curriculum_refs wpcr ON wpe.id = wpcr.work_plan_entry_id
 LEFT JOIN curriculum_references cr ON wpcr.curriculum_reference_id = cr.id
 WHERE wpe.is_example = TRUE
-GROUP BY wpe.id;
+GROUP BY wpe.id, wpe.activity, wpe.objectives;
 ```
 
 ### 5.3 Expected Query Volume
@@ -656,19 +745,19 @@ GROUP BY wpe.id;
 
 **CASCADE on work_plans:**
 - Deleting a work plan automatically deletes all associated work_plan_entries
-- Deleting a work_plan_entry automatically deletes all associated work_plan_entry_curriculum_refs
-- Ensures cleanup (no orphaned entries or curriculum reference associations)
+- Deleting a work_plan_entry automatically deletes all associated work_plan_entry_curriculum_refs and work_plan_entry_modules
+- Ensures cleanup (no orphaned entries, curriculum reference associations, or module associations)
 - Use with caution: deleting a work plan removes all its data permanently
 
 **RESTRICT on curriculum_references (from junction table):**
-- Cannot delete a curriculum reference if it's used by any work plan entries
+- Cannot delete a curriculum reference if it's used by any work plan entries (via work_plan_entry_curriculum_refs)
 - Protects data integrity (prevents broken references in saved work plans)
 - Admin must first remove curriculum reference associations before deleting the reference
 
-**PROTECT on educational_modules (from work_plan_entries):**
-- Cannot delete an educational module if it's referenced by any work plan entries
+**RESTRICT on educational_modules (from junction table):**
+- Cannot delete an educational module if it's referenced by any work plan entries (via work_plan_entry_modules)
 - Ensures referential integrity (prevents broken module references in saved work plans)
-- Admin must first remove or reassign module references before deleting the module
+- Admin must first remove module associations before deleting the module
 
 ---
 
@@ -697,32 +786,46 @@ GROUP BY wpe.id;
 │    created_at                  │       │    created_at                   │
 └────────────────────────────────┘       └────────────┬────────────────────┘
                                                       │
-┌────────────────────────────────┐                   │ N:1
-│   educational_modules          │                   │ (work_plan_entry_id FK)
-├────────────────────────────────┤                   ▼
-│ PK id                          │       ┌────────────────────────────────┐
-│ UK module_name (idx)           │       │   work_plan_entries            │
-│    is_ai_suggested             │       ├────────────────────────────────┤
-│    created_at                  │       │ PK id                          │
-└────────────┬───────────────────┘       │ FK work_plan_id (idx)          │
-             │                            │ FK module_id (idx)             │
-             │ 1:N (optional)             │    objectives                  │
-             │ (module_id FK, PROTECT)    │    activity                    │
-             └────────────────────────────┤    is_example (idx)            │
+                                                      │ N:1
+                                                      │ (work_plan_entry_id FK)
+                                                      ▼
+                                          ┌────────────────────────────────┐
+                                          │   work_plan_entries            │
+                                          ├────────────────────────────────┤
+                                          │ PK id                          │
+                                          │ FK work_plan_id (idx)          │
+                                          │    objectives                  │
+                                          │    activity                    │
+                                          │    is_example (idx)            │
                                           │    created_at                  │
                                           └────────────┬───────────────────┘
                                                        │
-                                                       │ N:1
-                                                       │ (work_plan_id FK, CASCADE)
-                                                       ▼
-                                          ┌────────────────────────────────┐
-                                          │      work_plans                │
-                                          ├────────────────────────────────┤
-                                          │ PK id                          │
-                                          │    theme                       │
-                                          │    created_at (idx)            │
-                                          │    updated_at                  │
-                                          └────────────────────────────────┘
+                                          ┌────────────┼───────────────────┐
+                                          │            │                   │
+                                          │ N:1        │                   │ N:M
+                                          │            │                   │
+                                          ▼            ▼                   ▼
+               ┌────────────────────────────────┐  ┌────────────────────────────────┐
+               │      work_plans                │  │ work_plan_entry_modules        │
+               ├────────────────────────────────┤  ├────────────────────────────────┤
+               │ PK id                          │  │ PK id                          │
+               │    theme                       │  │ FK work_plan_entry_id (idx)    │
+               │    created_at (idx)            │  │ FK module_id (idx)             │
+               │    updated_at                  │  │ UK (entry_id, module_id)       │
+               └────────────────────────────────┘  │    created_at                  │
+                                                    └────────────┬───────────────────┘
+                                                                 │
+                                                                 │ N:1
+                                                                 │ (module_id FK, RESTRICT)
+                                                                 ▼
+                                                    ┌────────────────────────────────┐
+                                                    │   educational_modules          │
+                                                    ├────────────────────────────────┤
+                                                    │ PK id                          │
+                                                    │ UK module_name (idx)           │
+                                                    │    is_ai_suggested             │
+                                                    │    created_at                  │
+                                                    └────────────────────────────────┘
 ```
 
 **Legend:**
@@ -744,6 +847,7 @@ GROUP BY wpe.id;
 | 1.0     | 2025-11-10 | DB Architect | Initial schema with 3 tables (MVP scope)     |
 | 2.0     | 2025-11-15 | DB Architect | Added work plan persistence tables (work_plans, work_plan_entries, work_plan_entry_curriculum_refs) with many-to-many relationships |
 | 2.1     | 2025-11-18 | DB Architect | Changed work_plan_entries.module from VARCHAR(200) to ForeignKey(educational_modules) for data integrity; Added module_id index; Updated ON DELETE to PROTECT |
+| 2.2     | 2025-11-22 | DB Architect | Changed work_plan_entries to educational_modules relationship from 1:N to N:M; Removed module_id column from work_plan_entries; Added work_plan_entry_modules junction table |
 
 ---
 

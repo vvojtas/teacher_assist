@@ -234,11 +234,23 @@ Kształtowanie orientacji w przestrzeni i świadomości własnego ciała.""",
             # (avoids duplicating entries if plan already exists)
             for entry_data in example['entries']:
 
-                # Create the entry
+                # Assign first module to ForeignKey field (migration 0003 will convert to many-to-many)
+                first_module = None
+                if entry_data['modules']:
+                    first_module_name = entry_data['modules'][0]
+                    if first_module_name in modules_map:
+                        first_module = modules_map[first_module_name]
+                    else:
+                        integrity_errors.append(
+                            f"Module '{first_module_name}' not found for activity '{entry_data['activity']}'"
+                        )
+
+                # Create the entry with first module
                 entry = WorkPlanEntry.objects.create(
                     work_plan=work_plan,
                     activity=entry_data['activity'],
                     objectives=entry_data['objectives'],
+                    module=first_module,
                     is_example=entry_data['is_example']
                 )
                 entries_created_count += 1
@@ -252,15 +264,6 @@ Kształtowanie orientacji w przestrzeni i świadomości własnego ciała.""",
                         )
                     else:
                         entry.curriculum_references.add(curriculum_refs_map[ref_code])
-
-                # Link modules
-                for module_name in entry_data['modules']:
-                    if module_name not in modules_map:
-                        integrity_errors.append(
-                            f"Module '{module_name}' not found for activity '{entry_data['activity']}'"
-                        )
-                    else:
-                        entry.modules.add(modules_map[module_name])
 
 
     # If there were any data integrity errors, raise them
