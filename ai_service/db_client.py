@@ -118,7 +118,7 @@ class DatabaseClient:
         Get example work plan entries for LLM training (where is_example=true).
 
         Returns theme, activity, modules, objectives, and curriculum_references.
-        Uses GROUP_CONCAT to avoid N+1 queries (single query for all data).
+        Uses subqueries to avoid Cartesian product (better performance than JOIN + GROUP_CONCAT).
         """
         with self._db_connection() as conn:
             cursor = conn.execute("""
@@ -127,16 +127,17 @@ class DatabaseClient:
                     wp.theme,
                     wpe.activity,
                     wpe.objectives,
-                    GROUP_CONCAT(DISTINCT em.module_name, ',') as module_names,
-                    GROUP_CONCAT(DISTINCT cr.reference_code, ',') as ref_codes
+                    (SELECT GROUP_CONCAT(em.module_name, ',')
+                     FROM work_plan_entry_modules wpem
+                     JOIN educational_modules em ON wpem.module_id = em.id
+                     WHERE wpem.work_plan_entry_id = wpe.id) as module_names,
+                    (SELECT GROUP_CONCAT(cr.reference_code, ',')
+                     FROM work_plan_entry_curriculum_refs wpcr
+                     JOIN curriculum_references cr ON wpcr.curriculum_reference_id = cr.id
+                     WHERE wpcr.work_plan_entry_id = wpe.id) as ref_codes
                 FROM work_plan_entries wpe
                 JOIN work_plans wp ON wpe.work_plan_id = wp.id
-                LEFT JOIN work_plan_entry_modules wpem ON wpe.id = wpem.work_plan_entry_id
-                LEFT JOIN educational_modules em ON wpem.module_id = em.id
-                LEFT JOIN work_plan_entry_curriculum_refs wpcr ON wpe.id = wpcr.work_plan_entry_id
-                LEFT JOIN curriculum_references cr ON wpcr.curriculum_reference_id = cr.id
                 WHERE wpe.is_example = 1
-                GROUP BY wpe.id, wp.theme, wpe.activity, wpe.objectives, wpe.created_at
                 ORDER BY wpe.created_at
             """)
 

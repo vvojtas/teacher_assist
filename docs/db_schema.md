@@ -711,18 +711,20 @@ for entry in work_plan.entries.all():  # Query 1
 **Efficient Example Entry Retrieval:**
 ```sql
 -- Load all example entries with their modules and curriculum refs (for LLM prompts)
+-- Uses subqueries to avoid Cartesian product (better performance than JOIN + GROUP_CONCAT)
 SELECT
     wpe.activity,
     wpe.objectives,
-    GROUP_CONCAT(DISTINCT em.module_name, ', ') as modules,
-    GROUP_CONCAT(DISTINCT cr.reference_code, ', ') as curriculum_codes
+    (SELECT GROUP_CONCAT(em.module_name, ', ')
+     FROM work_plan_entry_modules wpem
+     JOIN educational_modules em ON wpem.module_id = em.id
+     WHERE wpem.work_plan_entry_id = wpe.id) as modules,
+    (SELECT GROUP_CONCAT(cr.reference_code, ', ')
+     FROM work_plan_entry_curriculum_refs wpcr
+     JOIN curriculum_references cr ON wpcr.curriculum_reference_id = cr.id
+     WHERE wpcr.work_plan_entry_id = wpe.id) as curriculum_codes
 FROM work_plan_entries wpe
-LEFT JOIN work_plan_entry_modules wpem ON wpe.id = wpem.work_plan_entry_id
-LEFT JOIN educational_modules em ON wpem.module_id = em.id
-LEFT JOIN work_plan_entry_curriculum_refs wpcr ON wpe.id = wpcr.work_plan_entry_id
-LEFT JOIN curriculum_references cr ON wpcr.curriculum_reference_id = cr.id
-WHERE wpe.is_example = TRUE
-GROUP BY wpe.id, wpe.activity, wpe.objectives;
+WHERE wpe.is_example = TRUE;
 ```
 
 ### 5.3 Expected Query Volume
