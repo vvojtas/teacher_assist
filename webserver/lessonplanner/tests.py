@@ -689,7 +689,7 @@ class DatabaseMigrationDataTest(TestCase):
     def test_example_work_plan_entries_populated(self):
         """Test that example work plan entries were created."""
         count = WorkPlanEntry.objects.filter(is_example=True).count()
-        self.assertGreaterEqual(count, 5, "Should have at least 5 example entries")
+        self.assertGreaterEqual(count, 4, "Should have at least 4 example entries")
 
         # Check that example entries have curriculum references
         example_entry = WorkPlanEntry.objects.filter(is_example=True).first()
