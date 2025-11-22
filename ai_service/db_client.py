@@ -144,8 +144,8 @@ class DatabaseClient:
             examples = []
             for row in cursor.fetchall():
                 module_names_str = row['module_names']
-                # For backward compatibility, use first module as "module" field
-                module = sorted(module_names_str.split(','))[0] if module_names_str else ''
+                # Parse comma-separated module names into sorted list
+                modules = sorted(module_names_str.split(',')) if module_names_str else []
 
                 ref_codes_str = row['ref_codes']
                 curriculum_refs = sorted(ref_codes_str.split(',')) if ref_codes_str else []
@@ -153,7 +153,7 @@ class DatabaseClient:
                 examples.append(LLMExample(
                     theme=row['theme'] or '',
                     activity=row['activity'],
-                    module=module,
+                    modules=modules,
                     objectives=row['objectives'] or '',
                     curriculum_references=curriculum_refs
                 ))
