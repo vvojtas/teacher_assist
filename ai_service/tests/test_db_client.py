@@ -220,13 +220,13 @@ class TestGetLLMExamples:
         first_example = examples[0]
         assert hasattr(first_example, 'theme')
         assert hasattr(first_example, 'activity')
-        assert hasattr(first_example, 'module')
+        assert hasattr(first_example, 'modules')
         assert hasattr(first_example, 'objectives')
         assert hasattr(first_example, 'curriculum_references')
 
         assert isinstance(first_example.theme, str)
         assert isinstance(first_example.activity, str)
-        assert isinstance(first_example.module, str)
+        assert isinstance(first_example.modules, list)
         assert isinstance(first_example.objectives, str)
         assert isinstance(first_example.curriculum_references, list)
 
@@ -246,7 +246,8 @@ class TestGetLLMExamples:
 
         for example in examples:
             assert len(example.activity) > 0, "Activity should not be empty"
-            assert len(example.module) > 0, "Module should not be empty"
+            assert len(example.modules) > 0, "Modules list should not be empty"
+            assert all(isinstance(m, str) for m in example.modules), "All modules should be strings"
             # theme and objectives can be empty, but usually shouldn't be
             # for example entries
 
@@ -319,9 +320,9 @@ class TestIntegration:
         valid_module_names = {m.module_name for m in modules}
 
         for example in examples:
-            if example.module:  # module can be empty
-                assert example.module in valid_module_names, \
-                    f"Example uses invalid module: {example.module}"
+            for module in example.modules:
+                assert module in valid_module_names, \
+                    f"Example uses invalid module: {module}"
 
     def test_all_methods_work_together(self, db_client):
         """Integration test: verify all 4 methods work together."""
@@ -347,7 +348,7 @@ class TestIntegration:
         ref_codes = {r.reference_code for r in curr_refs}
 
         for example in examples:
-            if example.module:
-                assert example.module in module_names
+            for module in example.modules:
+                assert module in module_names
             for ref_code in example.curriculum_references:
                 assert ref_code in ref_codes
