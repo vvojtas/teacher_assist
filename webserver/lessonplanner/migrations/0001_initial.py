@@ -265,7 +265,6 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.RESTRICT,
                         to="lessonplanner.educationalmodule",
-                        db_index=True,
                     ),
                 ),
                 (
@@ -273,7 +272,6 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         to="lessonplanner.workplanentry",
-                        db_index=True,
                     ),
                 ),
             ],

@@ -46,7 +46,6 @@ class CurriculumReference(models.Model):
         MajorCurriculumReference,
         on_delete=models.RESTRICT,
         related_name='curriculum_references',
-        db_index=True,
         help_text="Parent major curriculum section"
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -172,13 +171,11 @@ class WorkPlanEntryCurriculumRef(models.Model):
     """
     work_plan_entry = models.ForeignKey(
         WorkPlanEntry,
-        on_delete=models.CASCADE,
-        db_index=True
+        on_delete=models.CASCADE
     )
     curriculum_reference = models.ForeignKey(
         CurriculumReference,
-        on_delete=models.RESTRICT,
-        db_index=True
+        on_delete=models.RESTRICT
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -199,13 +196,11 @@ class WorkPlanEntryModule(models.Model):
     """
     work_plan_entry = models.ForeignKey(
         WorkPlanEntry,
-        on_delete=models.CASCADE,
-        db_index=True
+        on_delete=models.CASCADE
     )
     module = models.ForeignKey(
         EducationalModule,
-        on_delete=models.RESTRICT,
-        db_index=True
+        on_delete=models.RESTRICT
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
