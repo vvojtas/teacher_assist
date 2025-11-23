@@ -1,8 +1,8 @@
 # AI Service Architecture Design
 
 **Project:** Teacher Assist - LangGraph AI Service
-**Version:** 1.0
-**Last Updated:** 2025-11-21
+**Version:** 1.1
+**Last Updated:** 2025-11-23
 **Status:** Design Phase
 
 ---
@@ -122,6 +122,7 @@ class WorkflowState(TypedDict):
 
     # Database Context (loaded in parallel)
     available_modules: list[str]
+    major_curriculum_refs: list[dict]
     curriculum_refs: list[dict]  # [{code: "4.15", text: "..."}, ...]
     example_entries: list[dict]
 
@@ -147,7 +148,7 @@ class WorkflowState(TypedDict):
 
 **Nodes:**
 1. `load_modules` - Query `educational_modules` table
-2. `load_curriculum_refs` - Query `curriculum_references` table (code + full_text)
+2. `load_curriculum_refs` - Query `curriculum_references` table (code + full_text + major_curriculum_id) & `load_major_curriculum_refs` (id + text)
 3. `load_examples` - Query `work_plan_entries` where `is_example=true`
 4. `load_prompt_template` - Read template file from `ai_service/templates/`
 
@@ -163,13 +164,13 @@ class WorkflowState(TypedDict):
 
 Prompt templates are stored in `ai_service/templates/` as Jinja2-style templates with clear section markers.
 
-**Template File:** `ai_service/templates/generate_metadata.txt`
+**Template File:** `ai_service/templates/fill+work_plan.txt`
 
 **Placeholders:**
 - `{activity}` - User-provided activity description
 - `{theme}` - Optional weekly theme
 - `{modules_list}` - All available educational modules
-- `{curriculum_refs}` - All curriculum references with codes and full text
+- `{curriculum_refs}` - All curriculum references with codes and full text (organised by major_curriculum_reffs)
 - `{examples}` - 3-5 example work plan entries from database
 
 **Template Sections:**
@@ -250,10 +251,11 @@ The output validator performs fast, deterministic checks without LLM calls.
 
 1. **JSON Format**
    - Output must be valid JSON
-   - Required fields: `reasoning`, `module`, `curriculum_refs`, `objectives`
+   - Required fields: `modules`, `curriculum_refs`, `objectives`
 
-2. **Module Validation**
-   - Module name must exist in `available_modules` list
+2. **Modules Validation**
+   - All module names must exist in `available_modules` list
+   - Count must be between 1-3
    - Case-sensitive match
 
 3. **Curriculum References Validation**
@@ -262,13 +264,12 @@ The output validator performs fast, deterministic checks without LLM calls.
    - No duplicate codes
 
 4. **Objectives Validation**
-   - Count must be between 1-10
+   - Count must be between 1-5
    - Each objective must be non-empty string
    - Minimum 10 characters per objective (avoid trivial entries)
 
 5. **Field Types**
-   - `reasoning`: string
-   - `module`: string
+   - `modules`: array of strings
    - `curriculum_refs`: array of strings
    - `objectives`: array of strings
 
@@ -579,52 +580,6 @@ Use environment variables to enable/disable features:
 
 ---
 
-## 14. Future Enhancements
-
-### 14.1 Post-Phase 3 Ideas
-
-1. **User Feedback Loop**
-   - Track when users edit AI-generated content
-   - Build dataset for fine-tuning or better examples
-
-2. **Curriculum Reference Ranking**
-   - Use embeddings to find most relevant curriculum refs
-   - Reduce prompt size by including only top 20 most relevant
-
-3. **Caching**
-   - Cache LLM responses for identical activities
-   - Reduce cost for common activities
-
-4. **Multi-Language Support**
-   - Extend to other countries' curricula
-   - Template-based prompt switching
-
-5. **Activity Classification**
-   - Pre-classify activity type before LLM call
-   - Route to specialized prompts per activity type
-
----
-
-## 15. Success Criteria
-
-**Phase 1 (MVP) is successful if:**
-- ✅ Generates valid metadata in < 10 seconds for 95% of requests
-- ✅ Curriculum codes are valid 95% of the time
-- ✅ Teachers find 70%+ of objectives usable without editing
-- ✅ Cost stays under $1/month for expected usage
-
-**Phase 2 is justified if:**
-- MVP logs show >20% validation failures
-- User feedback indicates quality issues
-- Clear patterns of poor outputs emerge
-
-**Phase 3 is justified if:**
-- Quality checker identifies fixable issues
-- Retry would improve success rate by >30%
-- Cost increase is acceptable for UX improvement
-
----
-
 ## 16. Open Questions
 
 1. **Prompt Template Format:** Jinja2, Python f-strings, or plain text with simple placeholders?
@@ -640,6 +595,7 @@ Use environment variables to enable/disable features:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-11-21 | AI Architect | Initial design document for Phase 1-3 |
+| 1.1 | 2025-11-23 | VVojtas | Human corrections |
 
 ---
 
