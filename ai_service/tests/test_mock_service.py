@@ -24,8 +24,9 @@ class TestMockAIService:
         )
 
         assert result.activity == "Zabawa w sklep z owocami"
-        assert isinstance(result.module, str)
-        assert len(result.module) > 0
+        assert isinstance(result.modules, list)
+        assert len(result.modules) >= 1
+        assert all(isinstance(m, str) and len(m) > 0 for m in result.modules)
         assert isinstance(result.curriculum_refs, list)
         assert len(result.curriculum_refs) >= 2
         assert isinstance(result.objectives, list)
@@ -36,7 +37,8 @@ class TestMockAIService:
         result = service.generate_metadata(activity="Test activity")
 
         assert result.activity == "Test activity"
-        assert result.module is not None
+        assert result.modules is not None
+        assert len(result.modules) >= 1
         assert len(result.curriculum_refs) > 0
         assert len(result.objectives) > 0
 
@@ -81,8 +83,8 @@ class TestMockAIService:
         for ref in result.curriculum_refs:
             assert ref in valid_refs
 
-    def test_generate_metadata_returns_valid_module(self, service):
-        """Test that returned module is from database"""
+    def test_generate_metadata_returns_valid_modules(self, service):
+        """Test that returned modules are from database"""
         from ai_service.db_client import get_db_client
 
         # Get valid modules from database
@@ -91,8 +93,8 @@ class TestMockAIService:
 
         result = service.generate_metadata(activity="Test activity")
 
-        # Verify returned module is valid database module
-        assert result.module in valid_modules
+        # Verify all returned modules are valid database modules
+        assert all(module in valid_modules for module in result.modules)
 
     def test_generate_metadata_returns_2_to_3_refs(self, service):
         """Test that 2-3 curriculum refs are returned"""
@@ -114,8 +116,9 @@ class TestMockAIService:
         ]
 
         # At least some results should be different
-        modules = [r.module for r in results]
-        assert len(set(modules)) > 1  # Not all modules should be the same
+        # Convert module lists to tuples for set comparison
+        modules = [tuple(r.modules) for r in results]
+        assert len(set(modules)) > 1  # Not all module combinations should be the same
 
     def test_generate_metadata_with_delay(self):
         """Test that delay simulation works"""

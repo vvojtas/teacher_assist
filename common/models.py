@@ -64,7 +64,7 @@ class FillWorkPlanResponse(BaseModel):
 
     Attributes:
         activity: Activity description (echoed from request)
-        module: Educational module name (Polish, uppercase)
+        modules: Educational module names (Polish, uppercase)
         curriculum_refs: Podstawa Programowa reference codes (1-10 items)
         objectives: Learning objectives in Polish (typically 2-3)
     """
@@ -72,9 +72,11 @@ class FillWorkPlanResponse(BaseModel):
         ...,
         description="Activity description echoed from request"
     )
-    module: str = Field(
+    modules: list[str] = Field(
         ...,
-        description="Educational module name (e.g., 'MATEMATYKA')"
+        min_length=1,
+        max_length=4,
+        description="Educational module names (e.g., ['MATEMATYKA', 'JĘZYK'])"
     )
     curriculum_refs: list[str] = Field(
         ...,
@@ -85,7 +87,7 @@ class FillWorkPlanResponse(BaseModel):
     objectives: list[str] = Field(
         ...,
         min_length=1,
-        max_length=10,
+        max_length=7,
         description="Learning objectives in Polish"
     )
 
@@ -93,7 +95,7 @@ class FillWorkPlanResponse(BaseModel):
         json_schema_extra={
             "example": {
                 "activity": "Zabawa w sklep z owocami",
-                "module": "MATEMATYKA",
+                "modules": ["MATEMATYKA"],
                 "curriculum_refs": ["4.15", "4.18"],
                 "objectives": [
                     "Dziecko potrafi przeliczać w zakresie 5",

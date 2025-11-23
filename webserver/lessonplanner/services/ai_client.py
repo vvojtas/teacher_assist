@@ -115,9 +115,12 @@ def fill_work_plan(activity: str, theme: str = "") -> WorkPlanMetadata:
         # Parse and validate response using Pydantic model
         response_data = FillWorkPlanResponse(**response.json())
 
+        # Merge modules list into comma-separated string for frontend
+        module_string = ", ".join(response_data.modules)
+
         # Return only the required fields (not the echoed activity)
         return {
-            "module": response_data.module,
+            "module": module_string,
             "curriculum_refs": response_data.curriculum_refs,
             "objectives": response_data.objectives
         }

@@ -64,7 +64,7 @@ Content-Type: application/json
 ```json
 {
   "activity": "Zabawa w sklep z owocami",
-  "module": "MATEMATYKA",
+  "modules": ["MATEMATYKA"],
   "curriculum_refs": ["4.15", "4.18"],
   "objectives": [
     "Dziecko potrafi przeliczać w zakresie 5",
@@ -77,7 +77,7 @@ Content-Type: application/json
 | Field | Type | Description |
 |-------|------|-------------|
 | `activity` | string | Activity description (echoed from request) |
-| `module` | string | Educational module name (Polish, uppercase) |
+| `modules` | array[string] | Educational module names (Polish, uppercase, 1-4 items) |
 | `curriculum_refs` | array[string] | Podstawa Programowa codes (1-10 items) |
 | `objectives` | array[string] | Learning objectives (typically 2-3) |
 
@@ -163,7 +163,7 @@ All error responses follow this structure:
 ```json
 {
   "activity": "Sortowanie kasztanów według wielkości",
-  "module": "MATEMATYKA",
+  "modules": ["MATEMATYKA"],
   "curriculum_refs": ["4.15", "4.16"],
   "objectives": [
     "Dziecko potrafi sortować obiekty według jednej cechy",
@@ -186,7 +186,7 @@ All error responses follow this structure:
 ```json
 {
   "activity": "Malowanie liści farbami",
-  "module": "FORMY PLASTYCZNE",
+  "modules": ["FORMY PLASTYCZNE"],
   "curriculum_refs": ["3.2", "3.5"],
   "objectives": [
     "Dziecko rozwija koordynację wzrokowo-ruchową",
