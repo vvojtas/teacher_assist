@@ -1,4 +1,3 @@
-import { useCallback } from "react"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PlanTableRow } from "./PlanTableRow"
 import type { Row, RowUpdate } from "@/hooks/useTableManager"
