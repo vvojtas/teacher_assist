@@ -283,7 +283,7 @@ The AI service analyzes teacher-entered activities and automatically generates a
 
 #### Functional Requirements
 - **Input:** Activity description (required) + weekly theme (optional context)
-- **Output:** Educational module name, curriculum paragraph references, and 2-3 learning objectives
+- **Output:** Educational module name(s), curriculum paragraph references, and 2-3 learning objectives
 - **Language:** All AI responses must be in natural Polish (no translation artifacts)
 - **Curriculum Accuracy:** Generated paragraph references must be valid codes from Podstawa Programowa
 - **Contextual Understanding:** AI should consider both activity description and weekly theme when generating metadata
@@ -378,7 +378,7 @@ Content-Type: application/json
 ```json
 {
   "activity": "string",
-  "module": "string",
+  "modules": ["string"],
   "curriculum_refs": ["string", "string"],
   "objectives": ["string", "string", "string"]
 }
@@ -388,7 +388,7 @@ Content-Type: application/json
 ```json
 {
   "activity": "Zabawa w sklep z owocami",
-  "module": "MATEMATYKA",
+  "modules": ["MATEMATYKA"],
   "curriculum_refs": ["4.15", "4.18"],
   "objectives": [
     "Dziecko potrafi przeliczać w zakresie 5",

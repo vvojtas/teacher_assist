@@ -34,16 +34,17 @@ class TestFillWorkPlan:
 
         # Verify response structure
         assert "activity" in data
-        assert "module" in data
+        assert "modules" in data
         assert "curriculum_refs" in data
         assert "objectives" in data
 
         # Verify activity is echoed back
         assert data["activity"] == sample_request_data["activity"]
 
-        # Verify module is a non-empty string
-        assert isinstance(data["module"], str)
-        assert len(data["module"]) > 0
+        # Verify modules is a non-empty list
+        assert isinstance(data["modules"], list)
+        assert len(data["modules"]) >= 1
+        assert all(isinstance(m, str) and len(m) > 0 for m in data["modules"])
 
         # Verify curriculum_refs is a list with 1-10 items
         assert isinstance(data["curriculum_refs"], list)
@@ -60,7 +61,7 @@ class TestFillWorkPlan:
         assert response.status_code == 200
         data = response.json()
         assert data["activity"] == sample_request_minimal["activity"]
-        assert "module" in data
+        assert "modules" in data
         assert "curriculum_refs" in data
         assert "objectives" in data
 
@@ -73,7 +74,7 @@ class TestFillWorkPlan:
 
         assert response.status_code == 200
         data = response.json()
-        assert "module" in data
+        assert "modules" in data
 
     def test_fill_work_plan_missing_activity(self, client: TestClient):
         """Test validation: missing required activity field"""
@@ -166,16 +167,16 @@ class TestAPIDocumentation:
 class TestResponseFormat:
     """Tests to verify response format matches specification"""
 
-    def test_response_module_is_uppercase(self, client: TestClient, sample_request_data):
+    def test_response_modules_are_uppercase(self, client: TestClient, sample_request_data):
         """Test that module names are in uppercase"""
         response = client.post("/api/fill-work-plan", json=sample_request_data)
 
         assert response.status_code == 200
         data = response.json()
-        module = data["module"]
+        modules = data["modules"]
 
-        # Module should be uppercase (Polish educational standard)
-        assert module.isupper() or module == module.upper()
+        # All modules should be uppercase (Polish educational standard)
+        assert all(module.isupper() or module == module.upper() for module in modules)
 
     def test_curriculum_refs_format(self, client: TestClient, sample_request_data):
         """Test that curriculum refs are in expected format"""

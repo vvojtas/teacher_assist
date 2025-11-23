@@ -79,13 +79,13 @@ class MockAIService:
             theme: Optional weekly theme for context
 
         Returns:
-            FillWorkPlanResponse: Mock metadata with module, curriculum refs, and objectives
+            FillWorkPlanResponse: Mock metadata with modules, curriculum refs, and objectives
 
         Note:
             Input validation is handled by FillWorkPlanRequest Pydantic model,
             so we trust that activity is already validated and non-empty.
 
-            Module and curriculum refs are selected from database.
+            Modules and curriculum refs are selected from database.
             Objectives are still hardcoded as per requirements.
         """
         # Simulate API processing delay (1-2 seconds)
@@ -93,15 +93,25 @@ class MockAIService:
             time.sleep(random.uniform(1.0, 2.0))
 
         # Generate mock response with random selections from database
-        # Select random module from database
-        module = random.choice(self.module_names) if self.module_names else "UNKNOWN"
+        # Fail explicitly if database is not populated
+        if not self.module_names:
+            raise ValueError("Database not initialized: no educational modules available")
+        if not self.curriculum_ref_codes:
+            raise ValueError("Database not initialized: no curriculum references available")
+
+        # Select 1-2 random modules from database
+        num_modules = random.randint(1, 2)
+        modules = random.sample(
+            self.module_names,
+            min(num_modules, len(self.module_names))
+        )
 
         # Select 2-3 random curriculum references from database
         num_refs = random.randint(2, 3)
         curriculum_refs = random.sample(
             self.curriculum_ref_codes,
             min(num_refs, len(self.curriculum_ref_codes))
-        ) if self.curriculum_ref_codes else []
+        )
 
         # Select 2-3 random objectives (still hardcoded as per requirements)
         num_objectives = random.randint(2, 3)
@@ -109,7 +119,7 @@ class MockAIService:
 
         return FillWorkPlanResponse(
             activity=activity.strip(),
-            module=module,
+            modules=modules,
             curriculum_refs=curriculum_refs,
             objectives=objectives
         )

@@ -83,7 +83,7 @@ class FillWorkPlanViewTests(TestCase):
     @patch('lessonplanner.services.ai_client.fill_work_plan')
     def test_fill_work_plan_success(self, mock_fill_work_plan):
         """Test successful metadata generation"""
-        # Mock AI service response
+        # Mock AI service response (after module merging in ai_client)
         mock_fill_work_plan.return_value = {
             'module': 'MATEMATYKA',
             'curriculum_refs': ['4.15', '4.18'],
@@ -215,7 +215,7 @@ class FillWorkPlanViewTests(TestCase):
         mock_response.status_code = 200
         mock_response.json.return_value = {
             'activity': 'Zabawa w sklep z owocami',
-            'module': 'MATEMATYKA',
+            'modules': ['MATEMATYKA', 'JĘZYK'],
             'curriculum_refs': ['4.15', '4.18'],
             'objectives': [
                 'Dziecko potrafi przeliczać w zakresie 5',
@@ -236,7 +236,7 @@ class FillWorkPlanViewTests(TestCase):
         # Verify Django response
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(data['module'], 'MATEMATYKA')
+        self.assertEqual(data['module'], 'MATEMATYKA, JĘZYK')
         self.assertIn('4.15', data['curriculum_refs'])
         self.assertEqual(len(data['objectives']), 2)
 
