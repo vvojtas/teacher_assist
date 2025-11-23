@@ -18,16 +18,13 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
   const contentRef = useRef<HTMLDivElement>(null)
   const { parseCurriculumCodes, fetchMultipleCodes } = useCurriculumTooltip()
   const [tooltipData, setTooltipData] = useState<Array<{ code: string; text: string }> | null>(null)
-  // Track the last value we sent to parent to distinguish external updates from our own
-  const lastValueRef = useRef(value)
 
-  // Update contenteditable only when value changes externally (not from our own onValueChange)
+  // Update contenteditable only when value changes externally
   // This handles AI-generated content, programmatic updates, and initial mount
   // Compare with DOM content to handle initial values correctly
   useEffect(() => {
     if (contentRef.current && contentRef.current.textContent !== value) {
       contentRef.current.textContent = value
-      lastValueRef.current = value
     }
   }, [value])
 
@@ -40,13 +37,10 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
       if (contentRef.current) {
         contentRef.current.textContent = truncated
       }
-      lastValueRef.current = truncated
       onValueChange(truncated)
       return
     }
 
-    // Update our tracking ref before calling parent to prevent echo
-    lastValueRef.current = newValue
     onValueChange(newValue)
   }, [onValueChange])
 
@@ -93,7 +87,6 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
     // Trigger state update
     if (contentRef.current) {
       const newValue = contentRef.current.textContent || ''
-      lastValueRef.current = newValue
       onValueChange(newValue)
     }
   }, [onValueChange])
