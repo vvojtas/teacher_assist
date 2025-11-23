@@ -1,3 +1,4 @@
+import { useCallback } from "react"
 import { Input } from "@/components/ui/input"
 
 interface ThemeInputProps {
@@ -6,6 +7,10 @@ interface ThemeInputProps {
 }
 
 export function ThemeInput({ value, onChange }: ThemeInputProps) {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value)
+  }, [onChange])
+
   return (
     <div className="mb-4">
       <label htmlFor="themeInput" className="block text-sm font-medium mb-2">
@@ -15,7 +20,7 @@ export function ThemeInput({ value, onChange }: ThemeInputProps) {
         id="themeInput"
         type="text"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={handleChange}
         placeholder="np. Jesień - zbiory"
         maxLength={200}
         className="max-w-md"

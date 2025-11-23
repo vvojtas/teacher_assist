@@ -101,7 +101,7 @@ function App() {
   }, [rows, showAlert, showConfirm, setRowLoading, theme, generateSingle, updateRow, showError])
 
   // Handle bulk generation
-  const handleBulkGenerate = async () => {
+  const handleBulkGenerate = useCallback(async () => {
     const rowsToProcess = getRowsNeedingGeneration()
 
     if (rowsToProcess.length === 0) {
@@ -170,10 +170,10 @@ function App() {
         setRowLoading(row.id, false)
       }
     }
-  }
+  }, [getRowsNeedingGeneration, showAlert, setRowLoading, theme, generateBulk, updateRow, showError])
 
   // Handle row deletion
-  const handleDelete = (rowId: string) => {
+  const handleDelete = useCallback((rowId: string) => {
     deleteRow(rowId)
     // Remove from selected rows if it was selected
     setSelectedRows(prev => {
@@ -181,20 +181,20 @@ function App() {
       next.delete(rowId)
       return next
     })
-  }
+  }, [deleteRow])
 
   // Handle clear all
-  const handleClearAll = async () => {
+  const handleClearAll = useCallback(async () => {
     const confirmed = await showConfirm('Czy na pewno chcesz wyczyść wszystkie wiersze?')
     if (confirmed) {
       clearAll()
       setTheme('')
       setSelectedRows(new Set())
     }
-  }
+  }, [showConfirm, clearAll])
 
   // Handle row selection
-  const handleSelectChange = (rowId: string, checked: boolean) => {
+  const handleSelectChange = useCallback((rowId: string, checked: boolean) => {
     setSelectedRows(prev => {
       const next = new Set(prev)
       if (checked) {
@@ -204,10 +204,10 @@ function App() {
       }
       return next
     })
-  }
+  }, [])
 
   // Handle copy to clipboard
-  const handleCopyTable = async () => {
+  const handleCopyTable = useCallback(async () => {
     try {
       let rowsToCopy
       let includeHeaders
@@ -242,7 +242,7 @@ function App() {
     } catch (error) {
       await showError((error as Error).message)
     }
-  }
+  }, [selectedRows, rows, showAlert, copyToClipboard, showError])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">

@@ -1,3 +1,4 @@
+import { useCallback } from "react"
 import { TableRow, TableCell } from "@/components/ui/table"
 import { EditableCell } from "./EditableCell"
 import { RowActions } from "./RowActions"
@@ -11,7 +12,7 @@ interface PlanTableRowProps {
   onGenerate: (rowId: string) => void
   onRegenerate: (rowId: string) => void
   onDelete: (rowId: string) => void
-  onSelectChange: (checked: boolean) => void
+  onSelectChange: (rowId: string, checked: boolean) => void
   onMarkUserEdited: (rowId: string) => void
 }
 
@@ -25,16 +26,20 @@ export function PlanTableRow({
   onSelectChange,
   onMarkUserEdited
 }: PlanTableRowProps) {
-  const handleCellChange = (field: string, value: string) => {
+  const handleCellChange = useCallback((field: string, value: string) => {
     onRowUpdate(row.id, { [field]: value })
-  }
+  }, [row.id, onRowUpdate])
 
-  const handleCellBlur = () => {
+  const handleCellBlur = useCallback(() => {
     // Mark as user edited if AI had generated content
     if (row.aiGenerated) {
       onMarkUserEdited(row.id)
     }
-  }
+  }, [row.aiGenerated, row.id, onMarkUserEdited])
+
+  const handleSelectChange = useCallback((checked: boolean) => {
+    onSelectChange(row.id, checked)
+  }, [row.id, onSelectChange])
 
   return (
     <TableRow
@@ -81,7 +86,7 @@ export function PlanTableRow({
           onGenerate={onGenerate}
           onRegenerate={onRegenerate}
           onDelete={onDelete}
-          onSelectChange={onSelectChange}
+          onSelectChange={handleSelectChange}
         />
       </TableCell>
     </TableRow>

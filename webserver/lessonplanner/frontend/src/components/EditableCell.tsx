@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { useCurriculumTooltip } from "@/hooks/useCurriculumTooltip"
 import { cn } from "@/lib/utils"
@@ -18,20 +18,17 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
   const contentRef = useRef<HTMLDivElement>(null)
   const { parseCurriculumCodes, fetchMultipleCodes } = useCurriculumTooltip()
   const [tooltipData, setTooltipData] = useState<Array<{ code: string; text: string }> | null>(null)
-  // Track the last value we sent to parent to distinguish external updates from our own
-  const lastValueRef = useRef(value)
 
-  // Update contenteditable only when value changes externally (not from our own onValueChange)
+  // Update contenteditable only when value changes externally
   // This handles AI-generated content, programmatic updates, and initial mount
   // Compare with DOM content to handle initial values correctly
   useEffect(() => {
     if (contentRef.current && contentRef.current.textContent !== value) {
       contentRef.current.textContent = value
-      lastValueRef.current = value
     }
   }, [value])
 
-  const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+  const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
     const newValue = (e.target as HTMLDivElement).textContent || ''
 
     // Enforce max length for XSS/DoS protection
@@ -40,24 +37,15 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
       if (contentRef.current) {
         contentRef.current.textContent = truncated
       }
-      lastValueRef.current = truncated
       onValueChange(truncated)
       return
     }
 
-    // Update our tracking ref before calling parent to prevent echo
-    lastValueRef.current = newValue
     onValueChange(newValue)
-  }
-
-  const handleBlur = () => {
-    if (onBlur) {
-      onBlur()
-    }
-  }
+  }, [onValueChange])
 
   // Handle paste to strip formatting using modern Selection API
-  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault()
 
     let text = e.clipboardData.getData('text/plain')
@@ -93,16 +81,15 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
     // Trigger state update
     if (contentRef.current) {
       const newValue = contentRef.current.textContent || ''
-      lastValueRef.current = newValue
       onValueChange(newValue)
     }
-  }
+  }, [onValueChange])
 
   // For curriculum field, show tooltip on hover
   const isCurriculumField = field === 'curriculum'
   const showTooltip = isCurriculumField && value
 
-  const handleMouseEnter = async () => {
+  const handleMouseEnter = useCallback(async () => {
     if (isCurriculumField && value) {
       const codes = parseCurriculumCodes(value)
       if (codes.length > 0) {
@@ -110,7 +97,7 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
         setTooltipData(data)
       }
     }
-  }
+  }, [isCurriculumField, value, parseCurriculumCodes, fetchMultipleCodes])
 
   const editableContent = (
     <div
@@ -118,7 +105,7 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
       contentEditable
       suppressContentEditableWarning
       onInput={handleInput}
-      onBlur={handleBlur}
+      onBlur={onBlur}
       onPaste={handlePaste}
       onMouseEnter={handleMouseEnter}
       className={cn(

@@ -44,7 +44,7 @@ export function PlanTable({
               onGenerate={onGenerate}
               onRegenerate={onRegenerate}
               onDelete={onDelete}
-              onSelectChange={(checked) => onSelectChange(row.id, checked)}
+              onSelectChange={onSelectChange}
               onMarkUserEdited={onMarkUserEdited}
             />
           ))}
