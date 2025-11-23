@@ -1,0 +1,78 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  django-tests:
+    name: Django Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run migrations
+        working-directory: ./webserver
+        run: python manage.py migrate
+
+      - name: Run Django tests
+        working-directory: ./webserver
+        run: python manage.py test
+
+  ai-service-tests:
+    name: AI Service Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run AI service tests
+        run: pytest ai_service/tests/
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './webserver/lessonplanner/frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./webserver/lessonplanner/frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: ./webserver/lessonplanner/frontend
+        run: npm run test:run
