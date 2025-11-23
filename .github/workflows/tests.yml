@@ -24,6 +24,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Run migrations
+        working-directory: ./webserver
+        run: python manage.py migrate
+
       - name: Run Django tests
         working-directory: ./webserver
         run: python manage.py test
@@ -62,10 +66,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './webserver/lessonplanner/frontend/package-lock.json'
 
       - name: Install dependencies
         working-directory: ./webserver/lessonplanner/frontend
-        run: npm install
+        run: npm ci
 
       - name: Run frontend tests
         working-directory: ./webserver/lessonplanner/frontend
