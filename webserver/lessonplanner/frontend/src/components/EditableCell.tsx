@@ -44,12 +44,6 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
     onValueChange(newValue)
   }, [onValueChange])
 
-  const handleBlur = useCallback(() => {
-    if (onBlur) {
-      onBlur()
-    }
-  }, [onBlur])
-
   // Handle paste to strip formatting using modern Selection API
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -111,7 +105,7 @@ export function EditableCell({ field, value, onValueChange, onBlur, className }:
       contentEditable
       suppressContentEditableWarning
       onInput={handleInput}
-      onBlur={handleBlur}
+      onBlur={onBlur}
       onPaste={handlePaste}
       onMouseEnter={handleMouseEnter}
       className={cn(
