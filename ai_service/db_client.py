@@ -33,12 +33,21 @@ class DatabaseClient:
         Initialize database client.
 
         Args:
-            db_path: Path to SQLite file (defaults to project_root/db.sqlite3)
+            db_path: Path to SQLite file (defaults to project_root/db.sqlite3).
+                    Relative paths are resolved from ai_service/ directory.
             timeout: Connection timeout in seconds (defaults to settings.database_timeout_seconds)
         """
         if db_path is None:
             project_root = Path(__file__).parent.parent
             db_path = project_root / "db.sqlite3"
+        else:
+            # Resolve relative paths from ai_service/ directory
+            db_path_obj = Path(db_path)
+            if not db_path_obj.is_absolute():
+                ai_service_dir = Path(__file__).parent
+                db_path = (ai_service_dir / db_path_obj).resolve()
+            else:
+                db_path = db_path_obj
 
         self.db_path = str(db_path)
         self.timeout = timeout if timeout is not None else settings.ai_service_database_timeout_seconds

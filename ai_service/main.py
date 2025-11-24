@@ -75,16 +75,27 @@ async def lifespan(app: FastAPI):
             await http_client.aclose()
             raise
 
-        # Verify database exists
+        # Verify database exists (resolve relative paths from project root)
         db_path = Path(settings.ai_service_database_path)
+        if not db_path.is_absolute():
+            # Resolve relative path from project root (parent of ai_service/)
+            project_root = Path(__file__).parent.parent
+            db_path = (project_root / db_path).resolve()
+
         if not db_path.exists():
-            error_msg = f"Database file not found: {settings.ai_service_database_path}"
+            error_msg = f"Database file not found: {db_path}"
             log_error(error_msg)
             await http_client.aclose()
             raise FileNotFoundError(error_msg)
 
-        # Verify prompt template exists
-        template_path = Path(settings.ai_service_prompt_template_dir) / "fill_work_plan.txt"
+        # Verify prompt template exists (resolve relative paths from project root)
+        template_dir = Path(settings.ai_service_prompt_template_dir)
+        if not template_dir.is_absolute():
+            # Resolve relative path from project root
+            project_root = Path(__file__).parent.parent
+            template_dir = (project_root / template_dir).resolve()
+
+        template_path = template_dir / "fill_work_plan.txt"
         if not template_path.exists():
             error_msg = f"Prompt template not found: {template_path}"
             log_error(error_msg)

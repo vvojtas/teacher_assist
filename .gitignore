@@ -224,3 +224,7 @@ yarn-error.log*
 
 # Jest coverage
 coverage/
+
+#logs from start.sh
+ai_service.log
+django.log
