@@ -59,7 +59,7 @@ Wypełnij powiązane pola modułu, podstawy programowej oraz cele dla podanych a
 {examples}
 
 ### Zadanie:
-Temat tygodnia: {theme}
+Temat: {theme}
 Aktywność: {activity}
 
 

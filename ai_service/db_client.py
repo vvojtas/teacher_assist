@@ -12,6 +12,7 @@ from pathlib import Path
 from contextlib import contextmanager
 
 from ai_service.config import settings
+from ai_service.utils.paths import get_database_path
 from ai_service.db_models import (
     EducationalModule,
     CurriculumReference,
@@ -34,22 +35,12 @@ class DatabaseClient:
 
         Args:
             db_path: Path to SQLite file (defaults to project_root/db.sqlite3).
-                    Relative paths are resolved from ai_service/ directory.
+                    Relative paths are resolved from project root.
             timeout: Connection timeout in seconds (defaults to settings.database_timeout_seconds)
         """
-        if db_path is None:
-            project_root = Path(__file__).parent.parent
-            db_path = project_root / "db.sqlite3"
-        else:
-            # Resolve relative paths from ai_service/ directory
-            db_path_obj = Path(db_path)
-            if not db_path_obj.is_absolute():
-                ai_service_dir = Path(__file__).parent
-                db_path = (ai_service_dir / db_path_obj).resolve()
-            else:
-                db_path = db_path_obj
-
-        self.db_path = str(db_path)
+        # Use centralized path resolution utility
+        resolved_path = get_database_path(db_path)
+        self.db_path = str(resolved_path)
         self.timeout = timeout if timeout is not None else settings.ai_service_database_timeout_seconds
 
         if not os.path.exists(self.db_path):

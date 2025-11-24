@@ -1,26 +1,131 @@
 """
 OpenRouter LLM client for AI service.
 
-Handles communication with OpenRouter API, including:
-- Async HTTP requests
+Handles communication with OpenRouter API using OpenAI SDK, including:
+- Async API calls with OpenAI client
+- Structured outputs (JSON Schema validation)
+- Reasoning extraction (supports <think> tags from models like DeepSeek R1)
 - Token usage tracking
 - Cost calculation
 - Error handling with Polish messages
 """
 
-import httpx
+import json
+import re
 from typing import Dict, Any, Tuple, Optional
+from openai import AsyncOpenAI
 
 from ai_service.config import settings
 from ai_service.utils.console import log_prompt, log_response, log_cost, log_error
 from ai_service.utils.cost_tracker import get_pricing_cache, calculate_cost
 
 
+# JSON Schema for structured LLM output
+# Ensures the model returns valid JSON with required fields
+LLM_OUTPUT_JSON_SCHEMA = {
+    "name": "educational_metadata",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "modules": {
+                "type": "array",
+                "description": "List of educational module names in Polish (uppercase)",
+                "items": {
+                    "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 3
+            },
+            "curriculum_refs": {
+                "type": "array",
+                "description": "List of curriculum reference codes (e.g., '4.15', '3.4')",
+                "items": {
+                    "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 7
+            },
+            "objectives": {
+                "type": "array",
+                "description": "List of learning objectives in Polish",
+                "items": {
+                    "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 5
+            }
+        },
+        "required": ["modules", "curriculum_refs", "objectives"],
+        "additionalProperties": False
+    }
+}
+
+
+def extract_reasoning_and_json(response_content: str) -> Tuple[str, Dict[str, Any]]:
+    """
+    Extract reasoning and JSON from model response content.
+
+    NOTE: This is a FALLBACK method for models that embed reasoning in content.
+    The preferred approach is using OpenRouter's `include_reasoning: true` parameter,
+    which returns reasoning in a separate API field.
+
+    Handles responses that contain reasoning tags followed by JSON output.
+    Supports multiple reasoning tag formats:
+    - <think>...</think> (DeepSeek R1 style when reasoning is in content)
+    - <thinking>...</thinking> (alternative format)
+
+    Args:
+        response_content: Raw response string from LLM
+
+    Returns:
+        (reasoning, json_dict) tuple where:
+            - reasoning: Extracted reasoning text (empty if no reasoning tags found)
+            - json_dict: Parsed JSON object
+
+    Raises:
+        ValueError: If JSON parsing fails
+    """
+    reasoning = ""
+    json_str = response_content
+
+    # Check for <think> tags (DeepSeek R1 style)
+    if "<think>" in response_content and "</think>" in response_content:
+        think_start = response_content.find("<think>") + len("<think>")
+        think_end = response_content.find("</think>")
+        reasoning = response_content[think_start:think_end].strip()
+        json_str = response_content[think_end + len("</think>"):].strip()
+
+    # Check for <thinking> tags (alternative format)
+    elif "<thinking>" in response_content and "</thinking>" in response_content:
+        think_start = response_content.find("<thinking>") + len("<thinking>")
+        think_end = response_content.find("</thinking>")
+        reasoning = response_content[think_start:think_end].strip()
+        json_str = response_content[think_end + len("</thinking>"):].strip()
+
+    # Clean JSON string (remove markdown code fences)
+    json_str = json_str.replace('```json', '').replace('```', '').strip()
+
+    # Parse JSON
+    try:
+        json_dict = json.loads(json_str)
+    except json.JSONDecodeError:
+        # If parsing fails, try to find JSON object in the string
+        json_match = re.search(r'\{.*\}', json_str, re.DOTALL)
+        if json_match:
+            json_dict = json.loads(json_match.group())
+        else:
+            raise ValueError(f"Could not parse JSON from: {json_str}")
+
+    return reasoning, json_dict
+
+
 class OpenRouterClient:
     """
-    Client for OpenRouter API.
+    Client for OpenRouter API using OpenAI SDK.
 
-    Provides async methods for calling LLMs with automatic cost tracking.
+    Provides async methods for calling LLMs with automatic cost tracking
+    and reasoning extraction support.
     """
 
     def __init__(
@@ -46,27 +151,37 @@ class OpenRouterClient:
         self.temperature = temperature or settings.ai_service_llm_temperature
         self.max_tokens = max_tokens or settings.ai_service_llm_max_tokens
         self.timeout = timeout or settings.ai_service_llm_timeout_seconds
-        self.base_url = "https://openrouter.ai/api/v1"
 
         if not self.api_key:
             raise ValueError("OpenRouter API key is required")
+
+        # Initialize OpenAI client with OpenRouter base URL
+        self.client = AsyncOpenAI(
+            api_key=self.api_key,
+            base_url="https://openrouter.ai/api/v1",
+            timeout=float(self.timeout),
+            default_headers={
+                "HTTP-Referer": "https://github.com/teacher-assist",
+                "X-Title": "Teacher Assist - Lesson Planner"
+            }
+        )
 
     async def generate(
         self,
         prompt: str,
         log_output: bool = True,
-        http_client: Optional[httpx.AsyncClient] = None
+        http_client: Optional[Any] = None  # Ignored, kept for API compatibility
     ) -> Tuple[str, Dict[str, int]]:
         """
         Generate completion from LLM.
 
-        Calls OpenRouter API and tracks token usage and costs.
+        Calls OpenRouter API via OpenAI SDK and tracks token usage and costs.
 
         Args:
             prompt: The complete prompt to send to the LLM.
             log_output: Whether to log prompt, response, and cost to console.
-            http_client: Optional shared HTTP client (recommended for connection pooling).
-                        If None, creates a new client for this request.
+            http_client: Deprecated parameter, kept for backwards compatibility.
+                        OpenAI SDK manages its own connection pooling.
 
         Returns:
             Tuple of (raw_response_text, usage_dict) where usage_dict contains:
@@ -76,90 +191,104 @@ class OpenRouterClient:
                 - estimated_cost: Calculated cost in USD
 
         Raises:
-            httpx.TimeoutException: If request exceeds timeout.
-            httpx.HTTPStatusError: If API returns error status.
+            openai.APITimeoutError: If request exceeds timeout.
+            openai.APIStatusError: If API returns error status.
             ValueError: If response format is invalid.
         """
         # Log prompt in GREEN
         if log_output:
             log_prompt(prompt)
 
-        # Prepare request payload
-        payload: Dict[str, Any] = {
-            "model": self.model,
-            "messages": [
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
-            # Enable usage tracking for token counts
-            "usage": {"include": True}
-        }
-
-        headers: Dict[str, str] = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://github.com/teacher-assist",  # Optional: helps with rate limits
-            "X-Title": "Teacher Assist - Lesson Planner"  # Optional: shown in OpenRouter dashboard
-        }
-
         try:
-            # Use shared client if provided, otherwise create a new one
-            if http_client is not None:
-                # Use shared client (recommended for connection pooling)
-                response = await http_client.post(
-                    f"{self.base_url}/chat/completions",
-                    headers=headers,
-                    json=payload,
-                    timeout=self.timeout
-                )
-                response.raise_for_status()
-                data: Dict[str, Any] = response.json()
-            else:
-                # Create temporary client (fallback for testing)
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(
-                        f"{self.base_url}/chat/completions",
-                        headers=headers,
-                        json=payload,
-                        timeout=self.timeout
-                    )
-                    response.raise_for_status()
-                    data: Dict[str, Any] = response.json()
-
-        except httpx.TimeoutException as e:
-            error_msg = f"Przekroczono limit czasu oczekiwania na odpowiedź LLM ({self.timeout}s)"
-            log_error(error_msg, str(e))
-            raise
-
-        except httpx.HTTPStatusError as e:
-            error_msg = f"Błąd API OpenRouter: {e.response.status_code}"
-            error_details = e.response.text
-            log_error(error_msg, error_details)
-            raise
+            # Call OpenAI API (compatible with OpenRouter)
+            # Enable structured outputs (JSON Schema validation) and reasoning tokens
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": LLM_OUTPUT_JSON_SCHEMA
+                },
+                extra_body={
+                    "include_reasoning": True  # OpenRouter parameter for reasoning tokens
+                }
+            )
 
         except Exception as e:
-            error_msg = "Nieoczekiwany błąd podczas wywołania LLM"
-            log_error(error_msg, str(e))
+            # Handle various API errors
+            error_type = type(e).__name__
+            if "timeout" in error_type.lower():
+                error_msg = f"Przekroczono limit czasu oczekiwania na odpowiedź LLM ({self.timeout}s)"
+                log_error(error_msg, str(e))
+            elif "status" in error_type.lower():
+                error_msg = f"Błąd API OpenRouter: {str(e)}"
+                log_error(error_msg, str(e))
+            else:
+                error_msg = "Nieoczekiwany błąd podczas wywołania LLM"
+                log_error(error_msg, str(e))
             raise
 
-        # Extract response text
+        # Extract response text and reasoning
         try:
-            raw_response: str = data["choices"][0]["message"]["content"]
-        except (KeyError, IndexError) as e:
+            raw_response: str = response.choices[0].message.content
+            if raw_response is None:
+                raise ValueError("Response content is None")
+
+            # Extract reasoning from OpenRouter's reasoning field (if available)
+            # This works with DeepSeek R1, Gemini Thinking, and other reasoning models
+            reasoning = ""
+            if hasattr(response.choices[0].message, 'reasoning') and response.choices[0].message.reasoning:
+                reasoning = response.choices[0].message.reasoning
+
+            # Log full response in BLUE (includes reasoning if present in content)
+            # Note: If reasoning is in separate field, it won't appear in content
+            if log_output:
+                if reasoning:
+                    # Log reasoning separately if extracted from reasoning field
+                    log_response(f"[REASONING]\n{reasoning}\n\n[JSON OUTPUT]\n{raw_response}")
+                else:
+                    log_response(raw_response)
+
+            # With structured outputs, response is guaranteed valid JSON matching schema
+            # Verify JSON validity and extract if embedded in extra text
+            try:
+                json.loads(raw_response)  # Verify it's valid JSON (should always pass)
+            except json.JSONDecodeError as e:
+                # Fallback: Try to extract JSON object from response using regex
+                # Look for single-level JSON object with expected fields
+                log_error("Structured output parsing failed, attempting regex extraction", str(e))
+
+                # Pattern: Match { ... } that contains our required fields
+                # No nested braces (single-level object)
+                pattern = r'\{[^{}]*"(?:modules|curriculum_refs|objectives)"[^{}]*"(?:modules|curriculum_refs|objectives)"[^{}]*"(?:modules|curriculum_refs|objectives)"[^{}]*\}'
+
+                match = re.search(pattern, raw_response, re.DOTALL)
+                if match:
+                    json_str = match.group(0)
+                    try:
+                        json.loads(json_str)  # Verify extracted JSON is valid
+                        raw_response = json_str  # Replace response with extracted JSON
+                        log_error("Successfully extracted JSON from response", f"Original length: {len(raw_response)}, Extracted length: {len(json_str)}")
+                    except json.JSONDecodeError as parse_err:
+                        raise ValueError(f"Invalid JSON from structured output (extraction also failed): {str(e)}")
+                else:
+                    raise ValueError(f"Invalid JSON from structured output (no valid JSON found): {str(e)}")
+
+        except (IndexError, AttributeError) as e:
             error_msg = "Nieprawidłowy format odpowiedzi z OpenRouter API"
             log_error(error_msg, f"Missing 'choices' or 'message' in response: {str(e)}")
             raise ValueError(error_msg)
 
-        # Log raw response in BLUE
-        if log_output:
-            log_response(raw_response)
 
         # Extract token usage
-        usage: Dict[str, Any] = data.get("usage", {})
-        input_tokens: int = usage.get("prompt_tokens", 0)
-        output_tokens: int = usage.get("completion_tokens", 0)
-        total_tokens: int = usage.get("total_tokens", input_tokens + output_tokens)
+        usage = response.usage
+        input_tokens: int = usage.prompt_tokens if usage else 0
+        output_tokens: int = usage.completion_tokens if usage else 0
+        total_tokens: int = usage.total_tokens if usage else (input_tokens + output_tokens)
 
         # Calculate cost using pricing cache
         estimated_cost: float

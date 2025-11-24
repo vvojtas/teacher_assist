@@ -1,34 +1,35 @@
 """
-Tests for OpenRouter LLM client.
+Tests for OpenRouter LLM client using OpenAI SDK.
 
-Uses mocked httpx responses to test client behavior without actual API calls.
+Uses mocked OpenAI responses to test client behavior without actual API calls.
 """
 
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-import httpx
 
-from ai_service.nodes.llm_client import OpenRouterClient
+from ai_service.nodes.llm_client import OpenRouterClient, extract_reasoning_and_json
 
 
 @pytest.fixture
-def mock_openrouter_response():
-    """Mock successful OpenRouter API response."""
-    return {
-        "id": "gen-test123",
-        "choices": [
-            {
-                "message": {
-                    "content": '{"modules": ["MATEMATYKA"], "curriculum_refs": ["4.15"], "objectives": ["Test objective"]}'
-                }
-            }
-        ],
-        "usage": {
-            "prompt_tokens": 100,
-            "completion_tokens": 50,
-            "total_tokens": 150
-        }
-    }
+def mock_openai_response():
+    """Mock successful OpenAI API response object."""
+    mock_response = MagicMock()
+
+    # Mock choices
+    mock_choice = MagicMock()
+    mock_message = MagicMock()
+    mock_message.content = '{"modules": ["MATEMATYKA"], "curriculum_refs": ["4.15"], "objectives": ["Test objective"]}'
+    mock_choice.message = mock_message
+    mock_response.choices = [mock_choice]
+
+    # Mock usage
+    mock_usage = MagicMock()
+    mock_usage.prompt_tokens = 100
+    mock_usage.completion_tokens = 50
+    mock_usage.total_tokens = 150
+    mock_response.usage = mock_usage
+
+    return mock_response
 
 
 @pytest.fixture
@@ -49,88 +50,90 @@ def mock_pricing_response():
 
 @pytest.mark.asyncio
 class TestOpenRouterClient:
-    """Tests for OpenRouter client."""
+    """Tests for OpenRouter client using OpenAI SDK."""
 
-    async def test_successful_generation(self, mock_openrouter_response, mock_pricing_response):
+    async def test_successful_generation(self, mock_openai_response, mock_pricing_response):
         """Test successful LLM call with token tracking."""
-        with patch('httpx.AsyncClient') as mock_client_class:
-            # Mock the async context manager
-            mock_client = AsyncMock()
-            mock_client_class.return_value.__aenter__.return_value = mock_client
-            mock_client_class.return_value.__aexit__.return_value = None
+        with patch('ai_service.nodes.llm_client.AsyncOpenAI') as mock_openai_class:
+            # Mock the OpenAI client instance
+            mock_client = MagicMock()
+            mock_openai_class.return_value = mock_client
 
-            # Mock chat completion response (use MagicMock for synchronous response methods)
-            mock_chat_response = MagicMock()
-            mock_chat_response.json.return_value = mock_openrouter_response
-            mock_chat_response.raise_for_status = MagicMock()
-            mock_client.post.return_value = mock_chat_response
+            # Mock chat completions
+            mock_client.chat.completions.create = AsyncMock(return_value=mock_openai_response)
 
-            # Mock pricing response (use MagicMock for synchronous response methods)
-            mock_pricing_response_obj = MagicMock()
-            mock_pricing_response_obj.json.return_value = mock_pricing_response
-            mock_pricing_response_obj.raise_for_status = MagicMock()
-            mock_client.get.return_value = mock_pricing_response_obj
+            # Mock pricing fetch
+            with patch('ai_service.nodes.llm_client.get_pricing_cache') as mock_pricing_cache:
+                mock_cache = MagicMock()
+                mock_cache.fetch_pricing = AsyncMock(return_value=(0.00000025, 0.00000125))
+                mock_pricing_cache.return_value = mock_cache
 
-            # Create client and call
-            client = OpenRouterClient(api_key="test-key")
-            response, usage = await client.generate("Test prompt", log_output=False)
+                # Create client and call
+                client = OpenRouterClient(api_key="test-key")
+                response, usage = await client.generate("Test prompt", log_output=False)
 
-            # Verify response
-            assert usage["input_tokens"] == 100
-            assert usage["output_tokens"] == 50
-            assert usage["total_tokens"] == 150
-            assert "estimated_cost" in usage
+                # Verify response
+                assert usage["input_tokens"] == 100
+                assert usage["output_tokens"] == 50
+                assert usage["total_tokens"] == 150
+                assert "estimated_cost" in usage
 
     async def test_timeout_handling(self):
         """Test that timeout errors are handled properly."""
-        with patch('httpx.AsyncClient') as mock_client_class:
-            mock_client = AsyncMock()
-            mock_client_class.return_value.__aenter__.return_value = mock_client
-            mock_client_class.return_value.__aexit__.return_value = None
+        with patch('ai_service.nodes.llm_client.AsyncOpenAI') as mock_openai_class:
+            mock_client = MagicMock()
+            mock_openai_class.return_value = mock_client
 
             # Mock timeout exception
-            mock_client.post.side_effect = httpx.TimeoutException("Request timed out")
+            from openai import APITimeoutError
+            mock_client.chat.completions.create = AsyncMock(
+                side_effect=APITimeoutError("Request timed out")
+            )
 
             client = OpenRouterClient(api_key="test-key")
 
-            with pytest.raises(httpx.TimeoutException):
+            with pytest.raises(APITimeoutError):
                 await client.generate("Test prompt", log_output=False)
 
     async def test_http_error_handling(self):
         """Test that HTTP errors are handled properly."""
-        with patch('httpx.AsyncClient') as mock_client_class:
-            mock_client = AsyncMock()
-            mock_client_class.return_value.__aenter__.return_value = mock_client
-            mock_client_class.return_value.__aexit__.return_value = None
+        with patch('ai_service.nodes.llm_client.AsyncOpenAI') as mock_openai_class:
+            mock_client = MagicMock()
+            mock_openai_class.return_value = mock_client
 
-            # Mock HTTP error (use MagicMock for synchronous response methods)
+            # Mock HTTP error
+            from openai import APIStatusError
             mock_response = MagicMock()
             mock_response.status_code = 500
-            mock_response.text = "Internal Server Error"
-            mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-                "500 Error",
-                request=MagicMock(),
-                response=mock_response
+
+            mock_client.chat.completions.create = AsyncMock(
+                side_effect=APIStatusError(
+                    "Internal Server Error",
+                    response=mock_response,
+                    body=None
+                )
             )
-            mock_client.post.return_value = mock_response
 
             client = OpenRouterClient(api_key="test-key")
 
-            with pytest.raises(httpx.HTTPStatusError):
+            with pytest.raises(APIStatusError):
                 await client.generate("Test prompt", log_output=False)
 
-    async def test_invalid_response_format(self, mock_pricing_response):
+    async def test_invalid_response_format(self):
         """Test handling of malformed API response."""
-        with patch('httpx.AsyncClient') as mock_client_class:
-            mock_client = AsyncMock()
-            mock_client_class.return_value.__aenter__.return_value = mock_client
-            mock_client_class.return_value.__aexit__.return_value = None
+        with patch('ai_service.nodes.llm_client.AsyncOpenAI') as mock_openai_class:
+            mock_client = MagicMock()
+            mock_openai_class.return_value = mock_client
 
-            # Mock malformed response (missing 'choices') - use MagicMock for synchronous methods
-            mock_chat_response = MagicMock()
-            mock_chat_response.json.return_value = {"error": "Invalid response"}
-            mock_chat_response.raise_for_status = MagicMock()
-            mock_client.post.return_value = mock_chat_response
+            # Mock response with None content
+            mock_response = MagicMock()
+            mock_choice = MagicMock()
+            mock_message = MagicMock()
+            mock_message.content = None
+            mock_choice.message = mock_message
+            mock_response.choices = [mock_choice]
+
+            mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
             client = OpenRouterClient(api_key="test-key")
 
@@ -142,37 +145,150 @@ class TestOpenRouterClient:
         with pytest.raises(ValueError):
             OpenRouterClient(api_key="")
 
-    async def test_cost_calculation_fallback(self, mock_openrouter_response):
+    async def test_cost_calculation_fallback(self, mock_openai_response):
         """Test that cost calculation uses fallback if pricing fetch fails."""
-        with patch('httpx.AsyncClient') as mock_client_class:
-            mock_client = AsyncMock()
-            mock_client_class.return_value.__aenter__.return_value = mock_client
-            mock_client_class.return_value.__aexit__.return_value = None
+        with patch('ai_service.nodes.llm_client.AsyncOpenAI') as mock_openai_class:
+            mock_client = MagicMock()
+            mock_openai_class.return_value = mock_client
 
-            # Mock successful chat response (use MagicMock for synchronous response methods)
-            mock_chat_response = MagicMock()
-            mock_chat_response.json.return_value = mock_openrouter_response
-            mock_chat_response.raise_for_status = MagicMock()
+            # Mock successful chat response
+            mock_client.chat.completions.create = AsyncMock(return_value=mock_openai_response)
 
-            # Mock failed pricing response (use MagicMock for synchronous response methods)
-            mock_pricing_response = MagicMock()
-            mock_pricing_response.raise_for_status.side_effect = httpx.HTTPError("Pricing failed")
+            # Mock failed pricing response
+            with patch('ai_service.nodes.llm_client.get_pricing_cache') as mock_pricing_cache:
+                mock_cache = MagicMock()
+                mock_cache.fetch_pricing = AsyncMock(side_effect=Exception("Pricing failed"))
+                mock_pricing_cache.return_value = mock_cache
 
-            # Alternate between chat and pricing calls
-            call_count = 0
-            def side_effect(*args, **kwargs):
-                nonlocal call_count
-                call_count += 1
-                if call_count == 1:
-                    return mock_pricing_response  # First call (pricing) fails
-                return mock_chat_response  # Second call (chat) succeeds
+                client = OpenRouterClient(api_key="test-key")
+                response, usage = await client.generate("Test prompt", log_output=False)
 
-            mock_client.post.return_value = mock_chat_response
-            mock_client.get.side_effect = httpx.HTTPError("Pricing failed")
+                # Should still get cost estimate (fallback pricing)
+                assert "estimated_cost" in usage
+                assert usage["estimated_cost"] > 0
 
-            client = OpenRouterClient(api_key="test-key")
-            response, usage = await client.generate("Test prompt", log_output=False)
 
-            # Should still get cost estimate (fallback pricing)
-            assert "estimated_cost" in usage
-            assert usage["estimated_cost"] > 0
+class TestReasoningExtraction:
+    """Tests for reasoning extraction from LLM responses."""
+
+    def test_extract_thinking_tags(self):
+        """Test extraction of <think> tags (DeepSeek R1 style)."""
+        response = """<think>
+This is my reasoning process.
+I need to analyze the activity.
+</think>
+{
+  "modules": ["MATEMATYKA"],
+  "curriculum_refs": ["4.15"],
+  "objectives": ["Test objective"]
+}"""
+        reasoning, json_dict = extract_reasoning_and_json(response)
+
+        assert reasoning == "This is my reasoning process.\nI need to analyze the activity."
+        assert json_dict["modules"] == ["MATEMATYKA"]
+        assert json_dict["curriculum_refs"] == ["4.15"]
+
+    def test_extract_thinking_alternative_tags(self):
+        """Test extraction of <thinking> tags (alternative format)."""
+        response = """<thinking>
+Analyzing the educational context.
+</thinking>
+{
+  "modules": ["JĘZYK"],
+  "curriculum_refs": ["3.4"],
+  "objectives": ["Develop language skills"]
+}"""
+        reasoning, json_dict = extract_reasoning_and_json(response)
+
+        assert reasoning == "Analyzing the educational context."
+        assert json_dict["modules"] == ["JĘZYK"]
+
+    def test_no_reasoning_tags(self):
+        """Test response without reasoning tags."""
+        response = """{
+  "modules": ["MATEMATYKA"],
+  "curriculum_refs": ["4.15"],
+  "objectives": ["Test"]
+}"""
+        reasoning, json_dict = extract_reasoning_and_json(response)
+
+        assert reasoning == ""
+        assert json_dict["modules"] == ["MATEMATYKA"]
+
+    def test_json_with_markdown_fences(self):
+        """Test JSON extraction with markdown code fences."""
+        response = """```json
+{
+  "modules": ["MATEMATYKA"],
+  "curriculum_refs": ["4.15"],
+  "objectives": ["Test"]
+}
+```"""
+        reasoning, json_dict = extract_reasoning_and_json(response)
+
+        assert reasoning == ""
+        assert json_dict["modules"] == ["MATEMATYKA"]
+
+    def test_invalid_json_raises_error(self):
+        """Test that invalid JSON raises ValueError."""
+        response = "This is not JSON at all"
+
+        with pytest.raises(ValueError, match="Could not parse JSON"):
+            extract_reasoning_and_json(response)
+
+    def test_json_extraction_from_mixed_content(self):
+        """Test JSON extraction when embedded in text."""
+        response = """Here is the analysis:
+{
+  "modules": ["MATEMATYKA"],
+  "curriculum_refs": ["4.15"],
+  "objectives": ["Test"]
+}
+And some trailing text."""
+
+        reasoning, json_dict = extract_reasoning_and_json(response)
+
+        # Should extract the JSON object
+        assert json_dict["modules"] == ["MATEMATYKA"]
+
+    async def test_json_extraction_fallback(self, mock_pricing_response):
+        """Test that regex fallback extracts JSON from malformed response."""
+        with patch('ai_service.nodes.llm_client.AsyncOpenAI') as mock_openai_class:
+            mock_client = MagicMock()
+            mock_openai_class.return_value = mock_client
+
+            # Mock response with JSON embedded in extra text
+            mock_response = MagicMock()
+            mock_choice = MagicMock()
+            mock_message = MagicMock()
+            # Simulate response with extra text before/after JSON
+            mock_message.content = '''Here is the result:
+{"modules": ["MATEMATYKA"], "curriculum_refs": ["4.15"], "objectives": ["Test objective"]}
+End of response.'''
+            mock_choice.message = mock_message
+            mock_response.choices = [mock_choice]
+
+            # Mock usage
+            mock_usage = MagicMock()
+            mock_usage.prompt_tokens = 100
+            mock_usage.completion_tokens = 50
+            mock_usage.total_tokens = 150
+            mock_response.usage = mock_usage
+
+            mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+            # Mock pricing fetch
+            with patch('ai_service.nodes.llm_client.get_pricing_cache') as mock_pricing_cache:
+                mock_cache = MagicMock()
+                mock_cache.fetch_pricing = AsyncMock(return_value=(0.00000025, 0.00000125))
+                mock_pricing_cache.return_value = mock_cache
+
+                client = OpenRouterClient(api_key="test-key")
+                response, usage = await client.generate("Test prompt", log_output=False)
+
+                # Should successfully extract and parse JSON
+                import json
+                parsed = json.loads(response)
+                assert parsed["modules"] == ["MATEMATYKA"]
+                assert parsed["curriculum_refs"] == ["4.15"]
+                assert parsed["objectives"] == ["Test objective"]

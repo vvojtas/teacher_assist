@@ -27,6 +27,7 @@ from ai_service.config import settings
 from ai_service.mock_service import MockAIService
 from ai_service.workflow import get_workflow
 from ai_service.utils.console import log_info, log_error
+from ai_service.utils.paths import get_database_path, resolve_from_project_root
 
 # Configure logging
 logging.basicConfig(
@@ -75,12 +76,8 @@ async def lifespan(app: FastAPI):
             await http_client.aclose()
             raise
 
-        # Verify database exists (resolve relative paths from project root)
-        db_path = Path(settings.ai_service_database_path)
-        if not db_path.is_absolute():
-            # Resolve relative path from project root (parent of ai_service/)
-            project_root = Path(__file__).parent.parent
-            db_path = (project_root / db_path).resolve()
+        # Verify database exists (use centralized path resolution)
+        db_path = get_database_path(settings.ai_service_database_path)
 
         if not db_path.exists():
             error_msg = f"Database file not found: {db_path}"
@@ -88,13 +85,8 @@ async def lifespan(app: FastAPI):
             await http_client.aclose()
             raise FileNotFoundError(error_msg)
 
-        # Verify prompt template exists (resolve relative paths from project root)
-        template_dir = Path(settings.ai_service_prompt_template_dir)
-        if not template_dir.is_absolute():
-            # Resolve relative path from project root
-            project_root = Path(__file__).parent.parent
-            template_dir = (project_root / template_dir).resolve()
-
+        # Verify prompt template exists (use centralized path resolution)
+        template_dir = resolve_from_project_root(settings.ai_service_prompt_template_dir)
         template_path = template_dir / "fill_work_plan.txt"
         if not template_path.exists():
             error_msg = f"Prompt template not found: {template_path}"
