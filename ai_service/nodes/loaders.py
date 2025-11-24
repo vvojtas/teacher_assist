@@ -35,19 +35,19 @@ def load_modules(state: Dict[str, Any]) -> Dict[str, Any]:
         # Convert Pydantic models to dicts
         modules_data: List[Dict[str, Any]] = [{"module_name": m.module_name} for m in modules]
 
+        # Only return the key this node is responsible for (parallel execution)
         return {
-            **state,
             "available_modules": modules_data
         }
 
     except Exception as e:
         error_msg = f"Błąd podczas ładowania modułów z bazy danych: {str(e)}"
         log_error("Błąd ładowania modułów", str(e))
+        # In error case, return validation fields to propagate error
+        # validation_errors uses operator.add reducer, so just return list
         return {
-            **state,
             "available_modules": [],
-            "validation_errors": state.get("validation_errors", []) + [error_msg],
-            "validation_passed": False
+            "validation_errors": [error_msg],
         }
 
 
@@ -91,8 +91,8 @@ def load_curriculum_refs(state: Dict[str, Any]) -> Dict[str, Any]:
             for ref in major_refs
         ]
 
+        # Only return the keys this node is responsible for (parallel execution)
         return {
-            **state,
             "curriculum_refs": curriculum_refs_data,
             "major_curriculum_refs": major_refs_data
         }
@@ -100,12 +100,11 @@ def load_curriculum_refs(state: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         error_msg = f"Błąd podczas ładowania podstawy programowej z bazy danych: {str(e)}"
         log_error("Błąd ładowania podstawy programowej", str(e))
+        # In error case, return validation fields to propagate error
         return {
-            **state,
             "curriculum_refs": [],
             "major_curriculum_refs": [],
-            "validation_errors": state.get("validation_errors", []) + [error_msg],
-            "validation_passed": False
+            "validation_errors": [error_msg],
         }
 
 
@@ -137,19 +136,18 @@ def load_examples(state: Dict[str, Any]) -> Dict[str, Any]:
             for ex in examples
         ]
 
+        # Only return the key this node is responsible for (parallel execution)
         return {
-            **state,
             "example_entries": examples_data
         }
 
     except Exception as e:
         error_msg = f"Błąd podczas ładowania przykładów z bazy danych: {str(e)}"
         log_error("Błąd ładowania przykładów", str(e))
+        # In error case, return validation fields to propagate error
         return {
-            **state,
             "example_entries": [],
-            "validation_errors": state.get("validation_errors", []) + [error_msg],
-            "validation_passed": False
+            "validation_errors": [error_msg],
         }
 
 
@@ -178,10 +176,10 @@ def load_prompt_template(state: Dict[str, Any]) -> Dict[str, Any]:
         if not template_path.exists():
             error_msg = f"Plik szablonu nie istnieje: {template_path}"
             log_error("Błąd ładowania szablonu", error_msg)
+            # In error case, return validation fields to propagate error
             return {
-                **state,
                 "prompt_template": "",
-                "validation_errors": state.get("validation_errors", []) + [error_msg],
+                "validation_errors": [error_msg],
                 "validation_passed": False
             }
 
@@ -189,17 +187,16 @@ def load_prompt_template(state: Dict[str, Any]) -> Dict[str, Any]:
         with open(template_path, "r", encoding="utf-8") as f:
             template: str = f.read()
 
+        # Only return the key this node is responsible for (parallel execution)
         return {
-            **state,
             "prompt_template": template
         }
 
     except Exception as e:
         error_msg = f"Błąd podczas ładowania szablonu promptu: {str(e)}"
         log_error("Błąd ładowania szablonu", str(e))
+        # In error case, return validation fields to propagate error
         return {
-            **state,
             "prompt_template": "",
-            "validation_errors": state.get("validation_errors", []) + [error_msg],
-            "validation_passed": False
+            "validation_errors": [error_msg],
         }

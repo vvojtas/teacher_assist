@@ -10,9 +10,10 @@ Defines the state machine that orchestrates the entire metadata generation proce
 6. Response formatting
 """
 
-from typing import TypedDict, List, Dict, Any, Optional
+from typing import TypedDict, List, Dict, Any, Optional, Annotated
 from langgraph.graph import StateGraph, END
 import httpx
+import operator
 
 from common.models import FillWorkPlanResponse, ErrorResponse
 from ai_service.nodes.validators import validate_input, validate_output, parse_llm_response
@@ -25,6 +26,23 @@ from ai_service.nodes.loaders import (
 from ai_service.nodes.prompt_builder import construct_prompt
 from ai_service.nodes.llm_generator import generate_with_llm
 from ai_service.nodes.formatters import format_success, format_error
+
+
+def start_parallel_loading(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Pass-through node to initiate parallel data loading.
+
+    This node exists to enable conditional routing from input validation
+    to parallel loader nodes (LangGraph limitation: conditional edges cannot
+    directly route to multiple parallel nodes).
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Unchanged state
+    """
+    return state
 
 
 class WorkflowState(TypedDict, total=False):
@@ -57,7 +75,7 @@ class WorkflowState(TypedDict, total=False):
 
     # Validation
     validation_passed: bool
-    validation_errors: List[str]
+    validation_errors: Annotated[List[str], operator.add]  # Use operator.add to merge errors from parallel nodes
 
     # Cost Tracking
     input_tokens: int
@@ -72,17 +90,17 @@ def should_continue_after_input_validation(state: WorkflowState) -> str:
     """
     Conditional routing after input validation.
 
-    Routes to loaders if input is valid, or directly to error formatter if invalid.
+    Routes to parallel loading if input is valid, or directly to error formatter if invalid.
 
     Args:
         state: Current workflow state.
 
     Returns:
-        "loaders" if input validation passed, "error" otherwise.
+        "load" if input validation passed, "error" otherwise.
     """
     # Check if input validation passed (no validation errors)
     if not state.get("validation_errors"):
-        return "loaders"
+        return "load"
     else:
         return "error"
 
@@ -141,6 +159,7 @@ def create_workflow() -> StateGraph:
 
     # Add nodes
     workflow.add_node("validate_input", validate_input)
+    workflow.add_node("start_loading", start_parallel_loading)
     workflow.add_node("load_modules", load_modules)
     workflow.add_node("load_curriculum_refs", load_curriculum_refs)
     workflow.add_node("load_examples", load_examples)
@@ -157,15 +176,21 @@ def create_workflow() -> StateGraph:
 
     # Add conditional routing after input validation
     # If input is invalid, go directly to error formatter (skip loaders and LLM)
-    # If input is valid, proceed to parallel loaders
+    # If input is valid, proceed to parallel loading via intermediate node
     workflow.add_conditional_edges(
         "validate_input",
         should_continue_after_input_validation,
         {
-            "loaders": ["load_modules", "load_curriculum_refs", "load_examples", "load_template"],
+            "load": "start_loading",
             "error": "format_error"
         }
     )
+
+    # Add edges from start_loading to all parallel loaders
+    workflow.add_edge("start_loading", "load_modules")
+    workflow.add_edge("start_loading", "load_curriculum_refs")
+    workflow.add_edge("start_loading", "load_examples")
+    workflow.add_edge("start_loading", "load_template")
 
     # Add edges from all loaders to prompt construction
     # Note: LangGraph automatically waits for all parallel branches to complete
