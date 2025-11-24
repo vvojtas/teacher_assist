@@ -11,6 +11,14 @@ from typing import Dict, Any, List, Set
 import json
 
 from ai_service.utils.console import log_warning, log_error
+from ai_service.constants import (
+    MAX_ACTIVITY_LENGTH,
+    MAX_THEME_LENGTH,
+    MAX_MODULES,
+    MAX_CURRICULUM_REFS,
+    MAX_OBJECTIVES,
+    MIN_OBJECTIVE_LENGTH
+)
 
 
 def validate_input(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -32,12 +40,12 @@ def validate_input(state: Dict[str, Any]) -> Dict[str, Any]:
     # Validate activity (required)
     if not activity:
         errors.append("Pole 'activity' nie może być puste")
-    elif len(activity) > 500:
-        errors.append(f"Pole 'activity' jest za długie ({len(activity)} znaków, max 500)")
+    elif len(activity) > MAX_ACTIVITY_LENGTH:
+        errors.append(f"Pole 'activity' jest za długie ({len(activity)} znaków, max {MAX_ACTIVITY_LENGTH})")
 
     # Validate theme (optional)
-    if theme and len(theme) > 200:
-        errors.append(f"Pole 'theme' jest za długie ({len(theme)} znaków, max 200)")
+    if theme and len(theme) > MAX_THEME_LENGTH:
+        errors.append(f"Pole 'theme' jest za długie ({len(theme)} znaków, max {MAX_THEME_LENGTH})")
 
     if errors:
         log_error("Błąd walidacji danych wejściowych", "\n".join(errors))
@@ -107,8 +115,8 @@ def validate_output(state: Dict[str, Any]) -> Dict[str, Any]:
         errors.append("Pole 'modules' musi być listą")
     elif len(modules) == 0:
         errors.append("Wymagany co najmniej 1 moduł")
-    elif len(modules) > 3:
-        errors.append(f"Zbyt wiele modułów ({len(modules)}, max 3)")
+    elif len(modules) > MAX_MODULES:
+        errors.append(f"Zbyt wiele modułów ({len(modules)}, max {MAX_MODULES})")
     else:
         # Check if modules exist in database
         invalid_modules = [m for m in modules if m not in valid_modules]
@@ -143,8 +151,8 @@ def validate_output(state: Dict[str, Any]) -> Dict[str, Any]:
             errors.append(
                 f"Wszystkie kody podstawy programowej są nieprawidłowe: {', '.join(invalid_refs)}"
             )
-        elif len(valid_refs) > 10:
-            errors.append(f"Zbyt wiele kodów podstawy programowej ({len(valid_refs)}, max 10)")
+        elif len(valid_refs) > MAX_CURRICULUM_REFS:
+            errors.append(f"Zbyt wiele kodów podstawy programowej ({len(valid_refs)}, max {MAX_CURRICULUM_REFS})")
 
         # Update parsed output with filtered refs
         if invalid_refs and valid_refs:
@@ -157,15 +165,15 @@ def validate_output(state: Dict[str, Any]) -> Dict[str, Any]:
         errors.append("Pole 'objectives' musi być listą")
     elif len(objectives) == 0:
         errors.append("Wymagany co najmniej 1 cel edukacyjny")
-    elif len(objectives) > 5:
-        errors.append(f"Zbyt wiele celów edukacyjnych ({len(objectives)}, max 5)")
+    elif len(objectives) > MAX_OBJECTIVES:
+        errors.append(f"Zbyt wiele celów edukacyjnych ({len(objectives)}, max {MAX_OBJECTIVES})")
     else:
         # Check each objective
         for i, obj in enumerate(objectives, 1):
             if not isinstance(obj, str):
                 errors.append(f"Cel {i} musi być tekstem")
-            elif len(obj.strip()) < 10:
-                errors.append(f"Cel {i} jest za krótki (min 10 znaków)")
+            elif len(obj.strip()) < MIN_OBJECTIVE_LENGTH:
+                errors.append(f"Cel {i} jest za krótki (min {MIN_OBJECTIVE_LENGTH} znaków)")
 
     # Log errors if any
     if errors:
