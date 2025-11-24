@@ -212,18 +212,17 @@ class TestParseResponse:
     def test_parse_valid_json(self):
         """Test parsing valid JSON response."""
         state = {
-            "llm_raw_response": '{"reasoning": "Test", "modules": ["MATEMATYKA"], "curriculum_refs": ["4.15"], "objectives": ["Objective 1"]}'
+            "llm_raw_response": '{"modules": ["MATEMATYKA"], "curriculum_refs": ["4.15"], "objectives": ["Objective 1"]}'
         }
         result = parse_llm_response(state)
 
         assert "llm_parsed_output" in result
         assert result["llm_parsed_output"]["modules"] == ["MATEMATYKA"]
-        assert result["reasoning"] == "Test"
 
     def test_parse_json_with_markdown(self):
         """Test parsing JSON wrapped in markdown code block."""
         state = {
-            "llm_raw_response": '```json\n{"reasoning": "Test", "modules": ["MATEMATYKA"], "curriculum_refs": ["4.15"], "objectives": ["Obj"]}\n```'
+            "llm_raw_response": '```json\n{"modules": ["MATEMATYKA"], "curriculum_refs": ["4.15"], "objectives": ["Obj"]}\n```'
         }
         result = parse_llm_response(state)
 

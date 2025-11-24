@@ -23,7 +23,6 @@ def sample_initial_state():
 def mock_llm_response():
     """Mock LLM JSON response."""
     return '''{
-        "reasoning": "Zabawa w sklep wymaga liczenia i rozpoznawania cyfr",
         "modules": ["MATEMATYKA"],
         "curriculum_refs": ["4.15", "4.18"],
         "objectives": [
@@ -123,7 +122,7 @@ class TestWorkflowNodes:
         with patch('ai_service.nodes.llm_generator.get_llm_client') as mock_get_client:
             mock_client = AsyncMock()
             mock_client.generate.return_value = (
-                '{"reasoning": "test", "modules": ["MATEMATYKA"], "curriculum_refs": ["4.15"], "objectives": ["Test objective that is long enough"]}',
+                '{"modules": ["MATEMATYKA"], "curriculum_refs": ["4.15"], "objectives": ["Test objective that is long enough"]}',
                 {"input_tokens": 100, "output_tokens": 50, "total_tokens": 150, "estimated_cost": 0.0001}
             )
             mock_get_client.return_value = mock_client

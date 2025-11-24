@@ -86,34 +86,61 @@ def format_examples(examples: List[Dict[str, Any]]) -> str:
     """
     Format LLM training examples for prompt.
 
-    Each example shows a complete work plan entry with all metadata.
+    Each example shows input (theme, activity) followed by 'Odpowiedź:' with
+    correctly formatted JSON output. This trains the LLM on the expected output format.
 
     Args:
         examples: List of example work plan entries with theme, activity,
                  modules, objectives, and curriculum_references.
 
     Returns:
-        Formatted string with numbered examples.
+        Formatted string with numbered examples showing input and JSON response.
 
     Example output:
         Przykład 1:
         Temat: Jesień - zbiory
         Aktywność: Zabawa w sklep z owocami
-        Moduły: MATEMATYKA
-        Podstawa programowa: 4.15, 4.18
-        Cele: Dziecko potrafi przeliczać w zakresie 5
-              Rozpoznaje poznane wcześniej cyfry
+
+        Odpowiedź:
+        {
+          "modules": ["MATEMATYKA"],
+          "curriculum_refs": ["4.15", "4.18"],
+          "objectives": [
+            "Dziecko potrafi przeliczać w zakresie 5",
+            "Rozpoznaje poznane wcześniej cyfry"
+          ]
+        }
     """
+    import json
+
     formatted_examples: List[str] = []
 
     for i, example in enumerate(examples, start=1):
+        # Format objectives as list
+        # Handle both string (newline-separated) and list formats
+        objectives = example['objectives']
+        if isinstance(objectives, str):
+            objectives_list = [obj.strip() for obj in objectives.split('\n') if obj.strip()]
+        else:
+            objectives_list = objectives
+
+        # Create JSON response object
+        response_json = {
+            "modules": example['modules'],
+            "curriculum_refs": example['curriculum_references'],
+            "objectives": objectives_list
+        }
+
+        # Format with proper indentation
+        json_str = json.dumps(response_json, ensure_ascii=False, indent=2)
+
         lines: List[str] = [
             f"Przykład {i}:",
             f"Temat: {example['theme']}",
             f"Aktywność: {example['activity']}",
-            f"Moduły: {', '.join(example['modules'])}",
-            f"Podstawa programowa: {', '.join(example['curriculum_references'])}",
-            f"Cele: {example['objectives']}",
+            "",
+            "Odpowiedź:",
+            json_str
         ]
         formatted_examples.append("\n".join(lines))
 

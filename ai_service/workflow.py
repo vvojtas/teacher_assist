@@ -71,7 +71,6 @@ class WorkflowState(TypedDict, total=False):
     # LLM Generation
     llm_raw_response: str
     llm_parsed_output: Dict[str, Any]
-    reasoning: str  # Logged but not returned in API
 
     # Validation
     validation_passed: bool

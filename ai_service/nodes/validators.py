@@ -198,7 +198,7 @@ def parse_llm_response(state: Dict[str, Any]) -> Dict[str, Any]:
         state: Workflow state containing 'llm_raw_response'.
 
     Returns:
-        Updated state with 'llm_parsed_output' and 'reasoning'.
+        Updated state with 'llm_parsed_output'.
     """
     raw_response = state.get("llm_raw_response", "")
 
@@ -222,7 +222,6 @@ def parse_llm_response(state: Dict[str, Any]) -> Dict[str, Any]:
                 return {
                     **state,
                     "llm_parsed_output": {},
-                    "reasoning": "",
                     "validation_passed": False,
                     "validation_errors": state.get("validation_errors", []) + [error_msg]
                 }
@@ -232,16 +231,11 @@ def parse_llm_response(state: Dict[str, Any]) -> Dict[str, Any]:
             return {
                 **state,
                 "llm_parsed_output": {},
-                "reasoning": "",
                 "validation_passed": False,
                 "validation_errors": state.get("validation_errors", []) + [error_msg]
             }
 
-    # Extract reasoning (logged but not returned in API response)
-    reasoning = parsed.get("reasoning", "")
-
     return {
         **state,
         "llm_parsed_output": parsed,
-        "reasoning": reasoning
     }

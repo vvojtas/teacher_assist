@@ -210,7 +210,6 @@ Jesteś ekspertem edukacji przedszkolnej w Polsce.
 [LLM RESPONSE]
 ================================================================================
 {
-  "reasoning": "...",
   "modules": ["MATEMATYKA"],
   ...
 }

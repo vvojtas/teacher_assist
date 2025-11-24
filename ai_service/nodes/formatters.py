@@ -16,7 +16,6 @@ def format_success(state: Dict[str, Any]) -> Dict[str, Any]:
     Format successful response.
 
     LangGraph node that creates FillWorkPlanResponse from validated LLM output.
-    NOTE: Reasoning is NOT included in the response (logged only).
 
     Args:
         state: Workflow state containing:

@@ -18,9 +18,6 @@ class LLMResponse(TypedDict):
     Example JSON response:
     ```json
     {
-        "reasoning": "Zabawa w sklep wymaga liczenia pieniędzy i rozpoznawania liczb, "
-                     "dlatego należy do modułu MATEMATYKA. Podstawa programowa 4.15 "
-                     "dotyczy liczenia, a 4.18 rozpoznawania cyfr.",
         "modules": ["MATEMATYKA"],
         "curriculum_refs": ["4.15", "4.18"],
         "objectives": [
@@ -31,8 +28,6 @@ class LLMResponse(TypedDict):
     ```
 
     Fields:
-        reasoning: Chain-of-thought explanation of the selections (Polish text).
-                   This field is logged but NOT returned in the API response.
         modules: List of 1-3 educational module names (uppercase Polish).
                  Must match modules from the database.
         curriculum_refs: List of 2-3 curriculum reference codes (e.g., "4.15").
@@ -41,7 +36,6 @@ class LLMResponse(TypedDict):
                    Each objective should be specific and actionable.
     """
 
-    reasoning: str
     modules: List[str]
     curriculum_refs: List[str]
     objectives: List[str]
@@ -49,10 +43,6 @@ class LLMResponse(TypedDict):
 
 # Example valid LLM response for documentation
 EXAMPLE_LLM_RESPONSE = {
-    "reasoning": "Zabawa w sklep z owocami rozwija umiejętności matematyczne poprzez "
-                 "liczenie i rozpoznawanie cyfr. Moduł MATEMATYKA jest najbardziej "
-                 "odpowiedni. Podstawa programowa 4.15 dotyczy liczenia w zakresie 5, "
-                 "a 4.18 rozpoznawania cyfr.",
     "modules": ["MATEMATYKA"],
     "curriculum_refs": ["4.15", "4.18"],
     "objectives": [

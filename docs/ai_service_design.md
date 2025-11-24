@@ -132,7 +132,7 @@ class WorkflowState(TypedDict):
 
     # LLM Generation
     llm_raw_response: str
-    llm_parsed_output: dict    # {reasoning, module, curriculum_refs, objectives}
+    llm_parsed_output: dict    # { module, curriculum_refs, objectives}
 
     # Validation
     validation_passed: bool
