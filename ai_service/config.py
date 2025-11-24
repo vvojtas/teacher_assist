@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
     # Database
     database_path: str = "../db.sqlite3"
+    database_timeout_seconds: float = 10.0  # SQLite connection timeout
 
     # Prompt Templates
     prompt_template_dir: str = "ai_service/templates"
