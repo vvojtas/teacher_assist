@@ -34,11 +34,12 @@ async def generate_with_llm(state: Dict[str, Any]) -> Dict[str, Any]:
     prompt: str = state.get("constructed_prompt", "")
 
     if not prompt:
-        log_error("Brak skonstruowanego promptu", "Prompt jest pusty")
+        error_msg = "Brak skonstruowanego promptu"
+        log_error("Błąd generowania LLM", "Prompt jest pusty")
         return {
             **state,
             "llm_raw_response": "",
-            "validation_errors": ["Brak skonstruowanego promptu"],
+            "validation_errors": state.get("validation_errors", []) + [error_msg],
             "validation_passed": False
         }
 
@@ -64,11 +65,11 @@ async def generate_with_llm(state: Dict[str, Any]) -> Dict[str, Any]:
 
     except Exception as e:
         error_msg = f"Błąd podczas generowania odpowiedzi LLM: {str(e)}"
-        log_error("Błąd LLM", error_msg)
+        log_error("Błąd generowania LLM", str(e))
 
         return {
             **state,
             "llm_raw_response": "",
-            "validation_errors": [error_msg],
+            "validation_errors": state.get("validation_errors", []) + [error_msg],
             "validation_passed": False
         }

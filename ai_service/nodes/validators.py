@@ -217,22 +217,24 @@ def parse_llm_response(state: Dict[str, Any]) -> Dict[str, Any]:
             try:
                 parsed = json.loads(json_str)
             except json.JSONDecodeError as e:
-                log_error("Nie można sparsować JSON z odpowiedzi LLM", str(e))
+                error_msg = f"Błąd parsowania JSON: {str(e)}"
+                log_error("Błąd parsowania JSON", str(e))
                 return {
                     **state,
                     "llm_parsed_output": {},
                     "reasoning": "",
                     "validation_passed": False,
-                    "validation_errors": [f"Błąd parsowania JSON: {str(e)}"]
+                    "validation_errors": state.get("validation_errors", []) + [error_msg]
                 }
         else:
-            log_error("Odpowiedź LLM nie zawiera prawidłowego JSON")
+            error_msg = "Odpowiedź nie jest prawidłowym JSON"
+            log_error("Błąd parsowania JSON", "Brak znacznika ```json w odpowiedzi")
             return {
                 **state,
                 "llm_parsed_output": {},
                 "reasoning": "",
                 "validation_passed": False,
-                "validation_errors": ["Odpowiedź nie jest prawidłowym JSON"]
+                "validation_errors": state.get("validation_errors", []) + [error_msg]
             }
 
     # Extract reasoning (logged but not returned in API response)

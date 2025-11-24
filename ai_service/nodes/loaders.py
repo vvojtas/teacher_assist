@@ -41,11 +41,13 @@ def load_modules(state: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        log_error("Błąd podczas ładowania modułów z bazy danych", str(e))
-        # Return empty list on error
+        error_msg = f"Błąd podczas ładowania modułów z bazy danych: {str(e)}"
+        log_error("Błąd ładowania modułów", str(e))
         return {
             **state,
-            "available_modules": []
+            "available_modules": [],
+            "validation_errors": state.get("validation_errors", []) + [error_msg],
+            "validation_passed": False
         }
 
 
@@ -96,12 +98,14 @@ def load_curriculum_refs(state: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        log_error("Błąd podczas ładowania podstawy programowej z bazy danych", str(e))
-        # Return empty lists on error
+        error_msg = f"Błąd podczas ładowania podstawy programowej z bazy danych: {str(e)}"
+        log_error("Błąd ładowania podstawy programowej", str(e))
         return {
             **state,
             "curriculum_refs": [],
-            "major_curriculum_refs": []
+            "major_curriculum_refs": [],
+            "validation_errors": state.get("validation_errors", []) + [error_msg],
+            "validation_passed": False
         }
 
 
@@ -139,11 +143,13 @@ def load_examples(state: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        log_error("Błąd podczas ładowania przykładów z bazy danych", str(e))
-        # Return empty list on error
+        error_msg = f"Błąd podczas ładowania przykładów z bazy danych: {str(e)}"
+        log_error("Błąd ładowania przykładów", str(e))
         return {
             **state,
-            "example_entries": []
+            "example_entries": [],
+            "validation_errors": state.get("validation_errors", []) + [error_msg],
+            "validation_passed": False
         }
 
 
@@ -165,11 +171,11 @@ def load_prompt_template(state: Dict[str, Any]) -> Dict[str, Any]:
 
         if not template_path.exists():
             error_msg = f"Plik szablonu nie istnieje: {template_path}"
-            log_error(error_msg)
+            log_error("Błąd ładowania szablonu", error_msg)
             return {
                 **state,
                 "prompt_template": "",
-                "validation_errors": [error_msg],
+                "validation_errors": state.get("validation_errors", []) + [error_msg],
                 "validation_passed": False
             }
 
@@ -183,10 +189,11 @@ def load_prompt_template(state: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        log_error("Błąd podczas ładowania szablonu promptu", str(e))
+        error_msg = f"Błąd podczas ładowania szablonu promptu: {str(e)}"
+        log_error("Błąd ładowania szablonu", str(e))
         return {
             **state,
             "prompt_template": "",
-            "validation_errors": [f"Błąd ładowania szablonu: {str(e)}"],
+            "validation_errors": state.get("validation_errors", []) + [error_msg],
             "validation_passed": False
         }

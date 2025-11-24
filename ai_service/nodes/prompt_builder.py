@@ -75,20 +75,20 @@ def construct_prompt(state: Dict[str, Any]) -> Dict[str, Any]:
 
     except KeyError as e:
         error_msg = f"Brak wymaganego pola w szablonie: {str(e)}"
-        log_error("Błąd podczas konstruowania promptu", error_msg)
+        log_error("Błąd konstruowania promptu", str(e))
         return {
             **state,
             "constructed_prompt": "",
-            "validation_errors": [error_msg],
+            "validation_errors": state.get("validation_errors", []) + [error_msg],
             "validation_passed": False
         }
 
     except Exception as e:
         error_msg = f"Nieoczekiwany błąd podczas konstruowania promptu: {str(e)}"
-        log_error("Błąd podczas konstruowania promptu", error_msg)
+        log_error("Błąd konstruowania promptu", str(e))
         return {
             **state,
             "constructed_prompt": "",
-            "validation_errors": [error_msg],
+            "validation_errors": state.get("validation_errors", []) + [error_msg],
             "validation_passed": False
         }
