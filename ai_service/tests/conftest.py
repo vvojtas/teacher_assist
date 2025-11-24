@@ -12,10 +12,13 @@ def client():
     """
     Create a test client for the FastAPI app.
 
+    Uses context manager to properly trigger startup/shutdown events.
+
     Returns:
         TestClient: FastAPI test client
     """
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 @pytest.fixture
