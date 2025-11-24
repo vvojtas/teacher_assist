@@ -1,0 +1,39 @@
+Jesteś ekspertem edukacji przedszkolnej w Polsce. Twoim zadaniem jest wygenerowanie metadanych edukacyjnych dla planowanej aktywności przedszkolnej.
+
+=== DOSTĘPNE MODUŁY EDUKACYJNE ===
+{modules_list}
+
+=== PODSTAWA PROGRAMOWA ===
+{curriculum_refs}
+
+=== PRZYKŁADY ===
+{examples}
+
+=== ZADANIE ===
+Temat tygodnia: {theme}
+Aktywność: {activity}
+
+Na podstawie powyższej aktywności wygeneruj odpowiednie metadane edukacyjne.
+
+=== WYMAGANIA ===
+1. Wybierz 1-2 najbardziej odpowiednie moduły z listy DOSTĘPNE MODUŁY EDUKACYJNE
+2. Wybierz 2-3 kody podstawy programowej z listy PODSTAWA PROGRAMOWA (użyj TYLKO kodów z listy!)
+3. Napisz 2-3 konkretne cele edukacyjne w języku polskim
+4. Wszystkie teksty muszą być w języku polskim
+5. Cele muszą być konkretne i mierzalne
+
+=== FORMAT ODPOWIEDZI ===
+Odpowiedź MUSI być w formacie JSON z następującymi polami:
+
+{{
+  "reasoning": "Krótkie wyjaśnienie wyboru modułów i kodów podstawy programowej",
+  "modules": ["MODUŁ1", "MODUŁ2"],
+  "curriculum_refs": ["kod1", "kod2", "kod3"],
+  "objectives": [
+    "Cel edukacyjny 1",
+    "Cel edukacyjny 2",
+    "Cel edukacyjny 3"
+  ]
+}}
+
+WAŻNE: Użyj WYŁĄCZNIE kodów podstawy programowej z powyższej listy. NIE wymyślaj własnych kodów!

@@ -1,0 +1,94 @@
+"""
+Prompt construction node for LangGraph workflow.
+
+Builds the final LLM prompt by replacing placeholders in the template
+with formatted data from the database.
+"""
+
+from typing import Dict, Any
+
+from ai_service.utils.formatters import (
+    format_curriculum_refs,
+    format_modules_list,
+    format_examples
+)
+from ai_service.utils.console import log_error
+
+
+def construct_prompt(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Construct the final LLM prompt from template and data.
+
+    LangGraph node that:
+    1. Formats all data (modules, curriculum refs, examples)
+    2. Replaces placeholders in template
+    3. Returns constructed prompt
+
+    Template placeholders:
+    - {activity}: User-provided activity description
+    - {theme}: Optional weekly theme
+    - {modules_list}: Comma-separated list of available modules
+    - {curriculum_refs}: Formatted curriculum references grouped by major area
+    - {examples}: Formatted training examples
+
+    Args:
+        state: Workflow state containing:
+            - prompt_template: Template string with placeholders
+            - activity: Activity description
+            - theme: Weekly theme (optional)
+            - available_modules: List of module dicts
+            - curriculum_refs: List of curriculum reference dicts
+            - major_curriculum_refs: List of major curriculum section dicts
+            - example_entries: List of example entry dicts
+
+    Returns:
+        Updated state with 'constructed_prompt' string.
+    """
+    try:
+        # Extract data from state
+        template = state.get("prompt_template", "")
+        activity = state.get("activity", "")
+        theme = state.get("theme", "")
+        modules_data = state.get("available_modules", [])
+        curriculum_refs_data = state.get("curriculum_refs", [])
+        major_refs_data = state.get("major_curriculum_refs", [])
+        examples_data = state.get("example_entries", [])
+
+        # Format data for prompt
+        modules_list = format_modules_list(modules_data)
+        curriculum_refs = format_curriculum_refs(major_refs_data, curriculum_refs_data)
+        examples = format_examples(examples_data)
+
+        # Replace placeholders in template
+        prompt = template.format(
+            activity=activity,
+            theme=theme or "(brak tematu)",
+            modules_list=modules_list,
+            curriculum_refs=curriculum_refs,
+            examples=examples
+        )
+
+        return {
+            **state,
+            "constructed_prompt": prompt
+        }
+
+    except KeyError as e:
+        error_msg = f"Brak wymaganego pola w szablonie: {str(e)}"
+        log_error("Błąd podczas konstruowania promptu", error_msg)
+        return {
+            **state,
+            "constructed_prompt": "",
+            "validation_errors": [error_msg],
+            "validation_passed": False
+        }
+
+    except Exception as e:
+        error_msg = f"Nieoczekiwany błąd podczas konstruowania promptu: {str(e)}"
+        log_error("Błąd podczas konstruowania promptu", error_msg)
+        return {
+            **state,
+            "constructed_prompt": "",
+            "validation_errors": [error_msg],
+            "validation_passed": False
+        }

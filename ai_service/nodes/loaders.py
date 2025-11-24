@@ -1,0 +1,192 @@
+"""
+Data loading nodes for LangGraph workflow.
+
+Parallel loaders for:
+- Educational modules from database
+- Curriculum references from database
+- LLM training examples from database
+- Prompt template from file
+"""
+
+from typing import Dict, Any
+from pathlib import Path
+
+from ai_service.db_client import get_db_client
+from ai_service.config import settings
+from ai_service.utils.console import log_error
+
+
+def load_modules(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Load educational modules from database.
+
+    LangGraph node that queries the educational_modules table.
+
+    Args:
+        state: Workflow state.
+
+    Returns:
+        Updated state with 'available_modules' list.
+    """
+    try:
+        db_client = get_db_client(settings.database_path)
+        modules = db_client.get_educational_modules()
+
+        # Convert Pydantic models to dicts
+        modules_data = [{"module_name": m.module_name} for m in modules]
+
+        return {
+            **state,
+            "available_modules": modules_data
+        }
+
+    except Exception as e:
+        log_error("Błąd podczas ładowania modułów z bazy danych", str(e))
+        # Return empty list on error
+        return {
+            **state,
+            "available_modules": []
+        }
+
+
+def load_curriculum_refs(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Load curriculum references from database.
+
+    LangGraph node that queries both curriculum_references and
+    major_curriculum_references tables.
+
+    Args:
+        state: Workflow state.
+
+    Returns:
+        Updated state with:
+            - 'curriculum_refs': List of detailed curriculum references
+            - 'major_curriculum_refs': List of major curriculum sections
+    """
+    try:
+        db_client = get_db_client(settings.database_path)
+
+        # Load detailed curriculum references
+        curriculum_refs = db_client.get_curriculum_references()
+        curriculum_refs_data = [
+            {
+                "reference_code": ref.reference_code,
+                "full_text": ref.full_text,
+                "major_reference_id": ref.major_reference_id
+            }
+            for ref in curriculum_refs
+        ]
+
+        # Load major curriculum sections
+        major_refs = db_client.get_major_curriculum_references()
+        major_refs_data = [
+            {
+                "id": ref.id,
+                "reference_code": ref.reference_code,
+                "full_text": ref.full_text
+            }
+            for ref in major_refs
+        ]
+
+        return {
+            **state,
+            "curriculum_refs": curriculum_refs_data,
+            "major_curriculum_refs": major_refs_data
+        }
+
+    except Exception as e:
+        log_error("Błąd podczas ładowania podstawy programowej z bazy danych", str(e))
+        # Return empty lists on error
+        return {
+            **state,
+            "curriculum_refs": [],
+            "major_curriculum_refs": []
+        }
+
+
+def load_examples(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Load LLM training examples from database.
+
+    LangGraph node that queries work_plan_entries where is_example=true.
+
+    Args:
+        state: Workflow state.
+
+    Returns:
+        Updated state with 'example_entries' list.
+    """
+    try:
+        db_client = get_db_client(settings.database_path)
+        examples = db_client.get_llm_examples()
+
+        # Convert Pydantic models to dicts
+        examples_data = [
+            {
+                "theme": ex.theme,
+                "activity": ex.activity,
+                "modules": ex.modules,
+                "objectives": ex.objectives,
+                "curriculum_references": ex.curriculum_references
+            }
+            for ex in examples
+        ]
+
+        return {
+            **state,
+            "example_entries": examples_data
+        }
+
+    except Exception as e:
+        log_error("Błąd podczas ładowania przykładów z bazy danych", str(e))
+        # Return empty list on error
+        return {
+            **state,
+            "example_entries": []
+        }
+
+
+def load_prompt_template(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Load prompt template from file.
+
+    LangGraph node that reads the fill_work_plan.txt template file.
+
+    Args:
+        state: Workflow state.
+
+    Returns:
+        Updated state with 'prompt_template' string.
+    """
+    try:
+        # Construct template path
+        template_path = Path(settings.prompt_template_dir) / "fill_work_plan.txt"
+
+        if not template_path.exists():
+            error_msg = f"Plik szablonu nie istnieje: {template_path}"
+            log_error(error_msg)
+            return {
+                **state,
+                "prompt_template": "",
+                "validation_errors": [error_msg],
+                "validation_passed": False
+            }
+
+        # Read template file
+        with open(template_path, "r", encoding="utf-8") as f:
+            template = f.read()
+
+        return {
+            **state,
+            "prompt_template": template
+        }
+
+    except Exception as e:
+        log_error("Błąd podczas ładowania szablonu promptu", str(e))
+        return {
+            **state,
+            "prompt_template": "",
+            "validation_errors": [f"Błąd ładowania szablonu: {str(e)}"],
+            "validation_passed": False
+        }
