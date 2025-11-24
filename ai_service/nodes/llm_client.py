@@ -83,7 +83,7 @@ class OpenRouterClient:
             log_prompt(prompt)
 
         # Prepare request payload
-        payload = {
+        payload: Dict[str, Any] = {
             "model": self.model,
             "messages": [
                 {"role": "user", "content": prompt}
@@ -94,7 +94,7 @@ class OpenRouterClient:
             "usage": {"include": True}
         }
 
-        headers = {
+        headers: Dict[str, str] = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
             "HTTP-Referer": "https://github.com/teacher-assist",  # Optional: helps with rate limits
@@ -110,7 +110,7 @@ class OpenRouterClient:
                     timeout=self.timeout
                 )
                 response.raise_for_status()
-                data = response.json()
+                data: Dict[str, Any] = response.json()
 
         except httpx.TimeoutException as e:
             error_msg = f"Przekroczono limit czasu oczekiwania na odpowiedź LLM ({self.timeout}s)"
@@ -130,7 +130,7 @@ class OpenRouterClient:
 
         # Extract response text
         try:
-            raw_response = data["choices"][0]["message"]["content"]
+            raw_response: str = data["choices"][0]["message"]["content"]
         except (KeyError, IndexError) as e:
             error_msg = "Nieprawidłowy format odpowiedzi z OpenRouter API"
             log_error(error_msg, f"Missing 'choices' or 'message' in response: {str(e)}")
@@ -141,12 +141,13 @@ class OpenRouterClient:
             log_response(raw_response)
 
         # Extract token usage
-        usage = data.get("usage", {})
-        input_tokens = usage.get("prompt_tokens", 0)
-        output_tokens = usage.get("completion_tokens", 0)
-        total_tokens = usage.get("total_tokens", input_tokens + output_tokens)
+        usage: Dict[str, Any] = data.get("usage", {})
+        input_tokens: int = usage.get("prompt_tokens", 0)
+        output_tokens: int = usage.get("completion_tokens", 0)
+        total_tokens: int = usage.get("total_tokens", input_tokens + output_tokens)
 
         # Calculate cost using pricing cache
+        estimated_cost: float
         try:
             pricing_cache = get_pricing_cache(settings.pricing_cache_ttl_seconds)
             prompt_price, completion_price = await pricing_cache.fetch_pricing(
@@ -168,7 +169,7 @@ class OpenRouterClient:
         if log_output:
             log_cost(input_tokens, output_tokens, estimated_cost, self.model)
 
-        usage_dict = {
+        usage_dict: Dict[str, Any] = {
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
             "total_tokens": total_tokens,

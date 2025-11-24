@@ -31,7 +31,7 @@ async def generate_with_llm(state: Dict[str, Any]) -> Dict[str, Any]:
             - output_tokens: Number of output tokens
             - estimated_cost: Estimated cost in USD
     """
-    prompt = state.get("constructed_prompt", "")
+    prompt: str = state.get("constructed_prompt", "")
 
     if not prompt:
         log_error("Brak skonstruowanego promptu", "Prompt jest pusty")
@@ -47,6 +47,8 @@ async def generate_with_llm(state: Dict[str, Any]) -> Dict[str, Any]:
         llm_client = get_llm_client()
 
         # Generate response (logs are handled inside the client)
+        raw_response: str
+        usage: Dict[str, Any]
         raw_response, usage = await llm_client.generate(
             prompt=prompt,
             log_output=True  # Enable colored console logging

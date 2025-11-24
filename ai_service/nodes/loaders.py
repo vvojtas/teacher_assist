@@ -8,7 +8,7 @@ Parallel loaders for:
 - Prompt template from file
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from pathlib import Path
 
 from ai_service.db_client import get_db_client
@@ -33,7 +33,7 @@ def load_modules(state: Dict[str, Any]) -> Dict[str, Any]:
         modules = db_client.get_educational_modules()
 
         # Convert Pydantic models to dicts
-        modules_data = [{"module_name": m.module_name} for m in modules]
+        modules_data: List[Dict[str, Any]] = [{"module_name": m.module_name} for m in modules]
 
         return {
             **state,
@@ -69,7 +69,7 @@ def load_curriculum_refs(state: Dict[str, Any]) -> Dict[str, Any]:
 
         # Load detailed curriculum references
         curriculum_refs = db_client.get_curriculum_references()
-        curriculum_refs_data = [
+        curriculum_refs_data: List[Dict[str, Any]] = [
             {
                 "reference_code": ref.reference_code,
                 "full_text": ref.full_text,
@@ -80,7 +80,7 @@ def load_curriculum_refs(state: Dict[str, Any]) -> Dict[str, Any]:
 
         # Load major curriculum sections
         major_refs = db_client.get_major_curriculum_references()
-        major_refs_data = [
+        major_refs_data: List[Dict[str, Any]] = [
             {
                 "id": ref.id,
                 "reference_code": ref.reference_code,
@@ -122,7 +122,7 @@ def load_examples(state: Dict[str, Any]) -> Dict[str, Any]:
         examples = db_client.get_llm_examples()
 
         # Convert Pydantic models to dicts
-        examples_data = [
+        examples_data: List[Dict[str, Any]] = [
             {
                 "theme": ex.theme,
                 "activity": ex.activity,
@@ -175,7 +175,7 @@ def load_prompt_template(state: Dict[str, Any]) -> Dict[str, Any]:
 
         # Read template file
         with open(template_path, "r", encoding="utf-8") as f:
-            template = f.read()
+            template: str = f.read()
 
         return {
             **state,

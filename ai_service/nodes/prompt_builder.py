@@ -5,7 +5,7 @@ Builds the final LLM prompt by replacing placeholders in the template
 with formatted data from the database.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from ai_service.utils.formatters import (
     format_curriculum_refs,
@@ -46,21 +46,21 @@ def construct_prompt(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     try:
         # Extract data from state
-        template = state.get("prompt_template", "")
-        activity = state.get("activity", "")
-        theme = state.get("theme", "")
-        modules_data = state.get("available_modules", [])
-        curriculum_refs_data = state.get("curriculum_refs", [])
-        major_refs_data = state.get("major_curriculum_refs", [])
-        examples_data = state.get("example_entries", [])
+        template: str = state.get("prompt_template", "")
+        activity: str = state.get("activity", "")
+        theme: str = state.get("theme", "")
+        modules_data: List[Dict[str, Any]] = state.get("available_modules", [])
+        curriculum_refs_data: List[Dict[str, Any]] = state.get("curriculum_refs", [])
+        major_refs_data: List[Dict[str, Any]] = state.get("major_curriculum_refs", [])
+        examples_data: List[Dict[str, Any]] = state.get("example_entries", [])
 
         # Format data for prompt
-        modules_list = format_modules_list(modules_data)
-        curriculum_refs = format_curriculum_refs(major_refs_data, curriculum_refs_data)
-        examples = format_examples(examples_data)
+        modules_list: str = format_modules_list(modules_data)
+        curriculum_refs: str = format_curriculum_refs(major_refs_data, curriculum_refs_data)
+        examples: str = format_examples(examples_data)
 
         # Replace placeholders in template
-        prompt = template.format(
+        prompt: str = template.format(
             activity=activity,
             theme=theme or "(brak tematu)",
             modules_list=modules_list,

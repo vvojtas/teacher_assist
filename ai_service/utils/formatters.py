@@ -36,16 +36,16 @@ def format_curriculum_refs(
     # Group curriculum refs by major_reference_id
     grouped: Dict[int, List[Dict[str, Any]]] = {}
     for ref in curriculum_refs:
-        major_id = ref['major_reference_id']
+        major_id: int = ref['major_reference_id']
         if major_id not in grouped:
             grouped[major_id] = []
         grouped[major_id].append(ref)
 
     # Build formatted string
-    output_lines = []
+    output_lines: List[str] = []
 
     for major_ref in major_refs:
-        major_id = major_ref['id']
+        major_id: int = major_ref['id']
 
         # Only include major sections that have curriculum refs
         if major_id in grouped:
@@ -78,7 +78,7 @@ def format_modules_list(modules: List[Dict[str, Any]]) -> str:
     Example:
         "MATEMATYKA, JĘZYK, MOTORYKA MAŁA, FORMY PLASTYCZNE"
     """
-    module_names = [m['module_name'] for m in modules]
+    module_names: List[str] = [m['module_name'] for m in modules]
     return ", ".join(sorted(module_names))
 
 
@@ -104,10 +104,10 @@ def format_examples(examples: List[Dict[str, Any]]) -> str:
         Cele: Dziecko potrafi przeliczać w zakresie 5
               Rozpoznaje poznane wcześniej cyfry
     """
-    formatted_examples = []
+    formatted_examples: List[str] = []
 
     for i, example in enumerate(examples, start=1):
-        lines = [
+        lines: List[str] = [
             f"Przykład {i}:",
             f"Temat: {example['theme']}",
             f"Aktywność: {example['activity']}",
