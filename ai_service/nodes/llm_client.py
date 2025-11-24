@@ -9,7 +9,6 @@ Handles communication with OpenRouter API, including:
 """
 
 import httpx
-import json
 from typing import Dict, Any, Tuple, Optional
 
 from ai_service.config import settings
