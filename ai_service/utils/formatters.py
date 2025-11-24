@@ -5,6 +5,7 @@ Formats database data into strings suitable for LLM prompts.
 """
 
 from typing import List, Dict, Any
+from ai_service.utils.schema import create_llm_output_json
 
 
 def format_curriculum_refs(
@@ -124,12 +125,12 @@ def format_examples(examples: List[Dict[str, Any]]) -> str:
         else:
             objectives_list = objectives
 
-        # Create JSON response object
-        response_json = {
-            "modules": example['modules'],
-            "curriculum_refs": example['curriculum_references'],
-            "objectives": objectives_list
-        }
+        # Create JSON response object using shared schema
+        response_json = create_llm_output_json(
+            modules=example['modules'],
+            curriculum_refs=example['curriculum_references'],
+            objectives=objectives_list
+        )
 
         # Format with proper indentation
         json_str = json.dumps(response_json, ensure_ascii=False, indent=2)

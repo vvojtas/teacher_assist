@@ -11,6 +11,7 @@ from typing import Dict, Any, List, Set
 import json
 
 from ai_service.utils.console import log_warning, log_error
+from ai_service.utils.schema import LLM_REQUIRED_FIELDS
 from ai_service.constants import (
     MAX_ACTIVITY_LENGTH,
     MAX_THEME_LENGTH,
@@ -94,9 +95,8 @@ def validate_output(state: Dict[str, Any]) -> Dict[str, Any]:
     valid_modules: Set[str] = {m['module_name'] for m in available_modules_data}
     valid_curriculum_codes: Set[str] = {ref['reference_code'] for ref in curriculum_refs_data}
 
-    # 1. Validate JSON structure
-    required_fields = ["modules", "curriculum_refs", "objectives"]
-    for field in required_fields:
+    # 1. Validate JSON structure (use shared schema definition)
+    for field in LLM_REQUIRED_FIELDS:
         if field not in parsed_output:
             errors.append(f"Brak wymaganego pola: {field}")
 
