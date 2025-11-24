@@ -64,9 +64,28 @@ class WorkflowState(TypedDict, total=False):
     final_response: Optional[FillWorkPlanResponse | ErrorResponse]
 
 
-def should_continue_after_validation(state: WorkflowState) -> str:
+def should_continue_after_input_validation(state: WorkflowState) -> str:
     """
-    Conditional routing function.
+    Conditional routing after input validation.
+
+    Routes to loaders if input is valid, or directly to error formatter if invalid.
+
+    Args:
+        state: Current workflow state.
+
+    Returns:
+        "loaders" if input validation passed, "error" otherwise.
+    """
+    # Check if input validation passed (no validation errors)
+    if not state.get("validation_errors"):
+        return "loaders"
+    else:
+        return "error"
+
+
+def should_continue_after_output_validation(state: WorkflowState) -> str:
+    """
+    Conditional routing after output validation.
 
     Routes to success or error formatter based on validation result.
 
@@ -90,7 +109,9 @@ def create_workflow() -> StateGraph:
         START
           ↓
         validate_input
-          ↓
+          ↓ [conditional: valid?]
+          ├─ error → format_error → END
+          └─ loaders → parallel loading
         ┌─────────────────┬──────────────────┬──────────────────┐
         ↓                 ↓                  ↓                  ↓
     load_modules   load_curriculum    load_examples    load_template
@@ -104,13 +125,9 @@ def create_workflow() -> StateGraph:
         parse_llm_response
           ↓
         validate_output
-          ↓
-        [conditional: validation_passed?]
-          ↓                    ↓
-        success              error
-     format_success    format_error
-          ↓                    ↓
-        END                  END
+          ↓ [conditional: validation_passed?]
+          ├─ success → format_success → END
+          └─ error → format_error → END
 
     Returns:
         Compiled StateGraph ready for execution.
@@ -134,11 +151,17 @@ def create_workflow() -> StateGraph:
     # Set entry point
     workflow.set_entry_point("validate_input")
 
-    # Add edges from input validation to parallel loaders
-    workflow.add_edge("validate_input", "load_modules")
-    workflow.add_edge("validate_input", "load_curriculum_refs")
-    workflow.add_edge("validate_input", "load_examples")
-    workflow.add_edge("validate_input", "load_template")
+    # Add conditional routing after input validation
+    # If input is invalid, go directly to error formatter (skip loaders and LLM)
+    # If input is valid, proceed to parallel loaders
+    workflow.add_conditional_edges(
+        "validate_input",
+        should_continue_after_input_validation,
+        {
+            "loaders": ["load_modules", "load_curriculum_refs", "load_examples", "load_template"],
+            "error": "format_error"
+        }
+    )
 
     # Add edges from all loaders to prompt construction
     # Note: LangGraph automatically waits for all parallel branches to complete
@@ -152,10 +175,10 @@ def create_workflow() -> StateGraph:
     workflow.add_edge("generate_llm", "parse_response")
     workflow.add_edge("parse_response", "validate_output")
 
-    # Add conditional routing after validation
+    # Add conditional routing after output validation
     workflow.add_conditional_edges(
         "validate_output",
-        should_continue_after_validation,
+        should_continue_after_output_validation,
         {
             "success": "format_success",
             "error": "format_error"
