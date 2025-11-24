@@ -208,14 +208,3 @@ def get_workflow() -> StateGraph:
     if _compiled_workflow is None:
         _compiled_workflow = create_workflow()
     return _compiled_workflow
-
-
-def reset_workflow() -> None:
-    """
-    Reset the global workflow instance.
-
-    Useful for testing or when configuration changes require workflow recompilation.
-    Should be called in test teardown to avoid cross-test contamination.
-    """
-    global _compiled_workflow
-    _compiled_workflow = None
