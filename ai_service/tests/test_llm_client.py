@@ -19,7 +19,7 @@ def mock_openrouter_response():
         "choices": [
             {
                 "message": {
-                    "content": '{"reasoning": "Test reasoning", "modules": ["MATEMATYKA"], "curriculum_refs": ["4.15"], "objectives": ["Test objective"]}'
+                    "content": '{"modules": ["MATEMATYKA"], "curriculum_refs": ["4.15"], "objectives": ["Test objective"]}'
                 }
             }
         ],
@@ -76,7 +76,6 @@ class TestOpenRouterClient:
             response, usage = await client.generate("Test prompt", log_output=False)
 
             # Verify response
-            assert "Test reasoning" in response
             assert usage["input_tokens"] == 100
             assert usage["output_tokens"] == 50
             assert usage["total_tokens"] == 150
