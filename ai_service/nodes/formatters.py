@@ -92,7 +92,7 @@ def format_error(state: Dict[str, Any]) -> Dict[str, Any]:
             f"{objective_errors[0] if objective_errors else ''} "
             f"Spróbuj ponownie."
         )
-    elif any("activity" in err.lower() or "aktywność" in err.lower()):
+    elif any("activity" in err.lower() or "aktywność" in err.lower() for err in errors):
         error_code = "INVALID_INPUT"
         # Get specific input error
         input_errors = [e for e in errors if "activity" in e.lower() or "aktywność" in e.lower()]
@@ -100,7 +100,7 @@ def format_error(state: Dict[str, Any]) -> Dict[str, Any]:
             f"Nieprawidłowe dane wejściowe. "
             f"{input_errors[0] if input_errors else 'Sprawdź pole aktywności.'}"
         )
-    elif any("theme" in err.lower() or "temat" in err.lower()):
+    elif any("theme" in err.lower() or "temat" in err.lower() for err in errors):
         error_code = "INVALID_INPUT"
         # Get specific theme error
         theme_errors = [e for e in errors if "theme" in e.lower() or "temat" in e.lower()]
@@ -108,13 +108,13 @@ def format_error(state: Dict[str, Any]) -> Dict[str, Any]:
             f"Nieprawidłowe dane wejściowe. "
             f"{theme_errors[0] if theme_errors else 'Sprawdź pole tematu.'}"
         )
-    elif any("szablon" in err.lower() or "template" in err.lower()):
+    elif any("szablon" in err.lower() or "template" in err.lower() for err in errors):
         error_code = "TEMPLATE_ERROR"
         error_message = (
             "Błąd wczytania szablonu promptu. "
             "Skontaktuj się z administratorem systemu."
         )
-    elif any("llm" in err.lower() or "api" in err.lower()):
+    elif any("llm" in err.lower() or "api" in err.lower() for err in errors):
         error_code = "LLM_ERROR"
         error_message = (
             "Błąd komunikacji z systemem AI. "

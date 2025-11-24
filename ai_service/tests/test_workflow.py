@@ -87,11 +87,11 @@ class TestWorkflowIntegration:
             workflow = create_workflow()
             result = await workflow.ainvoke(sample_initial_state)
 
-            # Should get error response
+            # Should get error response with PARSING_ERROR code (invalid JSON)
             assert "final_response" in result
             final_response = result["final_response"]
             assert hasattr(final_response, "error_code")
-            assert final_response.error_code == "VALIDATION_ERROR"
+            assert final_response.error_code == "PARSING_ERROR"
 
     async def test_workflow_invalid_input(self):
         """Test workflow with invalid input."""

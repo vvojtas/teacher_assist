@@ -59,14 +59,14 @@ class TestOpenRouterClient:
             mock_client_class.return_value.__aenter__.return_value = mock_client
             mock_client_class.return_value.__aexit__.return_value = None
 
-            # Mock chat completion response
-            mock_chat_response = AsyncMock()
+            # Mock chat completion response (use MagicMock for synchronous response methods)
+            mock_chat_response = MagicMock()
             mock_chat_response.json.return_value = mock_openrouter_response
             mock_chat_response.raise_for_status = MagicMock()
             mock_client.post.return_value = mock_chat_response
 
-            # Mock pricing response
-            mock_pricing_response_obj = AsyncMock()
+            # Mock pricing response (use MagicMock for synchronous response methods)
+            mock_pricing_response_obj = MagicMock()
             mock_pricing_response_obj.json.return_value = mock_pricing_response
             mock_pricing_response_obj.raise_for_status = MagicMock()
             mock_client.get.return_value = mock_pricing_response_obj
@@ -104,8 +104,8 @@ class TestOpenRouterClient:
             mock_client_class.return_value.__aenter__.return_value = mock_client
             mock_client_class.return_value.__aexit__.return_value = None
 
-            # Mock HTTP error
-            mock_response = AsyncMock()
+            # Mock HTTP error (use MagicMock for synchronous response methods)
+            mock_response = MagicMock()
             mock_response.status_code = 500
             mock_response.text = "Internal Server Error"
             mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
@@ -127,8 +127,8 @@ class TestOpenRouterClient:
             mock_client_class.return_value.__aenter__.return_value = mock_client
             mock_client_class.return_value.__aexit__.return_value = None
 
-            # Mock malformed response (missing 'choices')
-            mock_chat_response = AsyncMock()
+            # Mock malformed response (missing 'choices') - use MagicMock for synchronous methods
+            mock_chat_response = MagicMock()
             mock_chat_response.json.return_value = {"error": "Invalid response"}
             mock_chat_response.raise_for_status = MagicMock()
             mock_client.post.return_value = mock_chat_response
@@ -150,13 +150,13 @@ class TestOpenRouterClient:
             mock_client_class.return_value.__aenter__.return_value = mock_client
             mock_client_class.return_value.__aexit__.return_value = None
 
-            # Mock successful chat response
-            mock_chat_response = AsyncMock()
+            # Mock successful chat response (use MagicMock for synchronous response methods)
+            mock_chat_response = MagicMock()
             mock_chat_response.json.return_value = mock_openrouter_response
             mock_chat_response.raise_for_status = MagicMock()
 
-            # Mock failed pricing response
-            mock_pricing_response = AsyncMock()
+            # Mock failed pricing response (use MagicMock for synchronous response methods)
+            mock_pricing_response = MagicMock()
             mock_pricing_response.raise_for_status.side_effect = httpx.HTTPError("Pricing failed")
 
             # Alternate between chat and pricing calls
