@@ -29,7 +29,7 @@ def load_modules(state: Dict[str, Any]) -> Dict[str, Any]:
         Updated state with 'available_modules' list.
     """
     try:
-        db_client = get_db_client(settings.database_path)
+        db_client = get_db_client(settings.ai_service_database_path)
         modules = db_client.get_educational_modules()
 
         # Convert Pydantic models to dicts
@@ -67,7 +67,7 @@ def load_curriculum_refs(state: Dict[str, Any]) -> Dict[str, Any]:
             - 'major_curriculum_refs': List of major curriculum sections
     """
     try:
-        db_client = get_db_client(settings.database_path)
+        db_client = get_db_client(settings.ai_service_database_path)
 
         # Load detailed curriculum references
         curriculum_refs = db_client.get_curriculum_references()
@@ -122,7 +122,7 @@ def load_examples(state: Dict[str, Any]) -> Dict[str, Any]:
         Updated state with 'example_entries' list.
     """
     try:
-        db_client = get_db_client(settings.database_path)
+        db_client = get_db_client(settings.ai_service_database_path)
         examples = db_client.get_llm_examples()
 
         # Convert Pydantic models to dicts
@@ -158,6 +158,7 @@ def load_prompt_template(state: Dict[str, Any]) -> Dict[str, Any]:
     Load prompt template from file.
 
     LangGraph node that reads the fill_work_plan.txt template file.
+    Skips loading if template is already cached in state (performance optimization).
 
     Args:
         state: Workflow state.
@@ -165,9 +166,14 @@ def load_prompt_template(state: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Updated state with 'prompt_template' string.
     """
+    # Check if template is already cached in state (from startup)
+    if state.get("prompt_template"):
+        # Template already loaded, return unchanged state
+        return state
+
     try:
         # Construct template path
-        template_path = Path(settings.prompt_template_dir) / "fill_work_plan.txt"
+        template_path = Path(settings.ai_service_prompt_template_dir) / "fill_work_plan.txt"
 
         if not template_path.exists():
             error_msg = f"Plik szablonu nie istnieje: {template_path}"

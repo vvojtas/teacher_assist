@@ -41,11 +41,11 @@ class OpenRouterClient:
             max_tokens: Max output tokens (defaults to settings.llm_max_tokens).
             timeout: Request timeout in seconds (defaults to settings.llm_timeout_seconds).
         """
-        self.api_key = api_key or settings.openrouter_api_key
-        self.model = model or settings.llm_model
-        self.temperature = temperature or settings.llm_temperature
-        self.max_tokens = max_tokens or settings.llm_max_tokens
-        self.timeout = timeout or settings.llm_timeout_seconds
+        self.api_key = api_key or settings.ai_service_openrouter_api_key
+        self.model = model or settings.ai_service_llm_model
+        self.temperature = temperature or settings.ai_service_llm_temperature
+        self.max_tokens = max_tokens or settings.ai_service_llm_max_tokens
+        self.timeout = timeout or settings.ai_service_llm_timeout_seconds
         self.base_url = "https://openrouter.ai/api/v1"
 
         if not self.api_key:
@@ -54,7 +54,8 @@ class OpenRouterClient:
     async def generate(
         self,
         prompt: str,
-        log_output: bool = True
+        log_output: bool = True,
+        http_client: Optional[httpx.AsyncClient] = None
     ) -> Tuple[str, Dict[str, int]]:
         """
         Generate completion from LLM.
@@ -64,6 +65,8 @@ class OpenRouterClient:
         Args:
             prompt: The complete prompt to send to the LLM.
             log_output: Whether to log prompt, response, and cost to console.
+            http_client: Optional shared HTTP client (recommended for connection pooling).
+                        If None, creates a new client for this request.
 
         Returns:
             Tuple of (raw_response_text, usage_dict) where usage_dict contains:
@@ -101,8 +104,10 @@ class OpenRouterClient:
         }
 
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
+            # Use shared client if provided, otherwise create a new one
+            if http_client is not None:
+                # Use shared client (recommended for connection pooling)
+                response = await http_client.post(
                     f"{self.base_url}/chat/completions",
                     headers=headers,
                     json=payload,
@@ -110,6 +115,17 @@ class OpenRouterClient:
                 )
                 response.raise_for_status()
                 data: Dict[str, Any] = response.json()
+            else:
+                # Create temporary client (fallback for testing)
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        f"{self.base_url}/chat/completions",
+                        headers=headers,
+                        json=payload,
+                        timeout=self.timeout
+                    )
+                    response.raise_for_status()
+                    data: Dict[str, Any] = response.json()
 
         except httpx.TimeoutException as e:
             error_msg = f"Przekroczono limit czasu oczekiwania na odpowiedź LLM ({self.timeout}s)"
@@ -148,7 +164,7 @@ class OpenRouterClient:
         # Calculate cost using pricing cache
         estimated_cost: float
         try:
-            pricing_cache = get_pricing_cache(settings.pricing_cache_ttl_seconds)
+            pricing_cache = get_pricing_cache(settings.ai_service_pricing_cache_ttl_seconds)
             prompt_price, completion_price = await pricing_cache.fetch_pricing(
                 self.api_key,
                 self.model
@@ -161,8 +177,17 @@ class OpenRouterClient:
             )
         except Exception as e:
             # Fallback cost estimation if pricing fetch fails
-            log_error(f"Nie można pobrać cen z OpenRouter, używam szacunkowych: {str(e)}")
-            estimated_cost = (input_tokens * 0.00000025) + (output_tokens * 0.00000125)
+            # Use configurable fallback prices from settings
+            prompt_price = settings.ai_service_fallback_prompt_price
+            completion_price = settings.ai_service_fallback_completion_price
+            estimated_cost = (input_tokens * prompt_price) + (output_tokens * completion_price)
+
+            # Log warning about fallback pricing
+            log_error(
+                "Nie można pobrać cen z OpenRouter, używam szacunkowych cen",
+                f"Błąd: {str(e)} | "
+                f"Używam: ${prompt_price:.8f}/token (input), ${completion_price:.8f}/token (output)"
+            )
 
         # Log token usage and cost in YELLOW
         if log_output:

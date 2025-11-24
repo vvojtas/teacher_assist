@@ -6,7 +6,7 @@ Supports both mock and real mode for testing and production.
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Literal
+from typing import Literal, Optional
 
 
 class Settings(BaseSettings):
@@ -17,32 +17,34 @@ class Settings(BaseSettings):
     See ai_service/README.md for detailed documentation.
     """
 
-    # Service Mode
+    # Service Mode (keep without prefix as it's the main service identifier)
     ai_service_mode: Literal["mock", "real"] = "mock"
 
-    # LLM Configuration (OpenRouter)
-    openrouter_api_key: str = ""
-    llm_model: str = "anthropic/claude-3.5-haiku"
-    llm_temperature: float = 0.7
-    llm_max_tokens: int = 500
-    llm_timeout_seconds: int = 30
+    # LLM Configuration (OpenRouter) - All with ai_service_ prefix for consistency
+    ai_service_openrouter_api_key: str = ""
+    ai_service_llm_model: str = "anthropic/claude-3.5-haiku"
+    ai_service_llm_temperature: float = 0.7
+    ai_service_llm_max_tokens: int = 500
+    ai_service_llm_timeout_seconds: int = 30
 
-    # Database
-    database_path: str = "../db.sqlite3"
-    database_timeout_seconds: float = 10.0  # SQLite connection timeout
+    # Database - With ai_service_ prefix
+    ai_service_database_path: str = "../db.sqlite3"
+    ai_service_database_timeout_seconds: float = 10.0  # SQLite connection timeout
 
-    # Prompt Templates
-    prompt_template_dir: str = "ai_service/templates"
+    # Prompt Templates - With ai_service_ prefix
+    ai_service_prompt_template_dir: str = "ai_service/templates"
 
-    # Workflow Configuration
-    max_retry_attempts: int = 0  # Phase 1: No retry, Phase 3: 1-2
+    # Workflow Configuration - With ai_service_ prefix
+    ai_service_max_retry_attempts: int = 0  # Phase 1: No retry, Phase 3: 1-2
 
-    # Feature Flags (Phase 2/3)
-    enable_quality_checker: bool = False  # Phase 2+
-    enable_auto_retry: bool = False       # Phase 3+
+    # Feature Flags (Phase 2/3) - With ai_service_ prefix
+    ai_service_enable_quality_checker: bool = False  # Phase 2+
+    ai_service_enable_auto_retry: bool = False       # Phase 3+
 
-    # Cost Tracking
-    pricing_cache_ttl_seconds: int = 3600  # 1 hour
+    # Cost Tracking - With ai_service_ prefix
+    ai_service_pricing_cache_ttl_seconds: int = 3600  # 1 hour
+    ai_service_fallback_prompt_price: float = 0.00000025  # Fallback $0.25 per 1M input tokens
+    ai_service_fallback_completion_price: float = 0.00000125  # Fallback $1.25 per 1M output tokens
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -58,12 +60,31 @@ class Settings(BaseSettings):
         Raises:
             ValueError: If OpenRouter API key is missing in real mode.
         """
-        if self.ai_service_mode == "real" and not self.openrouter_api_key:
+        if self.ai_service_mode == "real" and not self.ai_service_openrouter_api_key:
             raise ValueError(
-                "OPENROUTER_API_KEY is required when AI_SERVICE_MODE=real. "
+                "AI_SERVICE_OPENROUTER_API_KEY is required when AI_SERVICE_MODE=real. "
                 "Please set it in your .env file or environment variables."
             )
 
 
-# Global settings instance
-settings = Settings()
+# Singleton settings instance (lazy initialization)
+_settings: Optional[Settings] = None
+
+
+def get_settings() -> Settings:
+    """
+    Get or create the global settings instance.
+
+    Uses lazy initialization to allow testing with different configurations.
+
+    Returns:
+        Settings: The global settings instance.
+    """
+    global _settings
+    if _settings is None:
+        _settings = Settings()
+    return _settings
+
+
+# Convenience alias for backwards compatibility
+settings = get_settings()

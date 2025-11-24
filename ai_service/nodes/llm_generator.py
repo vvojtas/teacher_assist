@@ -47,12 +47,16 @@ async def generate_with_llm(state: Dict[str, Any]) -> Dict[str, Any]:
         # Get LLM client
         llm_client = get_llm_client()
 
+        # Get shared HTTP client from state (if available)
+        http_client = state.get("http_client")
+
         # Generate response (logs are handled inside the client)
         raw_response: str
         usage: Dict[str, Any]
         raw_response, usage = await llm_client.generate(
             prompt=prompt,
-            log_output=True  # Enable colored console logging
+            log_output=True,  # Enable colored console logging
+            http_client=http_client  # Use shared HTTP client for connection pooling
         )
 
         return {

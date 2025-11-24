@@ -41,7 +41,7 @@ class DatabaseClient:
             db_path = project_root / "db.sqlite3"
 
         self.db_path = str(db_path)
-        self.timeout = timeout if timeout is not None else settings.database_timeout_seconds
+        self.timeout = timeout if timeout is not None else settings.ai_service_database_timeout_seconds
 
         if not os.path.exists(self.db_path):
             raise FileNotFoundError(f"Database file not found: {self.db_path}")

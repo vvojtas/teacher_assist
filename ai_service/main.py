@@ -14,7 +14,9 @@ Or with uvicorn:
 
 import logging
 import uvicorn
+import httpx
 from pathlib import Path
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -34,38 +36,34 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="Teacher Assist AI Service",
-    description="LangGraph-based AI service for generating educational metadata",
-    version="1.0.0",
-    docs_url="/docs",  # Swagger UI
-    redoc_url="/redoc",  # ReDoc
-)
-
-# Service instances (initialized on startup)
-mock_service = None
-workflow = None
-
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """
-    Initialize services on startup based on configured mode.
+    Lifespan context manager for FastAPI application.
 
-    Validates configuration and initializes either mock service or real workflow.
+    Handles startup and shutdown of shared resources:
+    - Mock service or LangGraph workflow
+    - Shared HTTP client for OpenRouter API
+    - Template caching
+
+    Replaces deprecated @app.on_event("startup") and @app.on_event("shutdown").
     """
-    global mock_service, workflow
-
+    # === Startup ===
     log_info(f"Starting AI Service in {settings.ai_service_mode.upper()} mode")
+
+    # Initialize shared HTTP client for OpenRouter API (used in real mode)
+    http_client = httpx.AsyncClient()
+    app.state.http_client = http_client
+    log_info("Shared HTTP client initialized")
 
     if settings.ai_service_mode == "mock":
         # Initialize mock service
         try:
-            mock_service = MockAIService()
+            app.state.mock_service = MockAIService()
             log_info("Mock service initialized successfully")
         except Exception as e:
             log_error("Failed to initialize mock service", str(e))
+            await http_client.aclose()
             raise
 
     elif settings.ai_service_mode == "real":
@@ -74,32 +72,68 @@ async def startup_event():
             settings.validate_real_mode()
         except ValueError as e:
             log_error("Configuration error for real mode", str(e))
+            await http_client.aclose()
             raise
 
         # Verify database exists
-        db_path = Path(settings.database_path)
+        db_path = Path(settings.ai_service_database_path)
         if not db_path.exists():
-            error_msg = f"Database file not found: {settings.database_path}"
+            error_msg = f"Database file not found: {settings.ai_service_database_path}"
             log_error(error_msg)
+            await http_client.aclose()
             raise FileNotFoundError(error_msg)
 
         # Verify prompt template exists
-        template_path = Path(settings.prompt_template_dir) / "fill_work_plan.txt"
+        template_path = Path(settings.ai_service_prompt_template_dir) / "fill_work_plan.txt"
         if not template_path.exists():
             error_msg = f"Prompt template not found: {template_path}"
             log_error(error_msg)
+            await http_client.aclose()
             raise FileNotFoundError(error_msg)
 
-        # Initialize workflow
+        # Load and cache prompt template (Issue #5: Template file caching)
         try:
-            workflow = get_workflow()
+            with open(template_path, "r", encoding="utf-8") as f:
+                app.state.prompt_template = f.read()
+            log_info("Prompt template cached successfully")
+        except Exception as e:
+            log_error("Failed to cache prompt template", str(e))
+            await http_client.aclose()
+            raise
+
+        # Initialize workflow (Issue #4: Avoid race condition by initializing here)
+        try:
+            from ai_service.workflow import create_workflow
+            app.state.workflow = create_workflow()
             log_info("LangGraph workflow initialized successfully")
         except Exception as e:
             log_error("Failed to initialize LangGraph workflow", str(e))
+            await http_client.aclose()
             raise
 
     else:
+        await http_client.aclose()
         raise ValueError(f"Invalid AI_SERVICE_MODE: {settings.ai_service_mode}")
+
+    log_info("AI Service startup complete")
+
+    yield  # Application runs here
+
+    # === Shutdown ===
+    log_info("Shutting down AI Service")
+    await http_client.aclose()
+    log_info("Shared HTTP client closed")
+
+
+# Initialize FastAPI app with lifespan
+app = FastAPI(
+    title="Teacher Assist AI Service",
+    description="LangGraph-based AI service for generating educational metadata",
+    version="1.0.0",
+    docs_url="/docs",  # Swagger UI
+    redoc_url="/redoc",  # ReDoc
+    lifespan=lifespan
+)
 
 
 @app.get("/health")
@@ -131,7 +165,7 @@ async def get_mode():
     }
 
     if settings.ai_service_mode == "real":
-        response["llm_model"] = settings.llm_model
+        response["llm_model"] = settings.ai_service_llm_model
 
     return response
 
@@ -144,7 +178,7 @@ async def get_mode():
         500: {"model": ErrorResponse, "description": "Internal server error"},
     }
 )
-async def fill_work_plan(request: FillWorkPlanRequest) -> FillWorkPlanResponse:
+async def fill_work_plan(request: FillWorkPlanRequest, req: Request) -> FillWorkPlanResponse:
     """
     Generate educational metadata for a given activity.
 
@@ -152,6 +186,7 @@ async def fill_work_plan(request: FillWorkPlanRequest) -> FillWorkPlanResponse:
 
     Args:
         request: FillWorkPlanRequest with activity and optional theme
+        req: FastAPI Request object (for accessing app.state)
 
     Returns:
         FillWorkPlanResponse: Generated metadata (module, curriculum_refs, objectives)
@@ -161,24 +196,26 @@ async def fill_work_plan(request: FillWorkPlanRequest) -> FillWorkPlanResponse:
         500: Internal server error (handled by global exception handlers)
     """
     if settings.ai_service_mode == "mock":
-        # Use mock service
-        result = mock_service.generate_metadata(
+        # Use mock service from app state
+        result = req.app.state.mock_service.generate_metadata(
             activity=request.activity,
             theme=request.theme
         )
         return result
 
     else:  # real mode
-        # Use LangGraph workflow
+        # Use LangGraph workflow from app state
         try:
-            # Prepare initial state
+            # Prepare initial state (include cached template and shared HTTP client)
             initial_state = {
                 "activity": request.activity,
-                "theme": request.theme
+                "theme": request.theme,
+                "prompt_template": req.app.state.prompt_template,  # Use cached template
+                "http_client": req.app.state.http_client  # Pass shared HTTP client
             }
 
             # Execute workflow (async)
-            final_state = await workflow.ainvoke(initial_state)
+            final_state = await req.app.state.workflow.ainvoke(initial_state)
 
             # Extract final response
             final_response = final_state.get("final_response")
@@ -306,7 +343,7 @@ def main():
     print("=" * 60)
     print(f"Mode: {settings.ai_service_mode.upper()}")
     if settings.ai_service_mode == "real":
-        print(f"LLM Model: {settings.llm_model}")
+        print(f"LLM Model: {settings.ai_service_llm_model}")
     print(f"Starting server on http://localhost:8001")
     print(f"API documentation: http://localhost:8001/docs")
     print(f"Health check: http://localhost:8001/health")

@@ -12,6 +12,7 @@ Defines the state machine that orchestrates the entire metadata generation proce
 
 from typing import TypedDict, List, Dict, Any, Optional
 from langgraph.graph import StateGraph, END
+import httpx
 
 from common.models import FillWorkPlanResponse, ErrorResponse
 from ai_service.nodes.validators import validate_input, validate_output, parse_llm_response
@@ -35,6 +36,9 @@ class WorkflowState(TypedDict, total=False):
     # Input (from API request)
     activity: str
     theme: str
+
+    # Shared Resources
+    http_client: Optional[httpx.AsyncClient]  # Shared HTTP client for OpenRouter API
 
     # Database Context (loaded in parallel)
     available_modules: List[Dict[str, Any]]
