@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     ai_service_llm_timeout_seconds: int = 30
 
     # Database - With ai_service_ prefix
-    ai_service_database_path: str = "../db.sqlite3"
+    ai_service_database_path: str = "db.sqlite3"
     ai_service_database_timeout_seconds: float = 10.0  # SQLite connection timeout
 
     # Prompt Templates - With ai_service_ prefix

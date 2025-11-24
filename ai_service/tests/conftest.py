@@ -14,10 +14,15 @@ def configure_test_environment():
     """
     Configure test environment settings.
 
-    Sets up database path to point to project root when running tests.
+    Sets up database path and forces MOCK mode for tests to avoid real LLM calls.
     This fixture runs automatically for all tests (autouse=True).
     """
     settings = get_settings()
+
+    # Force MOCK mode for tests (override .env file)
+    # This prevents tests from making real API calls to OpenRouter
+    settings.ai_service_mode = "mock"
+
     # When running tests from project root, database is at ./db.sqlite3
     db_path = os.path.join(os.getcwd(), "db.sqlite3")
     if os.path.exists(db_path):
