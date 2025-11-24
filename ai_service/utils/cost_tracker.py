@@ -5,6 +5,7 @@ Handles fetching pricing data from OpenRouter and calculating request costs.
 Pricing is cached to minimize API calls.
 """
 
+import asyncio
 import httpx
 from typing import Dict, Optional, Tuple
 from datetime import datetime, timedelta
@@ -16,6 +17,7 @@ class PricingCache:
     Cache for OpenRouter model pricing data.
 
     Pricing is fetched from /api/v1/models endpoint and cached for a configurable TTL.
+    Thread-safe with async lock to prevent concurrent API calls.
     """
 
     def __init__(self, ttl_seconds: int = 3600):
@@ -28,6 +30,7 @@ class PricingCache:
         self.ttl_seconds = ttl_seconds
         self._cache: Dict[str, Tuple[float, float]] = {}  # model -> (prompt_price, completion_price)
         self._cache_time: Optional[datetime] = None
+        self._lock = asyncio.Lock()  # Ensure thread-safe access
 
     def _is_cache_valid(self) -> bool:
         """Check if cache is still valid based on TTL."""
@@ -44,6 +47,7 @@ class PricingCache:
         Fetch pricing for a specific model from OpenRouter.
 
         Uses cached data if available and valid, otherwise fetches fresh data.
+        Thread-safe with async lock to prevent concurrent API calls.
 
         Args:
             api_key: OpenRouter API key.
@@ -55,43 +59,45 @@ class PricingCache:
         Raises:
             httpx.HTTPError: If API request fails.
         """
-        # Return cached pricing if valid
-        if self._is_cache_valid() and model in self._cache:
-            return self._cache[model]
+        # Use async lock to prevent concurrent fetches
+        async with self._lock:
+            # Check cache again after acquiring lock (double-checked locking)
+            if self._is_cache_valid() and model in self._cache:
+                return self._cache[model]
 
-        # Fetch fresh pricing data
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    "https://openrouter.ai/api/v1/models",
-                    headers={"Authorization": f"Bearer {api_key}"},
-                    timeout=10.0
-                )
-                response.raise_for_status()
-                data = response.json()
+            # Fetch fresh pricing data
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(
+                        "https://openrouter.ai/api/v1/models",
+                        headers={"Authorization": f"Bearer {api_key}"},
+                        timeout=10.0
+                    )
+                    response.raise_for_status()
+                    data = response.json()
 
-            # Find pricing for requested model
-            for model_data in data.get("data", []):
-                if model_data.get("id") == model:
-                    pricing = model_data.get("pricing", {})
-                    # Prices are strings to avoid float precision issues
-                    prompt_price = float(pricing.get("prompt", "0"))
-                    completion_price = float(pricing.get("completion", "0"))
+                # Find pricing for requested model
+                for model_data in data.get("data", []):
+                    if model_data.get("id") == model:
+                        pricing = model_data.get("pricing", {})
+                        # Prices are strings to avoid float precision issues
+                        prompt_price = float(pricing.get("prompt", "0"))
+                        completion_price = float(pricing.get("completion", "0"))
 
-                    # Cache the result
-                    self._cache[model] = (prompt_price, completion_price)
-                    self._cache_time = datetime.now()
+                        # Cache the result
+                        self._cache[model] = (prompt_price, completion_price)
+                        self._cache_time = datetime.now()
 
-                    return (prompt_price, completion_price)
+                        return (prompt_price, completion_price)
 
-            # Model not found, use fallback pricing
-            log_warning(f"Pricing not found for model {model}, using fallback estimate")
-            return self._get_fallback_pricing()
+                # Model not found, use fallback pricing
+                log_warning(f"Pricing not found for model {model}, using fallback estimate")
+                return self._get_fallback_pricing()
 
-        except Exception as e:
-            log_error(f"Failed to fetch pricing from OpenRouter: {str(e)}")
-            log_warning("Using fallback pricing estimates")
-            return self._get_fallback_pricing()
+            except Exception as e:
+                log_error(f"Failed to fetch pricing from OpenRouter: {str(e)}")
+                log_warning("Using fallback pricing estimates")
+                return self._get_fallback_pricing()
 
     def _get_fallback_pricing(self) -> Tuple[float, float]:
         """
@@ -106,6 +112,16 @@ class PricingCache:
         # $0.25 per 1M input tokens = $0.00000025 per token
         # $1.25 per 1M output tokens = $0.00000125 per token
         return (0.00000025, 0.00000125)
+
+    def reset(self) -> None:
+        """
+        Reset the cache.
+
+        Clears all cached pricing data and timestamps.
+        Useful for testing or when pricing data needs to be refreshed.
+        """
+        self._cache.clear()
+        self._cache_time = None
 
 
 def calculate_cost(
@@ -149,3 +165,16 @@ def get_pricing_cache(ttl_seconds: int = 3600) -> PricingCache:
     if _pricing_cache is None:
         _pricing_cache = PricingCache(ttl_seconds=ttl_seconds)
     return _pricing_cache
+
+
+def reset_pricing_cache() -> None:
+    """
+    Reset the global pricing cache instance.
+
+    Useful for testing or when pricing data needs to be refreshed.
+    Should be called in test teardown to avoid cross-test contamination.
+    """
+    global _pricing_cache
+    if _pricing_cache is not None:
+        _pricing_cache.reset()
+    _pricing_cache = None
