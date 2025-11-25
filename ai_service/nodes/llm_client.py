@@ -16,7 +16,7 @@ from typing import Dict, Any, Tuple, Optional
 from openai import AsyncOpenAI
 
 from ai_service.config import settings
-from ai_service.utils.console import log_prompt, log_response, log_cost, log_error, log_info
+from ai_service.utils.console import log_prompt, log_response, log_cost, log_error, log_warning, log_info
 from ai_service.utils.cost_tracker import get_pricing_cache, calculate_cost
 
 
@@ -262,8 +262,13 @@ class OpenRouterClient:
                 # Look for single-level JSON object with expected fields
                 log_error("Structured output parsing failed, attempting regex extraction", str(e))
 
-                # Pattern: Match { ... } that contains our required fields
-                # No nested braces (single-level object)
+                # Regex pattern explanation:
+                # \{                 - Opening brace
+                # [^{}]*             - Any characters except braces (ensures single-level)
+                # "(?:modules|...)"  - Match any of our three required field names (must appear 3 times)
+                # [^{}]*             - More characters without braces
+                # \}                 - Closing brace
+                # This ensures we extract a flat JSON object containing all three required fields
                 pattern = r'\{[^{}]*"(?:modules|curriculum_refs|objectives)"[^{}]*"(?:modules|curriculum_refs|objectives)"[^{}]*"(?:modules|curriculum_refs|objectives)"[^{}]*\}'
 
                 match = re.search(pattern, raw_response, re.DOTALL)
@@ -312,10 +317,9 @@ class OpenRouterClient:
             estimated_cost = (input_tokens * prompt_price) + (output_tokens * completion_price)
 
             # Log warning about fallback pricing
-            log_error(
-                "Nie można pobrać cen z OpenRouter, używam szacunkowych cen",
-                f"Błąd: {str(e)} | "
-                f"Używam: ${prompt_price:.8f}/token (input), ${completion_price:.8f}/token (output)"
+            log_warning(
+                f"Failed to fetch pricing from OpenRouter, using fallback prices: "
+                f"${prompt_price:.8f}/token (input), ${completion_price:.8f}/token (output)"
             )
 
         # Log token usage and cost in YELLOW

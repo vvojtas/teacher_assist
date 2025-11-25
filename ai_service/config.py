@@ -5,8 +5,9 @@ Uses Pydantic Settings to load configuration from environment variables.
 Supports both mock and real mode for testing and production.
 """
 
+from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Literal, Optional
+from typing import Literal
 
 
 class Settings(BaseSettings):
@@ -67,23 +68,18 @@ class Settings(BaseSettings):
             )
 
 
-# Singleton settings instance (lazy initialization)
-_settings: Optional[Settings] = None
-
-
+@lru_cache
 def get_settings() -> Settings:
     """
-    Get or create the global settings instance.
+    Get cached settings instance.
 
-    Uses lazy initialization to allow testing with different configurations.
+    Uses @lru_cache for efficient singleton pattern without mutable globals.
+    Cache can be cleared with get_settings.cache_clear() for testing.
 
     Returns:
-        Settings: The global settings instance.
+        Settings: The cached settings instance.
     """
-    global _settings
-    if _settings is None:
-        _settings = Settings()
-    return _settings
+    return Settings()
 
 
 # Convenience alias for backwards compatibility
