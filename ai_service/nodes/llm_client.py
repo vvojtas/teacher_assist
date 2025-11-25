@@ -16,7 +16,7 @@ from typing import Dict, Any, Tuple, Optional
 from openai import AsyncOpenAI
 
 from ai_service.config import settings
-from ai_service.utils.console import log_prompt, log_response, log_cost, log_error
+from ai_service.utils.console import log_prompt, log_response, log_cost, log_error, log_info
 from ai_service.utils.cost_tracker import get_pricing_cache, calculate_cost
 
 
@@ -272,7 +272,7 @@ class OpenRouterClient:
                     try:
                         json.loads(json_str)  # Verify extracted JSON is valid
                         raw_response = json_str  # Replace response with extracted JSON
-                        log_error("Successfully extracted JSON from response", f"Original length: {len(raw_response)}, Extracted length: {len(json_str)}")
+                        log_info("Successfully extracted JSON from response", f"Original length: {len(raw_response)}, Extracted length: {len(json_str)}")
                     except json.JSONDecodeError as parse_err:
                         raise ValueError(f"Invalid JSON from structured output (extraction also failed): {str(e)}")
                 else:
