@@ -171,7 +171,7 @@ def load_prompt_template(state: Dict[str, Any]) -> Dict[str, Any]:
 
     try:
         # Construct template path
-        template_path = Path(settings.ai_service_prompt_template_dir) / "fill_work_plan.txt"
+        template_path = Path(settings.ai_service_prompt_template_dir) / "fill_work_plan_eng.txt"
 
         if not template_path.exists():
             error_msg = f"Plik szablonu nie istnieje: {template_path}"

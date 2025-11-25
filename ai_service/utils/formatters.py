@@ -136,11 +136,17 @@ def format_examples(examples: List[Dict[str, Any]]) -> str:
         json_str = json.dumps(response_json, ensure_ascii=False, indent=2)
 
         lines: List[str] = [
-            f"Przykład {i}:",
-            f"Temat: {example['theme']}",
-            f"Aktywność: {example['activity']}",
+            f"Example {i}:",
+            "**Theme:**",
+            "<theme>",
+            f"{example['theme']}",
+            "</theme>",
+            "**Activity Description:**",
+            "<activity>",
+            f"{example['activity']}",
+            "</activity>",
             "",
-            "Odpowiedź:",
+            "Response:",
             json_str
         ]
         formatted_examples.append("\n".join(lines))

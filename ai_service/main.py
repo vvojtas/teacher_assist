@@ -87,7 +87,7 @@ async def lifespan(app: FastAPI):
 
         # Verify prompt template exists (use centralized path resolution)
         template_dir = resolve_from_project_root(settings.ai_service_prompt_template_dir)
-        template_path = template_dir / "fill_work_plan.txt"
+        template_path = template_dir / "fill_work_plan_eng.txt"
         if not template_path.exists():
             error_msg = f"Prompt template not found: {template_path}"
             log_error(error_msg)

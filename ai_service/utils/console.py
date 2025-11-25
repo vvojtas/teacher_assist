@@ -98,7 +98,7 @@ def log_warning(message: str) -> None:
     Args:
         message: The warning message.
     """
-    print(f"{Fore.RED}[WARNING] {message}{Style.RESET_ALL}")
+    print(f"{Fore.MAGENTA}[WARNING] {message}{Style.RESET_ALL}")
 
 
 def log_info(message: str) -> None:
