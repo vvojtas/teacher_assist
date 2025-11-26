@@ -51,6 +51,26 @@ teacher_assist/
 
 ## Development Commands
 
+### Virtual Environment
+
+This project uses a Python virtual environment located at `.venv/` in the project root.
+
+**Activate virtual environment:**
+```bash
+# Linux/Mac
+source .venv/bin/activate
+
+# Windows
+.venv\Scripts\activate
+```
+
+**IMPORTANT:** All Python commands (Django, AI service, pytest) must be run with the virtual environment activated.
+
+**Deactivate virtual environment:**
+```bash
+deactivate
+```
+
 ### Django Backend
 
 All Django commands should be run from the `webserver/` directory.
@@ -118,13 +138,15 @@ npm run test:coverage # With coverage report
 
 **Start AI service:**
 ```bash
+source .venv/bin/activate  # Activate virtual environment first
 python ai_service/main.py
 # Runs on http://localhost:8001
 ```
 
 **Run tests:**
 ```bash
-pytest ai_service/tests/
+source .venv/bin/activate  # Activate virtual environment first
+python -m pytest ai_service/tests/ -v
 ```
 
 ## Application Requirements

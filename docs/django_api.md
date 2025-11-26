@@ -71,7 +71,7 @@ X-CSRFToken: <csrf_token>
 **Success Response (200 OK):**
 ```json
 {
-  "module": "MATEMATYKA",
+  "modules": ["MATEMATYKA"],
   "curriculum_refs": ["4.15", "4.18"],
   "objectives": [
     "Dziecko potrafi przeliczać w zakresie 5",
@@ -83,8 +83,8 @@ X-CSRFToken: <csrf_token>
 **Response Schema:**
 | Field | Type | Description |
 |-------|------|-------------|
-| `module` | string | Educational module name |
-| `curriculum_refs` | array[string] | Curriculum reference codes |
+| `modules` | array[string] | Educational module names (1-3 items) |
+| `curriculum_refs` | array[string] | Curriculum reference codes (1-10 items) |
 | `objectives` | array[string] | Educational objectives (typically 2-3) |
 
 **Error Responses:**

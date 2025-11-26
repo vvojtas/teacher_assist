@@ -11,6 +11,8 @@ from typing import List, Optional
 from pathlib import Path
 from contextlib import contextmanager
 
+from ai_service.config import settings
+from ai_service.utils.paths import get_database_path
 from ai_service.db_models import (
     EducationalModule,
     CurriculumReference,
@@ -27,25 +29,31 @@ class DatabaseClient:
              get_major_curriculum_references(), get_llm_examples()
     """
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: Optional[str] = None, timeout: Optional[float] = None):
         """
         Initialize database client.
 
         Args:
-            db_path: Path to SQLite file (defaults to project_root/db.sqlite3)
+            db_path: Path to SQLite file (defaults to project_root/db.sqlite3).
+                    Relative paths are resolved from project root.
+            timeout: Connection timeout in seconds (defaults to settings.database_timeout_seconds)
         """
-        if db_path is None:
-            project_root = Path(__file__).parent.parent
-            db_path = project_root / "db.sqlite3"
-
-        self.db_path = str(db_path)
+        # Use centralized path resolution utility
+        resolved_path = get_database_path(db_path)
+        self.db_path = str(resolved_path)
+        self.timeout = timeout if timeout is not None else settings.ai_service_database_timeout_seconds
 
         if not os.path.exists(self.db_path):
             raise FileNotFoundError(f"Database file not found: {self.db_path}")
 
     def _get_connection(self) -> sqlite3.Connection:
-        """Get database connection with row factory."""
-        conn = sqlite3.connect(self.db_path)
+        """
+        Get database connection with row factory and timeout.
+
+        The timeout parameter controls how long to wait (in seconds) if the
+        database is locked before raising an exception.
+        """
+        conn = sqlite3.connect(self.db_path, timeout=self.timeout)
         conn.row_factory = sqlite3.Row
         return conn
 
