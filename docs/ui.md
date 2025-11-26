@@ -82,7 +82,7 @@ All table cells are editable (React EditableCell components):
 **API Response:**
 ```json
 {
-  "module": "MATEMATYKA",
+  "modules": ["MATEMATYKA"],
   "curriculum_refs": ["4.15", "4.18"],
   "objectives": ["Dziecko potrafi przeliczać...", "Rozpoznaje cyfry..."]
 }

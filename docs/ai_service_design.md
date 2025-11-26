@@ -164,7 +164,7 @@ class WorkflowState(TypedDict):
 
 Prompt templates are stored in `ai_service/templates/` as Jinja2-style templates with clear section markers.
 
-**Template File:** `ai_service/templates/fill+work_plan.txt`
+**Template File:** `ai_service/templates/fill_work_plan_eng.txt`
 
 **Placeholders:**
 - `{activity}` - User-provided activity description
@@ -195,6 +195,8 @@ The constructed prompt must:
 
 ## 5. LLM Integration
 
+**Implementation:** Uses OpenAI SDK (`openai` package) configured with OpenRouter's base URL. This provides compatibility with OpenRouter while using a mature, well-tested SDK.
+
 ### 5.1 Model Selection
 
 **Gateway:** OpenRouter (https://openrouter.ai)
@@ -216,7 +218,9 @@ The constructed prompt must:
 model: "anthropic/claude-3.5-haiku"  # Configurable via environment
 temperature: 0.7                     # Balance creativity and consistency
 max_tokens: 500                      # Limit output size
-response_format: json                # Structured output (if supported)
+response_format:                     # Structured output with JSON Schema
+  type: json_schema
+  json_schema: LLM_OUTPUT_JSON_SCHEMA  # Defines required fields and types
 ```
 
 ### 5.3 Expected Token Usage
@@ -490,23 +494,26 @@ Log all requests with:
 ### 11.1 Environment Variables
 
 ```bash
+# Service Mode
+AI_SERVICE_MODE=real  # "mock" or "real"
+
 # LLM Configuration
-OPENROUTER_API_KEY=sk-...
-LLM_MODEL=anthropic/claude-3.5-haiku
-LLM_TEMPERATURE=0.7
-LLM_MAX_TOKENS=500
-LLM_TIMEOUT_SECONDS=30
+AI_SERVICE_OPENROUTER_API_KEY=sk-...
+AI_SERVICE_LLM_MODEL=anthropic/claude-3.5-haiku
+AI_SERVICE_LLM_TEMPERATURE=0.7
+AI_SERVICE_LLM_MAX_TOKENS=500
+AI_SERVICE_LLM_TIMEOUT_SECONDS=30
 
 # Workflow Configuration
-MAX_RETRY_ATTEMPTS=1
-ENABLE_QUALITY_CHECKER=false  # Phase 2+
-ENABLE_AUTO_RETRY=false       # Phase 3+
+AI_SERVICE_MAX_RETRY_ATTEMPTS=0  # Phase 3+ (currently disabled)
+AI_SERVICE_ENABLE_QUALITY_CHECKER=false  # Phase 2+
+AI_SERVICE_ENABLE_AUTO_RETRY=false       # Phase 3+
 
-# Database
-DATABASE_PATH=../db.sqlite3
+# Database (path relative to repo root)
+AI_SERVICE_DATABASE_PATH=db.sqlite3
 
 # Prompt Templates
-PROMPT_TEMPLATE_DIR=ai_service/templates
+AI_SERVICE_PROMPT_TEMPLATE_DIR=ai_service/templates
 ```
 
 ### 11.2 Feature Flags
