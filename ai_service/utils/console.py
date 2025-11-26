@@ -91,9 +91,10 @@ def log_error(message: str, details: str = "") -> None:
 
 def log_warning(message: str) -> None:
     """
-    Log warning message in RED.
+    Log warning message in MAGENTA.
 
-    Used for lenient validation warnings (e.g., filtered invalid curriculum codes).
+    Used for lenient validation warnings (e.g., filtered invalid curriculum codes,
+    fallback pricing).
 
     Args:
         message: The warning message.

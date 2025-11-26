@@ -169,19 +169,17 @@ class OpenRouterClient:
     async def generate(
         self,
         prompt: str,
-        log_output: bool = True,
-        http_client: Optional[Any] = None  # Ignored, kept for API compatibility
+        log_output: bool = True
     ) -> Tuple[str, Dict[str, int]]:
         """
         Generate completion from LLM.
 
         Calls OpenRouter API via OpenAI SDK and tracks token usage and costs.
+        OpenAI SDK manages its own HTTP client and connection pooling internally.
 
         Args:
             prompt: The complete prompt to send to the LLM.
             log_output: Whether to log prompt, response, and cost to console.
-            http_client: Deprecated parameter, kept for backwards compatibility.
-                        OpenAI SDK manages its own connection pooling.
 
         Returns:
             Tuple of (raw_response_text, usage_dict) where usage_dict contains:
@@ -277,7 +275,7 @@ class OpenRouterClient:
                     try:
                         json.loads(json_str)  # Verify extracted JSON is valid
                         raw_response = json_str  # Replace response with extracted JSON
-                        log_info("Successfully extracted JSON from response", f"Original length: {len(raw_response)}, Extracted length: {len(json_str)}")
+                        log_info(f"Successfully extracted JSON from response (original length: {len(raw_response)}, extracted length: {len(json_str)})")
                     except json.JSONDecodeError as parse_err:
                         raise ValueError(f"Invalid JSON from structured output (extraction also failed): {str(e)}")
                 else:

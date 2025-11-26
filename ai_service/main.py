@@ -52,11 +52,6 @@ async def lifespan(app: FastAPI):
     # === Startup ===
     log_info(f"Starting AI Service in {settings.ai_service_mode.upper()} mode")
 
-    # Initialize shared HTTP client for OpenRouter API (used in real mode)
-    http_client = httpx.AsyncClient()
-    app.state.http_client = http_client
-    log_info("Shared HTTP client initialized")
-
     if settings.ai_service_mode == "mock":
         # Initialize mock service
         try:
@@ -64,7 +59,6 @@ async def lifespan(app: FastAPI):
             log_info("Mock service initialized successfully")
         except Exception as e:
             log_error("Failed to initialize mock service", str(e))
-            await http_client.aclose()
             raise
 
     elif settings.ai_service_mode == "real":
@@ -73,7 +67,6 @@ async def lifespan(app: FastAPI):
             settings.validate_real_mode()
         except ValueError as e:
             log_error("Configuration error for real mode", str(e))
-            await http_client.aclose()
             raise
 
         # Verify database exists (use centralized path resolution)
@@ -82,7 +75,6 @@ async def lifespan(app: FastAPI):
         if not db_path.exists():
             error_msg = f"Database file not found: {db_path}"
             log_error(error_msg)
-            await http_client.aclose()
             raise FileNotFoundError(error_msg)
 
         # Verify prompt template exists (use centralized path resolution)
@@ -91,7 +83,6 @@ async def lifespan(app: FastAPI):
         if not template_path.exists():
             error_msg = f"Prompt template not found: {template_path}"
             log_error(error_msg)
-            await http_client.aclose()
             raise FileNotFoundError(error_msg)
 
         # Load and cache prompt template (Issue #5: Template file caching)
@@ -101,7 +92,6 @@ async def lifespan(app: FastAPI):
             log_info("Prompt template cached successfully")
         except Exception as e:
             log_error("Failed to cache prompt template", str(e))
-            await http_client.aclose()
             raise
 
         # Initialize workflow (Issue #4: Avoid race condition by initializing here)
@@ -111,11 +101,9 @@ async def lifespan(app: FastAPI):
             log_info("LangGraph workflow initialized successfully")
         except Exception as e:
             log_error("Failed to initialize LangGraph workflow", str(e))
-            await http_client.aclose()
             raise
 
     else:
-        await http_client.aclose()
         raise ValueError(f"Invalid AI_SERVICE_MODE: {settings.ai_service_mode}")
 
     log_info("AI Service startup complete")
@@ -124,8 +112,6 @@ async def lifespan(app: FastAPI):
 
     # === Shutdown ===
     log_info("Shutting down AI Service")
-    await http_client.aclose()
-    log_info("Shared HTTP client closed")
 
 
 # Initialize FastAPI app with lifespan
@@ -209,12 +195,11 @@ async def fill_work_plan(request: FillWorkPlanRequest, req: Request) -> FillWork
     else:  # real mode
         # Use LangGraph workflow from app state
         try:
-            # Prepare initial state (include cached template and shared HTTP client)
+            # Prepare initial state (include cached template)
             initial_state = {
                 "activity": request.activity,
                 "theme": request.theme,
-                "prompt_template": req.app.state.prompt_template,  # Use cached template
-                "http_client": req.app.state.http_client  # Pass shared HTTP client
+                "prompt_template": req.app.state.prompt_template  # Use cached template
             }
 
             # Execute workflow (async)

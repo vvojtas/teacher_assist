@@ -37,8 +37,8 @@ LLM_TEMPERATURE=0.7
 LLM_MAX_TOKENS=500
 LLM_TIMEOUT_SECONDS=30
 
-# Database Path (relative to project root)
-DATABASE_PATH=../db.sqlite3
+# Database Path (relative to repo root)
+AI_SERVICE_DATABASE_PATH=db.sqlite3
 
 # Prompt Templates Directory
 PROMPT_TEMPLATE_DIR=ai_service/templates
@@ -83,7 +83,7 @@ The service will start on `http://localhost:8001`.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `DATABASE_PATH` | No | `../db.sqlite3` | Path to SQLite database (relative to ai_service) |
+| `AI_SERVICE_DATABASE_PATH` | No | `db.sqlite3` | Path to SQLite database (relative to repo root) |
 
 ### Workflow Configuration
 
@@ -195,9 +195,9 @@ When running in real mode, the console displays:
 - 🟢 **Green**: Final formatted prompt sent to LLM
 - 🔵 **Blue**: Raw LLM response
 - 🟡 **Yellow**: Token counts and estimated cost
-- 🔴 **Red**: Errors and validation warnings
+- 🟣 **Magenta**: Warnings (e.g., fallback pricing, filtered invalid values)
+- 🔴 **Red**: Errors
 
-Example output:
 ```
 ================================================================================
 [PROMPT SENT TO LLM]
@@ -249,7 +249,7 @@ When the LLM returns invalid curriculum codes:
 
 1. Valid codes are kept
 2. Invalid codes are filtered out
-3. Warning logged in **RED** console output
+3. Warning logged in **MAGENTA** console output
 4. At least 1 valid code required
 
 Example warning:
@@ -287,31 +287,12 @@ pytest ai_service/tests/test_workflow.py
 
 ## Troubleshooting
 
-### "OPENROUTER_API_KEY is required when AI_SERVICE_MODE=real"
-
-**Solution:** Add your OpenRouter key to the `.env` file or set environment variable.
-
-### "Database not found" error
-
-**Solution:** Verify `DATABASE_PATH` points to correct SQLite file. Default is `../db.sqlite3` (relative to ai_service directory).
-
-### "Template file not found" error
-
-**Solution:** Ensure `ai_service/templates/fill_work_plan.txt` exists.
-
 ### High costs
 
 **Solution:**
 - Use cheaper models (e.g., `google/gemini-flash-1.5`)
 - Reduce `LLM_MAX_TOKENS` setting
 - Switch to `AI_SERVICE_MODE=mock` for testing
-
-### Slow responses
-
-**Solution:**
-- Check network latency to OpenRouter
-- Try faster models (e.g., `anthropic/claude-3.5-haiku`)
-- Increase `LLM_TIMEOUT_SECONDS` if needed
 
 ## Development
 

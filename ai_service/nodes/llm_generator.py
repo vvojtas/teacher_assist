@@ -35,7 +35,7 @@ async def generate_with_llm(state: Dict[str, Any]) -> Dict[str, Any]:
 
     if not prompt:
         error_msg = "Brak skonstruowanego promptu"
-        log_error("Błąd generowania LLM", "Prompt jest pusty")
+        log_error("LLM generation error", "Prompt is empty")
         return {
             **state,
             "llm_raw_response": "",
@@ -47,16 +47,13 @@ async def generate_with_llm(state: Dict[str, Any]) -> Dict[str, Any]:
         # Get LLM client
         llm_client = get_llm_client()
 
-        # Get shared HTTP client from state (if available)
-        http_client = state.get("http_client")
-
         # Generate response (logs are handled inside the client)
+        # OpenAI SDK manages its own HTTP client internally
         raw_response: str
         usage: Dict[str, Any]
         raw_response, usage = await llm_client.generate(
             prompt=prompt,
-            log_output=True,  # Enable colored console logging
-            http_client=http_client  # Use shared HTTP client for connection pooling
+            log_output=True  # Enable colored console logging
         )
 
         return {
@@ -69,7 +66,7 @@ async def generate_with_llm(state: Dict[str, Any]) -> Dict[str, Any]:
 
     except Exception as e:
         error_msg = f"Błąd podczas generowania odpowiedzi LLM: {str(e)}"
-        log_error("Błąd generowania LLM", str(e))
+        log_error("LLM generation error", str(e))
 
         return {
             **state,

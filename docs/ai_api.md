@@ -97,7 +97,7 @@ Content-Type: application/json
 
 ---
 
-### 2. Health Check (Optional)
+### 2. Health Check
 
 **Endpoint:** `GET /health`
 
@@ -105,21 +105,24 @@ Content-Type: application/json
 ```json
 {
   "status": "healthy",
-  "version": "1.0.0"
+  "mode": "mock",
+  "version": "1.0.0",
+  "service": "Teacher Assist AI Service"
 }
 ```
 
-**Error Response (503 Service Unavailable):**
-```json
-{
-  "status": "unhealthy",
-  "error": "OpenRouter API key not configured"
-}
-```
+**Response Schema:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Always "healthy" |
+| `mode` | string | Current service mode ("mock" or "real") |
+| `version` | string | Service version |
+| `service` | string | Service name |
 
 **Implementation Notes:**
-- Optional for MVP
-- Can be used for diagnostics or startup checks
+- Used for diagnostics and startup checks
+- Always returns 200 OK if service is running
+- No authentication required
 
 ---
 
