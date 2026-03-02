@@ -28,3 +28,6 @@ openai==1.59.5
 # Utilities for AI service
 colorama==0.4.6           # Colored console output
 pydantic-settings==2.7.1  # Settings management
+
+# MCP Server
+mcp
