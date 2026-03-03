@@ -30,4 +30,4 @@ colorama==0.4.6           # Colored console output
 pydantic-settings==2.7.1  # Settings management
 
 # MCP Server
-mcp
+mcp[cli]
