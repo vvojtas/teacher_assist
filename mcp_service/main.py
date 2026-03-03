@@ -11,7 +11,12 @@ from mcp.server.fastmcp import FastMCP
 from mcp_service.api_client import DjangoAPIClient
 
 # Initialize FastMCP Server
-mcp = FastMCP("TeacherAssist", instructions="MCP Server providing access to Teacher Assist Backend API")
+mcp = FastMCP(
+    "TeacherAssist",
+    instructions="MCP Server providing access to Teacher Assist Backend API",
+    host="127.0.0.1",
+    port=8002,
+)
 
 # Initialize our Django API client
 django_client = DjangoAPIClient()
@@ -25,4 +30,4 @@ async def get_curriculum_references_resource() -> dict:
     return await django_client.get_all_curriculum_references()
 
 if __name__ == "__main__":
-    mcp.run()
+    mcp.run(transport="streamable-http")
