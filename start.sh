@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Teacher Assist - Application Startup Script (Linux/Mac)
-# This script starts both the Django web server and the AI service
+# This script starts the Django web server, AI service, and MCP gateway
 
 set -e  # Exit on error
 
@@ -19,6 +19,7 @@ cd "$PROJECT_ROOT"
 # Log files
 AI_SERVICE_LOG="$PROJECT_ROOT/ai_service.log"
 DJANGO_LOG="$PROJECT_ROOT/django.log"
+MCP_SERVICE_LOG="$PROJECT_ROOT/mcp_service.log"
 VENV_DIR="$PROJECT_ROOT/.venv"
 
 echo "============================================================"
@@ -89,7 +90,7 @@ echo -e "${GREEN}Starting services...${NC}"
 echo ""
 
 # Start AI Service (port 8001) in background
-echo -e "${BLUE}[1/2] Starting AI Service on http://localhost:8001${NC}"
+echo -e "${BLUE}[1/3] Starting AI Service on http://localhost:8001${NC}"
 $PYTHON_CMD ai_service/main.py > "$AI_SERVICE_LOG" 2>&1 &
 AI_SERVICE_PID=$!
 echo "      AI Service PID: $AI_SERVICE_PID"
@@ -107,7 +108,7 @@ fi
 
 # Start Django Web Server (port 8000) in background
 echo ""
-echo -e "${BLUE}[2/2] Starting Django Web Server on http://localhost:8000${NC}"
+echo -e "${BLUE}[2/3] Starting Django Web Server on http://localhost:8000${NC}"
 cd webserver
 $PYTHON_CMD manage.py runserver 127.0.0.1:8000 > "$DJANGO_LOG" 2>&1 &
 DJANGO_PID=$!
@@ -126,6 +127,26 @@ if ! ps -p $DJANGO_PID > /dev/null; then
     exit 1
 fi
 
+# Start MCP Gateway Service (port 8002) in background
+echo ""
+echo -e "${BLUE}[3/3] Starting MCP Gateway on http://localhost:8002${NC}"
+$PYTHON_CMD mcp_service/main.py > "$MCP_SERVICE_LOG" 2>&1 &
+MCP_PID=$!
+echo "      MCP PID: $MCP_PID"
+echo "      Log file: $MCP_SERVICE_LOG"
+
+# Wait for MCP to start
+echo "      Waiting for MCP Gateway to start..."
+sleep 2
+
+# Check if MCP is running
+if ! ps -p $MCP_PID > /dev/null; then
+    echo -e "${RED}      Error: MCP Gateway failed to start. Check $MCP_SERVICE_LOG${NC}"
+    kill $AI_SERVICE_PID 2>/dev/null
+    kill $DJANGO_PID 2>/dev/null
+    exit 1
+fi
+
 echo ""
 echo "============================================================"
 echo -e "${GREEN}✓ Application started successfully!${NC}"
@@ -134,18 +155,22 @@ echo ""
 echo "Services running:"
 echo "  • AI Service:    http://localhost:8001"
 echo "  • Web Interface: http://localhost:8000"
+echo "  • MCP Gateway:   http://localhost:8002/mcp"
 echo ""
 echo "API Documentation:"
 echo "  • AI Service Docs: http://localhost:8001/docs"
 echo "  • Health Check:    http://localhost:8001/health"
+echo "  • MCP Endpoint:    http://localhost:8002/mcp"
 echo ""
 echo "Process IDs:"
 echo "  • AI Service: $AI_SERVICE_PID"
 echo "  • Django:     $DJANGO_PID"
+echo "  • MCP Gateway:$MCP_PID"
 echo ""
 echo "Log files:"
 echo "  • AI Service: $AI_SERVICE_LOG"
 echo "  • Django:     $DJANGO_LOG"
+echo "  • MCP Gateway:$MCP_SERVICE_LOG"
 echo ""
 echo "============================================================"
 echo ""
@@ -155,6 +180,7 @@ echo ""
 # Save PIDs to file for stop script
 echo "$AI_SERVICE_PID" > "$PROJECT_ROOT/.ai_service.pid"
 echo "$DJANGO_PID" > "$PROJECT_ROOT/.django.pid"
+echo "$MCP_PID" > "$PROJECT_ROOT/.mcp_service.pid"
 
 # Trap Ctrl+C to cleanup
 cleanup() {
@@ -178,11 +204,18 @@ cleanup() {
         rm "$PROJECT_ROOT/.ai_service.pid"
     fi
 
+    if [ -f "$PROJECT_ROOT/.mcp_service.pid" ]; then
+        MCP_PID=$(cat "$PROJECT_ROOT/.mcp_service.pid")
+        echo "Stopping MCP Gateway (PID: $MCP_PID)..."
+        kill $MCP_PID 2>/dev/null || true
+        rm "$PROJECT_ROOT/.mcp_service.pid"
+    fi
+
     echo -e "${GREEN}Services stopped.${NC}"
     exit 0
 }
 
 trap cleanup SIGINT SIGTERM
 
-# Wait for both processes
-wait $AI_SERVICE_PID $DJANGO_PID
+# Wait for all processes
+wait $AI_SERVICE_PID $DJANGO_PID $MCP_PID

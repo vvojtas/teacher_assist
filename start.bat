@@ -1,6 +1,6 @@
 @echo off
 REM Teacher Assist - Application Startup Script (Windows)
-REM This script starts both the Django web server and the AI service
+REM This script starts the Django web server, AI service, and MCP gateway
 
 setlocal enabledelayedexpansion
 
@@ -82,15 +82,22 @@ echo Starting services...
 echo.
 
 REM Start AI Service (port 8001) in new window
-echo [1/2] Starting AI Service on http://localhost:8001
+echo [1/3] Starting AI Service on http://localhost:8001
 start "Teacher Assist - AI Service" /MIN python ai_service/main.py
 timeout /t 3 /nobreak >nul
 echo       Started in minimized window
 
 REM Start Django Web Server (port 8000) in new window
 echo.
-echo [2/2] Starting Django Web Server on http://localhost:8000
+echo [2/3] Starting Django Web Server on http://localhost:8000
 start "Teacher Assist - Django Server" /MIN python webserver/manage.py runserver 127.0.0.1:8000
+timeout /t 3 /nobreak >nul
+echo       Started in minimized window
+
+REM Start MCP Gateway Service (port 8002) in new window
+echo.
+echo [3/3] Starting MCP Gateway on http://localhost:8002
+start "Teacher Assist - MCP Gateway" /MIN python mcp_service/main.py
 timeout /t 3 /nobreak >nul
 echo       Started in minimized window
 
@@ -102,10 +109,12 @@ echo.
 echo Services running:
 echo   * AI Service:    http://localhost:8001
 echo   * Web Interface: http://localhost:8000
+echo   * MCP Gateway:   http://localhost:8002/mcp
 echo.
 echo API Documentation:
 echo   * AI Service Docs: http://localhost:8001/docs
 echo   * Health Check:    http://localhost:8001/health
+echo   * MCP Endpoint:    http://localhost:8002/mcp
 echo.
 echo ============================================================
 echo.
@@ -116,7 +125,7 @@ echo.
 echo ============================================================
 echo.
 echo To stop the application:
-echo   * Close both minimized console windows
+echo   * Close all three minimized console windows
 echo.
 echo You can close this window now.
 echo.

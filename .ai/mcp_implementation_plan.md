@@ -12,7 +12,7 @@ This phase focuses on the fundamental project setup and reading simple data from
 
 ### 1. Project Initialization & Structure
 - **Create Directory:** Create a new folder at the project root named `mcp_service/`.
-- **Dependencies:** Use the existing `.venv` in the project root. Add `mcp`, `httpx`, `python-dotenv`, `pytest`, and `pytest-asyncio` to the root `requirements.txt`.
+- **Dependencies:** Use the existing `.venv` in the project root. Add `mcp[cli]`, `httpx`, `python-dotenv`, `pytest`, and `pytest-asyncio` to the root `requirements.txt`.
 - **File Structure:** Set up the basic module structure:
   - `mcp_service/main.py`: The entry point and FastMCP instance definition.
   - `mcp_service/config.py`: Environment configuration (e.g., parsing `DJANGO_API_URL`).
@@ -25,8 +25,9 @@ This phase focuses on the fundamental project setup and reading simple data from
 ### 3. Implementing the Curriculum Interfaces
 Based on `.ai/api_info.md`, we will expose curriculum references in two ways. For Phase 1, we focus on fetching all references:
 - **As an MCP Resource (All References):**
-  - **Client Method:** Implement `get_all_curriculum_references()` in `api_client.py` that calls `GET /api/curriculum-refs`.
-  - **MCP Definition:** In `main.py`, define a FastMCP Resource (e.g., `curriculum://references/all`) that fetches and formats the entire curriculum JSON as readable text.
+  - **Client Method:** Implement `get_all_curriculum_references()` in `api_client.py` that calls `GET /api/curriculum-refs/` and returns the raw JSON `dict`.
+  - **MCP Definition:** In `main.py`, define a FastMCP Resource (e.g., `curriculum://references/all`) with `mime_type="application/json"` that returns the curriculum data as structured JSON.
+  - **Transport:** Use **Streamable HTTP** transport on `http://127.0.0.1:8002` (endpoint: `/mcp`). This allows the MCP server to run as a persistent HTTP service rather than stdio.
 
 ### 4. Unit Testing Setup
 - **Create Tests Directory:** Set up a `tests/` directory within `mcp_service/`.
